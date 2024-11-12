@@ -1,7 +1,7 @@
 <?php
  
 /**
- * PHP Mikrotik Billing (https://github.com/hotspotbilling/phpnuxbill/)
+ * PHP Mikrotik Billing (https://github.com/shabran01/SpeedRadius_Advanced/)
  *
  * This script is for updating SpeedRadius
  **/
@@ -14,7 +14,7 @@ if($db_password != null && ($db_pass == null || empty($db_pass))){
 }
 
 if (empty($update_url)) {
-    $update_url = 'https://github.com/shabran01/SpeedRadius/archive/refs/heads/main.zip';
+    $update_url = 'https://github.com/shabran01/SpeedRadius_Advanced/archive/refs/heads/main.zip';
 }
 
 
@@ -49,8 +49,8 @@ if (!extension_loaded('zip')) {
 }
 
 
-$file = pathFixer('system/cache/SpeedRadius.zip');
-$folder = pathFixer('system/cache/SpeedRadius-' . basename($update_url, ".zip") . '/');
+$file = pathFixer('system/cache/SpeedRadius_Advanced.zip');
+$folder = pathFixer('system/cache/SpeedRadius_Advanced-' . basename($update_url, ".zip") . '/');
 
 if (empty($step)) {
     $step++;
