@@ -84,8 +84,22 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Sorting Dropdown -->
+            <div class="row" style="padding: 5px">
+                <div class="col-lg-3">
+                    <select class="form-control" name="sort" id="sort">
+                        <option value="id_asc" {if $sort eq 'id_asc'}selected{/if}>{Lang::T('Sort by ID Ascending')}</option>
+                        <option value="id_desc" {if $sort eq 'id_desc'}selected{/if}>{Lang::T('Sort by ID Descending')}</option>
+                        <option value="name_asc" {if $sort eq 'name_asc'}selected{/if}>{Lang::T('Sort by Name Ascending')}</option>
+                        <option value="name_desc" {if $sort eq 'name_desc'}selected{/if}>{Lang::T('Sort by Name Descending')}</option>
+                        <!-- Add more sorting options based on other columns as needed -->
+                    </select>
+                </div>
+            </div>
         </form>
     </div>
+    
     <div class="table-responsive">
         <div style="margin-left: 5px; margin-right: 5px;">
             <table id="datatable" class="table table-bordered table-striped table-condensed">
@@ -110,29 +124,18 @@
                         <td>{$ds['type']}</td>
                         <td>{$ds['routers']}</td>
                         <td>{$ds['name_plan']}</td>
-                        <td style="background-color: white; color: black;" onmouseleave="this.style.backgroundColor = 'white';"
-                            onmouseenter="this.style.backgroundColor = 'lightgray';">
-                            {$ds['code']}</td>
-                        <td>{if $ds['status'] eq '0'} <label class="btn-tag btn-tag-success"> Not Use
-                            </label> {else} <label class="btn-tag btn-tag-danger">Used</label>
-                            {/if}</td>
-                        <td>{if $ds['user'] eq '0'} -
-                            {else}<a href="{$_url}customers/viewu/{$ds['user']}">{$ds['user']}</a>
-                            {/if}</td>
+                        <td>{$ds['code']}</td>
+                        <td>{if $ds['status'] eq '0'} <label class="btn-tag btn-tag-success">Not Use</label>
+                            {else} <label class="btn-tag btn-tag-danger">Used</label>{/if}</td>
+                        <td>{if $ds['user'] eq '0'} - {else}<a href="{$_url}customers/viewu/{$ds['user']}">{$ds['user']}</a>{/if}</td>
                         <td>{if $ds['used_date']}{Lang::dateTimeFormat($ds['used_date'])}{/if}</td>
-                        <td>{if $ds['generated_by']}
-                            <a href="{$_url}settings/users-view/{$ds['generated_by']}">{$admins[$ds['generated_by']]}</a>
-                            {else} -
-                            {/if}
-                        </td>
+                        <td>{if $ds['generated_by']}<a href="{$_url}settings/users-view/{$ds['generated_by']}">{$admins[$ds['generated_by']]}</a>{else} - {/if}</td>
                         <td>
                             {if $ds['status'] neq '1'}
-                            <a href="{$_url}plan/voucher-view/{$ds['id']}" id="{$ds['id']}" style="margin: 0px;"
-                                class="btn btn-success btn-xs">&nbsp;&nbsp;{Lang::T('View')}&nbsp;&nbsp;</a>
+                            <a href="{$_url}plan/voucher-view/{$ds['id']}" id="{$ds['id']}" style="margin: 0px;" class="btn btn-success btn-xs">&nbsp;&nbsp;{Lang::T('View')}&nbsp;&nbsp;</a>
                             {/if}
                             {if in_array($_admin['user_type'], ['SuperAdmin', 'Admin'])}
-                            <a href="{$_url}plan/voucher-delete/{$ds['id']}" id="{$ds['id']}"
-                                class="btn btn-danger btn-xs" onclick="return ask(this, '{Lang::T('Delete')}?')">
+                            <a href="{$_url}plan/voucher-delete/{$ds['id']}" id="{$ds['id']}" class="btn btn-danger btn-xs" onclick="return ask(this, '{Lang::T('Delete')}?')">
                                 <i class="glyphicon glyphicon-trash"></i>
                             </a>
                             {/if}
