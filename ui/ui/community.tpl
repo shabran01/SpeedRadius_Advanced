@@ -66,8 +66,8 @@
             <div class="box-body">
                 <b>SpeedRadius</b> is a billing Hotspot ,Static IP and PPPOE for Mikrotik using PHP and Mikrotik API to comunicate with router. If you get more profit with this application, please donate us.<br>Watch project <a href="https://chat.whatsapp.com/HjnLYIEN6h0A0KMXbfNYP5" target="_blank">in here</a>
             </div>
-            <div class="box-footer" id="currentVersion">ver</div>
-            <div class="box-footer" id="latestVersion">ver</div>
+            <div class="box-footer" id="currentVersion">ver : <b><?= $version ?></b> </div>
+            <div class="box-footer" id="latestVersion">ver : <b><?= $version ?></b> </div>
             <div class="box-footer">
 
                 <div class="btn-group btn-group-justified" role="group" aria-label="...">
