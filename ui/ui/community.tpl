@@ -61,17 +61,17 @@
     <div class="col-sm-6" id="update">
         <div class="box box-primary box-hovered mb20 activities">
             <div class="box-header">
-                <h3 class="box-title">SPEEDCOM</h3>
+                <h3 class="box-title">SPEEDRADIUS</h3>
             </div>
             <div class="box-body">
-                <b>Speedcom</b> is a billing Hotspot ,Static IP and PPPOE for Mikrotik using PHP and Mikrotik API to comunicate with router. If you get more profit with this application, please donate us.<br>Watch project <a href="https://chat.whatsapp.com/HjnLYIEN6h0A0KMXbfNYP5" target="_blank">in here</a>
+                <b>SpeedRadius</b> is a billing Hotspot ,Static IP and PPPOE for Mikrotik using PHP and Mikrotik API to comunicate with router. If you get more profit with this application, please donate us.<br>Watch project <a href="https://chat.whatsapp.com/HjnLYIEN6h0A0KMXbfNYP5" target="_blank">in here</a>
             </div>
             <div class="box-footer" id="currentVersion">version : <b>2024.10.15</b> </div>
             <div class="box-footer" id="latestVersion : ">version : <b>2024.10.15</b>  </div>
             <div class="box-footer">
                 <div class="btn-group btn-group-justified" role="group" aria-label="...">
                     <a href="/update.php?step=4" class="btn btn-success btn-sm btn-block">Update Database</a>
-                    <a href="https://paystack.com/buy/mikrotik-billing-system-api---install-mikrotik-php-we-udcqmw" target="_blank"
+                    <a href="https://github.com/shabran01/SpeedRadius_Advanced/archive/refs/heads/main.zip" target="_blank"
                         class="btn btn-warning btn-sm btn-block text-black">Install Latest Version</a>
                 </div>
                 
@@ -79,7 +79,7 @@
                 <div class="btn-group btn-group-justified" role="group" aria-label="...">
                     <a href="./CHANGELOG.md" target="_blank" class="btn btn-default btn-sm btn-block">Current
                         Changelog</a>
-                    <a href="https://github.com/hotspotbilling/phpnuxbill/blob/master/CHANGELOG.md" target="_blank"
+                    <a href="https://github.com/shabran01/SpeedRadius_Advanced/CHANGELOG.md" target="_blank"
                         class="btn btn-default btn-sm btn-block">Repo Changelog</a>
                 </div>
             </div>
@@ -95,7 +95,7 @@
         $.getJSON("./version.json?" + Math.random(), function(data) {
             $('#currentVersion').html('Current Version: ' + data.version);
         });
-        $.getJSON("https://raw.githubusercontent.com/hotspotbilling/phpnuxbill/master/version.json?" + Math
+        $.getJSON("https://github.com/shabran01/SpeedRadius_Advanced/version.json?" + Math
             .random(),
             function(data) {
                 $('#latestVersion').html('Latest Version: ' + data.version);
