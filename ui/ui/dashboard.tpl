@@ -1,55 +1,111 @@
 {include file="sections/header.tpl"}
 
 <div class="row">
-    {if in_array($_admin['user_type'],['SuperAdmin','Admin', 'Report'])}
-        <div class="col-lg-3 col-xs-6">
-            <div class="small-box bg-aqua">
+    {if in_array($_admin['user_type'], ['SuperAdmin', 'Admin', 'Report'])}
+        <div class="col-lg-3 col-xs-6 d-flex">
+            <div class="small-box bg-aqua flex-fill">
                 <div class="inner">
-                    <h4 class="text-bold" style="font-size: large;"><sup>{$_c['currency_code']}</sup>
-                        {number_format($iday,0,$_c['dec_point'],$_c['thousands_sep'])}</h4>
+                    <h4 class="text-bold" style="font-size: large;">
+                        <sup>{$_c['currency_code']}</sup>
+                        {number_format($iday, 0, $_c['dec_point'], $_c['thousands_sep'])}
+                    </h4>
                 </div>
                 <div class="icon">
-                    <i class="ion ion-clock"></i>
+                    <i class="ion ion-cash"></i>
                 </div>
-                <a href="{$_url}reports/by-date" class="small-box-footer">{Lang::T('Income Today')}</a>
+                <a href="{$_url}reports/by-date" class="small-box-footer">
+                    {Lang::T('Income Today')}
+                </a>
             </div>
         </div>
-        <div class="col-lg-3 col-xs-6">
-            <div class="small-box bg-green">
+        <div class="col-lg-3 col-xs-6 d-flex">
+            <div class="small-box bg-green flex-fill">
                 <div class="inner">
-                    <h4 class="text-bold" style="font-size: large;"><sup>{$_c['currency_code']}</sup>
-                        {number_format($imonth,0,$_c['dec_point'],$_c['thousands_sep'])}</h4>
+                    <h4 class="text-bold" style="font-size: large;">
+                        <sup>{$_c['currency_code']}</sup>
+                        {number_format($imonth, 0, $_c['dec_point'], $_c['thousands_sep'])}
+                    </h4>
                 </div>
                 <div class="icon">
-                    <i class="ion ion-android-calendar"></i>
+                    <i class="ion ion-stats-bars"></i>
                 </div>
-                <a href="{$_url}reports/by-period" class="small-box-footer">{Lang::T('Income This Month')}</a>
+                <a href="{$_url}reports/by-period" class="small-box-footer">
+                    {Lang::T('Income This Month')}
+                </a>
             </div>
         </div>
     {/if}
-    <div class="col-lg-3 col-xs-6">
-        <div class="small-box bg-yellow">
+    <div class="col-lg-3 col-xs-6 d-flex">
+        <div class="small-box bg-yellow flex-fill">
             <div class="inner">
-                <h4 class="text-bold" style="font-size: large;">{$u_act}/{$u_all-$u_act}</h4>
+                <h4 class="text-bold" style="font-size: large;">{$u_act}/{$u_all - $u_act}</h4>
             </div>
             <div class="icon">
                 <i class="ion ion-person"></i>
             </div>
-            <a href="{$_url}plan/list" class="small-box-footer">{Lang::T('Active')}/{Lang::T('Expired')}</a>
+            <a href="{$_url}plan/list" class="small-box-footer">
+                {Lang::T('Active')}/{Lang::T('Expired')}
+            </a>
         </div>
     </div>
-    <div class="col-lg-3 col-xs-6">
-        <div class="small-box bg-red">
+    <div class="col-lg-3 col-xs-6 d-flex">
+        <div class="small-box bg-light-blue flex-fill">
+            <div class="inner">
+                <h4 class="text-2xl font-bold" id="online-ppp-users">0</h4>
+            </div>
+            <div class="icon">
+                <i class="ion ion-network"></i>
+            </div>
+            <a href="{$_url}plugin/pppoe_monitor_router_menu" class="small-box-footer">
+                {Lang::T('Online PPPoE Users')}
+            </a>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-3 col-xs-6 d-flex">
+        <div class="small-box bg-orange flex-fill">
+            <div class="inner">
+                <h4 class="text-2xl font-bold" id="online-hotspot-users">0</h4>
+            </div>
+            <div class="icon">
+                <i class="ion ion-wifi"></i>
+            </div>
+            <a href="{$_url}onlineusers/hotspot" class="small-box-footer">
+                {Lang::T('Online Hotspot Users')}
+            </a>
+        </div>
+    </div>
+    <div class="col-lg-3 col-xs-6 d-flex">
+        <div class="small-box bg-purple flex-fill">
+            <div class="inner">
+                <h4 class="text-2xl font-bold" id="total-online-users">0</h4>
+            </div>
+            <div class="icon">
+                <i class="ion ion-ios-people"></i>
+            </div>
+            <a href="{$_url}reports/by-date" class="small-box-footer">
+                {Lang::T('Total Online Users')}
+            </a>
+        </div>
+    </div>
+    <div class="col-lg-3 col-xs-6 d-flex">
+        <div class="small-box bg-red flex-fill">
             <div class="inner">
                 <h4 class="text-bold" style="font-size: large;">{$c_all}</h4>
             </div>
             <div class="icon">
                 <i class="ion ion-android-people"></i>
             </div>
-            <a href="{$_url}customers/list" class="small-box-footer">{Lang::T('Customers')}</a>
+            <a href="{$_url}customers/list" class="small-box-footer">
+                {Lang::T('Customers')}
+            </a>
         </div>
     </div>
 </div>
+
+
+
 <ol class="breadcrumb">
     <li>{Lang::dateFormat($start_date)}</li>
     <li>{Lang::dateFormat($current_date)}</li>
@@ -455,5 +511,47 @@
         });
     </script>
 {/if}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+    $(document).ready(function() {
+        $.ajax({
+            url: "{$_url}onlineusers/sms_balance",
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+            if (response.status === 'success' && response.data && response.data.remaining_balance) {
+                $('#sms-balance').text(response.data.remaining_balance);
+            } else if (response.message) {
+                $('#sms-balance').text('Error: ' + response.message);
+            } else {
+                $('#sms-balance').text('Unknown error');
+            }
+        },
+            error: function() {
+                $('#sms-balance').text('Failed to fetch balance');
+            }
+        });
+    });
+    </script>
+
+<script>
+$(document).ready(function() {
+    $.ajax({
+        url: "{$_url}onlineusers/summary", // Adjust this URL to your actual endpoint
+        type: 'GET',
+        dataType: 'json', // Ensure the expected response is JSON
+        success: function(data) {
+            console.log('Data fetched successfully:', data);
+            $('#total-online-users').text(data.total_users);
+            $('#online-hotspot-users').text(data.hotspot_users);
+            $('#online-ppp-users').text(data.ppoe_users);
+				
+        },
+        error: function(error) {
+            console.log('Error fetching data:', error);
+        }
+    });
+});
+</script>
 
 {include file="sections/footer.tpl"}
