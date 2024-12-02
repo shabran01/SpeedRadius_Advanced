@@ -1,6 +1,6 @@
 {include file="sections/header.tpl"}
 
-<center><a href="https://speedcomwifi.xyz" target="_blank"><img src="https://speedcomwifi.co.ke/ui/theme/default/images/logo.png" class="img-responsive"></a></center>
+<center><a href="https://speedcomwifi.xyz" target="_blank"><img src="https://raw.githubusercontent.com/shabran01/SpeedRadius_Advanced/refs/heads/main/install/img/logo.png" class="img-responsive"></a></center>
 <br><br>
 
 <div class="row">
@@ -79,7 +79,7 @@
                 <div class="btn-group btn-group-justified" role="group" aria-label="...">
                     <a href="./CHANGELOG.md" target="_blank" class="btn btn-default btn-sm btn-block">Current
                         Changelog</a>
-                    <a href="https://github.com/shabran01/SpeedRadius_Advanced/CHANGELOG.md" target="_blank"
+                    <a href="https://github.com/shabran01/SpeedRadius_Advanced/blob/main/CHANGELOG.md" target="_blank"
                         class="btn btn-default btn-sm btn-block">Repo Changelog</a>
                 </div>
             </div>
