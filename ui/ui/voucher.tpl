@@ -1,4 +1,4 @@
- {include file="sections/header.tpl"}
+{include file="sections/header.tpl"}
 <!-- voucher -->
 <div class="row" style="padding: 5px">
     <div class="col-lg-3 col-lg-offset-9">
@@ -109,9 +109,9 @@
                         <td>{$ds['type']}</td>
                         <td>{$ds['routers']}</td>
                         <td>{$ds['name_plan']}</td>
-                        <td style="background-color: black; color: black;"
-                            onmouseleave="this.style.backgroundColor = 'black';"
-                            onmouseenter="this.style.backgroundColor = 'white';">
+                        <td style="background-color: white; color: black;"
+                            onmouseleave="this.style.backgroundColor = 'white';"
+                            onmouseenter="this.style.backgroundColor = 'lightgray';">
                             {$ds['code']}</td>
                         <td>{if $ds['status'] eq '0'} <label class="btn-tag btn-tag-success"> Not Use
                             </label> {else} <label class="btn-tag btn-tag-danger">Used</label>
