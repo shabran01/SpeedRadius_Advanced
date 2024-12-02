@@ -96,7 +96,7 @@
         $.getJSON("./version.json?" + Math.random(), function(data) {
             $('#currentVersion').html('Current Version: ' + data.version);
         });
-        $.getJSON("https://github.com/shabran01/SpeedRadius_Advanced/version.json?" + Math
+        $.getJSON("https://github.com/shabran01/SpeedRadius_Advanced/blob/main/version.json" + Math
             .random(),
             function(data) {
                 $('#latestVersion').html('Latest Version: ' + data.version);
