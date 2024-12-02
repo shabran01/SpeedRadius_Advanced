@@ -1,4 +1,5 @@
 {include file="sections/header.tpl"}
+
 <!-- voucher -->
 <div class="row" style="padding: 5px">
     <div class="col-lg-3 col-lg-offset-9">
@@ -14,18 +15,19 @@
         </div>
     </div>
 </div>
+
 <div class="panel panel-hovered mb20 panel-primary">
     <div class="panel-heading">
         {if in_array($_admin['user_type'],['SuperAdmin','Admin'])}
         <div class="btn-group pull-right">
             <a class="btn btn-danger btn-xs" title="Remove used Voucher" href="{$_url}plan/remove-voucher"
                 onclick="return ask(this, 'Delete all used voucher code more than 3 months?')"><span
-                    class="glyphicon glyphicon-trash" aria-hidden="true"></span> {Lang::T('Delete')} &gt; {Lang::T('3
-                Months')}</a>
+                    class="glyphicon glyphicon-trash" aria-hidden="true"></span> {Lang::T('Delete')} &gt; {Lang::T('3 Months')}</a>
         </div>
         {/if}
         &nbsp;
     </div>
+
     <div class="panel-body">
         <form id="site-search" method="post" action="{$_url}plan/voucher/">
             <div class="row" style="padding: 5px">
@@ -42,8 +44,7 @@
                     <select class="form-control" id="router" name="router">
                         <option value="">{Lang::T('Location')}</option>
                         {foreach $routers as $r}
-                        <option value="{$r}" {if $router eq $r }selected{/if}>{$r}
-                        </option>
+                        <option value="{$r}" {if $router eq $r }selected{/if}>{$r}</option>
                         {/foreach}
                     </select>
                 </div>
@@ -85,6 +86,7 @@
             </div>
         </form>
     </div>
+
     <div class="table-responsive">
         <div style="margin-left: 5px; margin-right: 5px;">&nbsp;
             <table id="datatable" class="table table-bordered table-striped table-condensed">
@@ -116,15 +118,11 @@
                         <td>{if $ds['status'] eq '0'} <label class="btn-tag btn-tag-success"> Not Use
                             </label> {else} <label class="btn-tag btn-tag-danger">Used</label>
                             {/if}</td>
-                        <td>{if $ds['user'] eq '0'} -
-                            {else}<a href="{$_url}customers/viewu/{$ds['user']}">{$ds['user']}</a>
-                            {/if}</td>
+                        <td>{if $ds['user'] eq '0'} - {else}<a href="{$_url}customers/viewu/{$ds['user']}">{$ds['user']}</a>{/if}</td>
                         <td>{if $ds['used_date']}{Lang::dateTimeFormat($ds['used_date'])}{/if}</td>
                         <td>{if $ds['generated_by']}
-                            <a
-                                href="{$_url}settings/users-view/{$ds['generated_by']}">{$admins[$ds['generated_by']]}</a>
-                            {else} -
-                            {/if}
+                            <a href="{$_url}settings/users-view/{$ds['generated_by']}">{$admins[$ds['generated_by']]}</a>
+                            {else} - {/if}
                         </td>
                         <td>
                             {if $ds['status'] neq '1'}
@@ -145,4 +143,5 @@
     </div>
     {include file="pagination.tpl"}
 </div>
+
 {include file="sections/footer.tpl"}
