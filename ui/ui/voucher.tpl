@@ -1,16 +1,16 @@
 {include file="sections/header.tpl"}
 
-<!-- voucher -->
+<!-- Voucher Section -->
 <div class="row" style="padding: 5px">
     <div class="col-lg-3 col-lg-offset-9">
         <div class="btn-group btn-group-justified" role="group">
             <div class="btn-group" role="group">
                 <a href="{$_url}plan/add-voucher" class="btn btn-primary"><i class="ion ion-android-add"></i> 
-                    {Lang::T('Vouchers')}</a>
+                {Lang::T('Vouchers')}</a>
             </div>
             <div class="btn-group" role="group">
-                <a href="{$_url}plan/print-voucher" target="print_voucher" class="btn btn-info"><i class="ion ion-android-print"></i> 
-                    {Lang::T('Print')}</a>
+                <a href="{$_url}plan/print-voucher" target="print_voucher" class="btn btn-info"><i
+                        class="ion ion-android-print"></i> {Lang::T('Print')}</a>
             </div>
         </div>
     </div>
@@ -18,17 +18,16 @@
 
 <div class="panel panel-hovered mb20 panel-primary">
     <div class="panel-heading">
-        {if in_array($_admin['user_type'],['SuperAdmin','Admin'])}
+        {if in_array($_admin['user_type'], ['SuperAdmin', 'Admin'])}
         <div class="btn-group pull-right">
             <a class="btn btn-danger btn-xs" title="Remove used Voucher" href="{$_url}plan/remove-used-vouchers"
-                onclick="return ask(this, 'Delete all used voucher codes?')">
-                <span class="glyphicon glyphicon-trash" aria-hidden="true"></span> 
-                {Lang::T('Delete')} &gt; {Lang::T('Used')}
+                onclick="return ask(this, '{Lang::T('Delete all used voucher codes?')}')">
+                <span class="glyphicon glyphicon-trash" aria-hidden="true"></span> {Lang::T('Delete')} &gt; {Lang::T('Used')}
             </a>
         </div>
         {/if}
+        &nbsp;
     </div>
-
     <div class="panel-body">
         <form id="site-search" method="post" action="{$_url}plan/voucher/">
             <div class="row" style="padding: 5px">
@@ -75,7 +74,8 @@
                 <div class="col-lg-2">
                     <div class="btn-group btn-group-justified" role="group">
                         <div class="btn-group" role="group">
-                            <button class="btn btn-success btn-block" type="submit"><span class="fa fa-search"></span></button>
+                            <button class="btn btn-success btn-block" type="submit"><span
+                                    class="fa fa-search"></span></button>
                         </div>
                         <div class="btn-group" role="group">
                             <a class="btn btn-warning btn-block" title="Clear Search Query"
@@ -86,9 +86,8 @@
             </div>
         </form>
     </div>
-
     <div class="table-responsive">
-        <div style="margin-left: 5px; margin-right: 5px;">&nbsp;
+        <div style="margin-left: 5px; margin-right: 5px;">
             <table id="datatable" class="table table-bordered table-striped table-condensed">
                 <thead>
                     <tr>
@@ -114,23 +113,28 @@
                         <td style="background-color: white; color: black;" onmouseleave="this.style.backgroundColor = 'white';"
                             onmouseenter="this.style.backgroundColor = 'lightgray';">
                             {$ds['code']}</td>
-                        <td>{if $ds['status'] eq '0'} <label class="btn-tag btn-tag-success"> Not Use </label> 
-                            {else} <label class="btn-tag btn-tag-danger">Used</label> {/if}</td>
-                        <td>{if $ds['user'] eq '0'} - {else}<a href="{$_url}customers/viewu/{$ds['user']}">{$ds['user']}</a> {/if}</td>
+                        <td>{if $ds['status'] eq '0'} <label class="btn-tag btn-tag-success"> Not Use
+                            </label> {else} <label class="btn-tag btn-tag-danger">Used</label>
+                            {/if}</td>
+                        <td>{if $ds['user'] eq '0'} -
+                            {else}<a href="{$_url}customers/viewu/{$ds['user']}">{$ds['user']}</a>
+                            {/if}</td>
                         <td>{if $ds['used_date']}{Lang::dateTimeFormat($ds['used_date'])}{/if}</td>
                         <td>{if $ds['generated_by']}
                             <a href="{$_url}settings/users-view/{$ds['generated_by']}">{$admins[$ds['generated_by']]}</a>
-                            {else} - {/if}
+                            {else} -
+                            {/if}
                         </td>
                         <td>
                             {if $ds['status'] neq '1'}
                             <a href="{$_url}plan/voucher-view/{$ds['id']}" id="{$ds['id']}" style="margin: 0px;"
                                 class="btn btn-success btn-xs">&nbsp;&nbsp;{Lang::T('View')}&nbsp;&nbsp;</a>
                             {/if}
-                            {if in_array($_admin['user_type'],['SuperAdmin','Admin'])}
+                            {if in_array($_admin['user_type'], ['SuperAdmin', 'Admin'])}
                             <a href="{$_url}plan/voucher-delete/{$ds['id']}" id="{$ds['id']}"
                                 class="btn btn-danger btn-xs" onclick="return ask(this, '{Lang::T('Delete')}?')">
-                                <i class="glyphicon glyphicon-trash"></i></a>
+                                <i class="glyphicon glyphicon-trash"></i>
+                            </a>
                             {/if}
                         </td>
                     </tr>
