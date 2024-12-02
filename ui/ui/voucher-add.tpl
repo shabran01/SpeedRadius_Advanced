@@ -58,14 +58,6 @@
                         <p class="help-block col-md-4">UPPERCASE lowercase RaNdoM</p>
                     </div>
                     <div class="form-group">
-                        <label class="col-md-2 control-label">{Lang::T('Voucher Prefix')}</label>
-                        <div class="col-md-6">
-                            <input type="text" class="form-control" name="prefix" placeholder="NUX-"
-                                value="{$_c['voucher_prefix']}">
-                        </div>
-                        <p class="help-block col-md-4">NUX-VoUCHeRCOdE</p>
-                    </div>
-                    <div class="form-group">
                         <label class="col-md-2 control-label">{Lang::T('Length Code')}</label>
                         <div class="col-md-6">
                             <input type="text" class="form-control" name="lengthcode" value="12">
