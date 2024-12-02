@@ -4,7 +4,7 @@
 // ...
 
 _admin();
-$ui->assign('_title', Lang::T('Online Hotspot Users'));
+$ui->assign('_title', Lang::T('Online Users'));
 $ui->assign('_system_menu', 'onlineusers');
 
 $action = $routes['1'];
@@ -67,7 +67,7 @@ case 'ppp_users':
         break;
 
     case 'summary':
-        // Fetch summary of online users and total bytes used
+        // Fetch summary of online users 
         $summary = mikrotik_get_online_users_summary();
         header('Content-Type: application/json');
         echo json_encode($summary);
@@ -75,7 +75,7 @@ case 'ppp_users':
         break;
     case 'sms_balance':
         // Fetch the SMS balance
-        $api_url = 'https://portal.bytewavenetworks.com/api/http/balance?api_token=108|yS1EznTgtmhRM5prqTyXTvashAddg6zP509JhC2U6262587d  ';
+        $api_url = 'https://portal.bytewavenetworks.com/api/http/balance?api_token=110|qzbO9Ax3w6VXhtsldP69oglWEpPzCOksuvQuf4jU2240100f ';
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $api_url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -102,7 +102,7 @@ case 'ppp_users':
 // Function to round the value and append the appropriate unit
 function mikrotik_formatBytes($bytes, $precision = 2)
 {
-$units = array('B', 'KB', 'MB', 'GB', 'TB');
+    $units = array('B', 'KB', 'MB', 'GB', 'TB');
 
     $bytes = max($bytes, 0);
     $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
@@ -160,8 +160,6 @@ function mikrotik_get_hotspot_online_users()
     return empty($filteredHotspotList) ? [] : $filteredHotspotList;
 }
 
-
-
 function mikrotik_get_ppp_online_users()
 {
     global $routes;
@@ -195,41 +193,6 @@ function mikrotik_get_ppp_online_users()
     return filter_null_users($userList);
 }
 
-function save_data_usage($username, $bytes_in, $bytes_out, $connection_type) {
-    if (!$username) {
-        error_log("Error: Missing username in save_data_usage()");
-        return;
-    }
-
-    $currentTime = date('Y-m-d H:i:s');
-    $currentDate = date('Y-m-d');
-    
-    // Check if there's an existing record for this user today
-    $existingRecord = ORM::for_table('tbl_user_data_usage')
-        ->where('username', $username)
-        ->where('connection_type', $connection_type)
-        ->where_raw('DATE(timestamp) = ?', [$currentDate])
-        ->find_one();
-
-    if ($existingRecord) {
-        // Update existing record for today
-        $existingRecord->bytes_in = ($bytes_in ?: 0);
-        $existingRecord->bytes_out = ($bytes_out ?: 0);
-        $existingRecord->last_updated = $currentTime;
-        $existingRecord->save();
-    } else {
-        // Create new record for today
-        $newRecord = ORM::for_table('tbl_user_data_usage')->create();
-        $newRecord->username = $username;
-        $newRecord->bytes_in = ($bytes_in ?: 0);
-        $newRecord->bytes_out = ($bytes_out ?: 0);
-        $newRecord->connection_type = $connection_type;
-        $newRecord->timestamp = $currentTime;
-        $newRecord->last_updated = $currentTime;
-        $newRecord->save();
-    }
-}
-
 function mikrotik_get_online_users_summary()
 {
     global $routes;
@@ -245,11 +208,9 @@ function mikrotik_get_online_users_summary()
         $rxBytes = $hotspot->getProperty('bytes-in');
         $txBytes = $hotspot->getProperty('bytes-out');
         $totalHotspotUsage += $rxBytes + $txBytes;
-        $username = $hotspot->getProperty('user');
-        save_data_usage($username, $rxBytes, $txBytes, 'hotspot');
 
         $hotspotList[] = [
-            'username' => $username,
+            'username' => $hotspot->getProperty('user'),
             'address' => $hotspot->getProperty('address'),
             'uptime' => $hotspot->getProperty('uptime'),
             'server' => $hotspot->getProperty('server'),
@@ -284,11 +245,9 @@ function mikrotik_get_online_users_summary()
         $bytes_in = $pppUser->getProperty('limit-bytes-in');
         $bytes_out = $pppUser->getProperty('limit-bytes-out');
         $totalPPPoEUsage += $bytes_in + $bytes_out;
-        $username = $pppUser->getProperty('name');
-        save_data_usage($username, $bytes_in, $bytes_out, 'pppoe');
 
         $pppoeList[] = [
-            'username' => $username,
+            'username' => $pppUser->getProperty('name'),
             'address' => $pppUser->getProperty('address'),
             'uptime' => $pppUser->getProperty('uptime'),
             'service' => $pppUser->getProperty('service'),
@@ -312,6 +271,7 @@ function mikrotik_get_online_users_summary()
             $user['total'] === '0 B'
         );
     });
+
     // Calculate total data usage
     $totalDataUsage = $totalHotspotUsage + $totalPPPoEUsage;
 
