@@ -3,7 +3,7 @@
         <footer class="main-footer">
             <div class="pull-right" id="version" onclick="location.href = '{$_url}community#latestVersion';"></div>
             Mikrotik API by <a href="https://chat.whatsapp.com/HjnLYIEN6h0A0KMXbfNYP5" rel="nofollow noreferrer noopener"
-                target="_blank">SpeedRadius</a>, Theme by <a href="https://speedcomwifi.xyz/" rel="nofollow noreferrer noopener"
+                target="_blank">SpeedRadius</a>, Developed by <a href="https://speedcomwifi.xyz/" rel="nofollow noreferrer noopener"
                 target="_blank">Shabran</a>
         </footer>
 </div>
