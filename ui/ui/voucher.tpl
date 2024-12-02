@@ -1,4 +1,5 @@
 {include file="sections/header.tpl"}
+
 <!-- voucher -->
 <div class="row" style="padding: 5px">
     <div class="col-lg-3 col-lg-offset-9">
@@ -18,12 +19,10 @@
     <div class="panel-heading">
         {if in_array($_admin['user_type'],['SuperAdmin','Admin'])}
         <div class="btn-group pull-right">
-            <a class="btn btn-danger btn-xs" title="Remove used Voucher" href="{$_url}plan/remove-voucher"
-                onclick="return ask(this, 'Delete all used voucher code more than 3 months?')"><span
-                    class="glyphicon glyphicon-trash" aria-hidden="true"></span> {Lang::T('Delete')} &gt; {Lang::T('3 Months')}</a>
-            <a class="btn btn-danger btn-xs" title="Delete all vouchers" href="{$_url}plan/delete-all-vouchers"
-                onclick="return ask(this, 'Are you sure you want to delete all vouchers?')"><span
-                    class="glyphicon glyphicon-trash" aria-hidden="true"></span> {Lang::T('Delete All')}</a>
+            <a class="btn btn-danger btn-xs" title="Remove used Voucher" href="{$_url}plan/remove-used-vouchers"
+                onclick="return ask(this, 'Delete all used voucher codes?')">
+                <span class="glyphicon glyphicon-trash" aria-hidden="true"></span> {Lang::T('Delete')} &gt; {Lang::T('Used')}
+            </a>
         </div>
         {/if}
         &nbsp;
@@ -44,8 +43,7 @@
                     <select class="form-control" id="router" name="router">
                         <option value="">{Lang::T('Location')}</option>
                         {foreach $routers as $r}
-                        <option value="{$r}" {if $router eq $r }selected{/if}>{$r}
-                        </option>
+                        <option value="{$r}" {if $router eq $r }selected{/if}>{$r}</option>
                         {/foreach}
                     </select>
                 </div>
@@ -111,8 +109,7 @@
                         <td>{$ds['type']}</td>
                         <td>{$ds['routers']}</td>
                         <td>{$ds['name_plan']}</td>
-                        <td style="background-color: white; color: black;"
-                            onmouseleave="this.style.backgroundColor = 'white';"
+                        <td style="background-color: white; color: black;" onmouseleave="this.style.backgroundColor = 'white';"
                             onmouseenter="this.style.backgroundColor = 'lightgray';">
                             {$ds['code']}</td>
                         <td>{if $ds['status'] eq '0'} <label class="btn-tag btn-tag-success"> Not Use
@@ -123,8 +120,7 @@
                             {/if}</td>
                         <td>{if $ds['used_date']}{Lang::dateTimeFormat($ds['used_date'])}{/if}</td>
                         <td>{if $ds['generated_by']}
-                            <a
-                                href="{$_url}settings/users-view/{$ds['generated_by']}">{$admins[$ds['generated_by']]}</a>
+                            <a href="{$_url}settings/users-view/{$ds['generated_by']}">{$admins[$ds['generated_by']]}</a>
                             {else} -
                             {/if}
                         </td>
@@ -147,4 +143,5 @@
     </div>
     {include file="pagination.tpl"}
 </div>
+
 {include file="sections/footer.tpl"}
