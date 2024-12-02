@@ -20,8 +20,10 @@
         <div class="btn-group pull-right">
             <a class="btn btn-danger btn-xs" title="Remove used Voucher" href="{$_url}plan/remove-voucher"
                 onclick="return ask(this, 'Delete all used voucher code more than 3 months?')"><span
-                    class="glyphicon glyphicon-trash" aria-hidden="true"></span> {Lang::T('Delete')} &gt; {Lang::T('3
-                Months')}</a>
+                    class="glyphicon glyphicon-trash" aria-hidden="true"></span> {Lang::T('Delete')} &gt; {Lang::T('3 Months')}</a>
+            <a class="btn btn-danger btn-xs" title="Delete all vouchers" href="{$_url}plan/delete-all-vouchers"
+                onclick="return ask(this, 'Are you sure you want to delete all vouchers?')"><span
+                    class="glyphicon glyphicon-trash" aria-hidden="true"></span> {Lang::T('Delete All')}</a>
         </div>
         {/if}
         &nbsp;
