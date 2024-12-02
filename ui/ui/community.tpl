@@ -71,7 +71,7 @@
             <div class="box-footer">
                 <div class="btn-group btn-group-justified" role="group" aria-label="...">
                     <a href="/update.php?step=4" class="btn btn-success btn-sm btn-block">Update Database</a>
-                    <a href="https://github.com/shabran01/SpeedRadius_Advanced/archive/refs/heads/main.zip" target="_blank"
+                    <a href="./update.php" target="_blank"
                         class="btn btn-warning btn-sm btn-block text-black">Install Latest Version</a>
                 </div>
                 
