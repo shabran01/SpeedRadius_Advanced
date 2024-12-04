@@ -314,7 +314,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- Isi tabel akan dimasukkan melalui JavaScript -->
+                                <!-- The table content will be inserted via JavaScript -->
                             </tbody>
                         </table>
                     </div>
