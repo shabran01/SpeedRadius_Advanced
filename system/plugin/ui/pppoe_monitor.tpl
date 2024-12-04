@@ -417,7 +417,7 @@ $j(document).ready(function() {
     });
 
 
-    // Fungsi untuk mendapatkan batas maksimum
+    // Function to get the maximum limit
     function getMaxLimit(data) {
         if (data.hasOwnProperty('max_limit')) {
             return data.max_limit.toString();
@@ -521,16 +521,16 @@ function reconnect(id, username) {
         $j('#advancedSearchForm').on('submit', function(e) {
             e.preventDefault(); // Mencegah pengiriman form secara default
 
-            // Mendapatkan nilai dari input
+            // Retrieve the value from the input
             var username = $j('#searchUsername').val();
             var status = $j('#searchStatus').val();
 
-            // Melakukan pencarian dan menggambar ulang tabel
+            // Perform a search and redraw the table
             table.column(1).search(username).draw(); // Kolom 1 untuk username
             table.column(9).search(status).draw(); // Kolom 9 untuk status
         });
 
-        // Menambahkan ikon search ke dalam tombol
+        // Add a search icon to the button
         var searchButton = $j('<button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>');
         $j('#advancedSearchForm').append(searchButton);
     });
@@ -731,7 +731,7 @@ function createDailyChart(username) {
         });
 }
 
-// ========================================== NEW FITUR ==========================================//
+// ========================================== NEW FEATURE ==========================================//
 function generateDailyData(username, startDate, endDate) {
     return new Promise((resolve, reject) => {
         $j.ajax({
@@ -794,7 +794,7 @@ function convertToBytes(value) {
             return number;
     }
 }
-// ========================================== NEW FITUR ==========================================//
+// ========================================== NEW FEATURE ==========================================//
 function formatBytesPerSecond(bytes) {
     if (bytes === 0) {
         return '0 Bps';
@@ -806,7 +806,7 @@ function formatBytesPerSecond(bytes) {
     return formattedValue + ' ' + sizes[i];
 }
 
-// Fungsi untuk mengubah ukuran dalam byte menjadi format yang lebih mudah dibaca
+// Function to convert size in bytes to a more readable format
 function formatBytes(bytes, decimals = 2) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -916,28 +916,6 @@ function updateTrafficIcons(response) {
 }
 
 
-// Donation Popup
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-        document.getElementById('donationPopup').style.display = 'flex';
-    }, 1000);
-});
-
-document.getElementById('donationPopup').querySelector('.modalsupport-close').addEventListener('click', function() {
-    document.getElementById('donationPopup').style.display = 'none';
-});
-
-window.addEventListener('click', function(event) {
-    if (event.target === document.getElementById('donationPopup')) {
-        document.getElementById('donationPopup').style.display = 'none';
-    }
-});
-
-document.getElementById('donationPopup').querySelector('.donate-button').addEventListener('click', function() {
-    window.open('https://buymeacoffee.com/kevindonisaputra', '_blank');
-});
-
-</script>
 
 
 
