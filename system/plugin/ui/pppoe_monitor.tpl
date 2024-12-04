@@ -350,24 +350,7 @@
     </div>
   </div>
 </div>
-<div id="donationPopup" class="modalsupport">
-  <div class="modalsupport-content">
-    <span class="modalsupport-close">&times;</span>
-    <div class="container-fluid mt-5">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="modal-title">Support Us</h5>
-        </div>
-        <div class="card-body">
-          <p>Your support helps us maintain and improve our services. Consider donating today!</p>
-          <button class="btn btn-primary donate-button">Donate Now</button>
-          <p class="mt-3">Thank you for your support!</p>
-          <img src="https://kodingku.my.id/bmc_qr.png" alt="QR Code">
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+
 <script>
 var $j = jQuery.noConflict();
 
