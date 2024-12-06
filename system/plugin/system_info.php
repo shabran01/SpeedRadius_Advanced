@@ -158,6 +158,11 @@ function system_info_getSystemInfo()
         'System Distro' => system_info_getSystemDistro(),
         'CPU Cores' => system_info_get_cpu_cores(),
         'CPU Usage' => system_info_get_cpu_usage(),
+        'Memory Usage' => $memory_usage,
+        'Network Interfaces' => system_info_get_network_info(),
+        'Process Information' => system_info_get_process_info(),
+        'Service Status' => system_info_get_service_status(),
+        'Storage Information' => system_info_get_raid_status(),
         'PHP Version' => phpversion(),
         'Server Software' => $_SERVER['SERVER_SOFTWARE'],
         'Server IP Address' => $_SERVER['SERVER_ADDR'],
@@ -175,7 +180,7 @@ function system_info_getSystemInfo()
 
     return $systemInfo;
 }
-//Lets get the storage usege
+
 function system_info_get_disk_usage()
 {
     if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
@@ -347,6 +352,191 @@ function system_info_getWindowsVersion()
 
     return $version;
 }
+
+function system_info_get_network_info() {
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        // Windows system
+        $output = [];
+        exec('wmic NIC get NetConnectionID,Speed,NetConnectionStatus', $output);
+        $interfaces = [];
+        
+        // Skip the header line
+        for ($i = 1; $i < count($output); $i++) {
+            $line = trim($output[$i]);
+            if (empty($line)) continue;
+            
+            $parts = preg_split('/\s+/', $line, 3);
+            if (count($parts) === 3) {
+                $status = '';
+                switch($parts[2]) {
+                    case '0': $status = 'Disconnected'; break;
+                    case '1': $status = 'Connecting'; break;
+                    case '2': $status = 'Connected'; break;
+                    default: $status = 'Unknown';
+                }
+                
+                $interfaces[] = [
+                    'name' => $parts[0],
+                    'speed' => $parts[1] ? system_info_format_bytes($parts[1]/8, 0).'/s' : 'Unknown',
+                    'status' => $status
+                ];
+            }
+        }
+        
+        return $interfaces;
+    } else {
+        // Linux system
+        $interfaces = [];
+        $output = shell_exec("ip -s link");
+        if ($output) {
+            $lines = explode("\n", $output);
+            $current_interface = null;
+            
+            foreach ($lines as $line) {
+                if (preg_match('/^\d+:\s+([^:@]+)[:@]/', $line, $matches)) {
+                    $current_interface = [
+                        'name' => trim($matches[1]),
+                        'status' => strpos($line, 'UP') !== false ? 'Up' : 'Down',
+                        'speed' => 'Unknown',
+                        'rx_bytes' => 0,
+                        'tx_bytes' => 0
+                    ];
+                } elseif ($current_interface && strpos($line, 'RX:') !== false) {
+                    $stats = explode(' ', trim($line));
+                    $current_interface['rx_bytes'] = isset($stats[2]) ? system_info_format_bytes($stats[2]) : 0;
+                } elseif ($current_interface && strpos($line, 'TX:') !== false) {
+                    $stats = explode(' ', trim($line));
+                    $current_interface['tx_bytes'] = isset($stats[2]) ? system_info_format_bytes($stats[2]) : 0;
+                    $interfaces[] = $current_interface;
+                    $current_interface = null;
+                }
+            }
+        }
+        return $interfaces;
+    }
+}
+
+function system_info_get_process_info() {
+    $info = [];
+    
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        // Get total processes
+        $output = [];
+        exec('wmic process get ProcessId', $output);
+        $info['total_processes'] = count($output) - 1; // Subtract header line
+        
+        // Get top CPU processes
+        $output = [];
+        exec('wmic path win32_perfformatteddata_perfproc_process get Name,PercentProcessorTime /format:csv', $output);
+        $top_processes = [];
+        
+        foreach (array_slice($output, 1, 6) as $line) { // Get top 5 processes
+            $parts = explode(',', $line);
+            if (count($parts) === 3 && $parts[1] !== '_Total') {
+                $top_processes[$parts[1]] = $parts[2] . '%';
+            }
+        }
+        $info['top_processes'] = $top_processes;
+        
+    } else {
+        // Linux system
+        // Get total processes
+        $total = shell_exec('ps aux | wc -l');
+        $info['total_processes'] = trim($total) - 1; // Subtract header line
+        
+        // Get top CPU processes
+        $output = shell_exec("ps aux --sort=-%cpu | head -6"); // Get top 5 processes
+        $lines = explode("\n", $output);
+        $top_processes = [];
+        
+        for ($i = 1; $i < count($lines); $i++) {
+            $line = trim($lines[$i]);
+            if (empty($line)) continue;
+            
+            $parts = preg_split('/\s+/', $line);
+            if (count($parts) >= 11) {
+                $top_processes[$parts[10]] = $parts[2] . '%';
+            }
+        }
+        $info['top_processes'] = $top_processes;
+    }
+    
+    return $info;
+}
+
+function system_info_get_service_status() {
+    $services = ['freeradius', 'mysql', 'apache2'];
+    $status = [];
+    
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        foreach ($services as $service) {
+            $output = [];
+            exec("sc query $service", $output);
+            $running = false;
+            foreach ($output as $line) {
+                if (strpos($line, 'RUNNING') !== false) {
+                    $running = true;
+                    break;
+                }
+            }
+            $status[$service] = $running ? 'Running' : 'Stopped';
+        }
+    } else {
+        foreach ($services as $service) {
+            $output = shell_exec("systemctl is-active $service 2>&1");
+            $status[$service] = (trim($output) === 'active') ? 'Running' : 'Stopped';
+        }
+    }
+    
+    return $status;
+}
+
+function system_info_get_raid_status() {
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        $output = [];
+        exec('wmic path win32_volume get Label,FileSystem,Capacity,FreeSpace /format:csv', $output);
+        $volumes = [];
+        
+        foreach (array_slice($output, 1) as $line) {
+            $parts = explode(',', $line);
+            if (count($parts) >= 4) {
+                $volumes[] = [
+                    'label' => $parts[1],
+                    'filesystem' => $parts[2],
+                    'total' => system_info_format_bytes($parts[3]),
+                    'free' => system_info_format_bytes($parts[4])
+                ];
+            }
+        }
+        
+        return ['volumes' => $volumes];
+    } else {
+        // Try to get mdstat for Linux RAID
+        $raid_status = @file_get_contents('/proc/mdstat');
+        if ($raid_status) {
+            return ['mdstat' => $raid_status];
+        }
+        
+        // If no RAID, return basic disk health
+        $smart_output = shell_exec('smartctl --scan');
+        $disks = [];
+        if ($smart_output) {
+            $lines = explode("\n", $smart_output);
+            foreach ($lines as $line) {
+                if (preg_match('/^\/dev\/\w+/', $line, $matches)) {
+                    $disk_info = shell_exec("smartctl -H {$matches[0]}");
+                    $disks[] = [
+                        'device' => $matches[0],
+                        'health' => strpos($disk_info, 'PASSED') !== false ? 'Healthy' : 'Check Required'
+                    ];
+                }
+            }
+        }
+        
+        return ['disks' => $disks];
+    }
+}
+
 function system_info_generateServiceTable()
 {
     function system_info_check_service($service_name)
