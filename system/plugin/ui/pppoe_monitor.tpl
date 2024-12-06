@@ -942,26 +942,7 @@ function updateTrafficIcons(response) {
 }
 
 
-// Donation Popup
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-        document.getElementById('donationPopup').style.display = 'flex';
-    }, 1000);
-});
 
-document.getElementById('donationPopup').querySelector('.modalsupport-close').addEventListener('click', function() {
-    document.getElementById('donationPopup').style.display = 'none';
-});
-
-window.addEventListener('click', function(event) {
-    if (event.target === document.getElementById('donationPopup')) {
-        document.getElementById('donationPopup').style.display = 'none';
-    }
-});
-
-document.getElementById('donationPopup').querySelector('.donate-button').addEventListener('click', function() {
-    window.open('https://buymeacoffee.com/kevindonisaputra', '_blank');
-});
 
 </script>
 
