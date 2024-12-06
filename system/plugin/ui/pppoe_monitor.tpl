@@ -314,7 +314,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- The table content will be inserted via JavaScript -->
+                                <!-- Isi tabel akan dimasukkan melalui JavaScript -->
                             </tbody>
                         </table>
                     </div>
@@ -350,7 +350,24 @@
     </div>
   </div>
 </div>
-
+<div id="donationPopup" class="modalsupport">
+  <div class="modalsupport-content">
+    <span class="modalsupport-close">&times;</span>
+    <div class="container-fluid mt-5">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="modal-title">Support Us</h5>
+        </div>
+        <div class="card-body">
+          <p>Your support helps us maintain and improve our services. Consider donating today!</p>
+          <button class="btn btn-primary donate-button">Donate Now</button>
+          <p class="mt-3">Thank you for your support!</p>
+          <img src="https://kodingku.my.id/bmc_qr.png" alt="QR Code">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
 var $j = jQuery.noConflict();
 
@@ -417,7 +434,7 @@ $j(document).ready(function() {
     });
 
 
-    // Function to get the maximum limit
+    // Fungsi untuk mendapatkan batas maksimum
     function getMaxLimit(data) {
         if (data.hasOwnProperty('max_limit')) {
             return data.max_limit.toString();
@@ -521,16 +538,16 @@ function reconnect(id, username) {
         $j('#advancedSearchForm').on('submit', function(e) {
             e.preventDefault(); // Mencegah pengiriman form secara default
 
-            // Retrieve the value from the input
+            // Mendapatkan nilai dari input
             var username = $j('#searchUsername').val();
             var status = $j('#searchStatus').val();
 
-            // Perform a search and redraw the table
+            // Melakukan pencarian dan menggambar ulang tabel
             table.column(1).search(username).draw(); // Kolom 1 untuk username
             table.column(9).search(status).draw(); // Kolom 9 untuk status
         });
 
-        // Add a search icon to the button
+        // Menambahkan ikon search ke dalam tombol
         var searchButton = $j('<button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>');
         $j('#advancedSearchForm').append(searchButton);
     });
@@ -731,7 +748,7 @@ function createDailyChart(username) {
         });
 }
 
-// ========================================== NEW FEATURE ==========================================//
+// ========================================== NEW FITUR ==========================================//
 function generateDailyData(username, startDate, endDate) {
     return new Promise((resolve, reject) => {
         $j.ajax({
@@ -794,7 +811,7 @@ function convertToBytes(value) {
             return number;
     }
 }
-// ========================================== NEW FEATURE ==========================================//
+// ========================================== NEW FITUR ==========================================//
 function formatBytesPerSecond(bytes) {
     if (bytes === 0) {
         return '0 Bps';
@@ -806,7 +823,7 @@ function formatBytesPerSecond(bytes) {
     return formattedValue + ' ' + sizes[i];
 }
 
-// Function to convert size in bytes to a more readable format
+// Fungsi untuk mengubah ukuran dalam byte menjadi format yang lebih mudah dibaca
 function formatBytes(bytes, decimals = 2) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -916,6 +933,28 @@ function updateTrafficIcons(response) {
 }
 
 
+// Donation Popup
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        document.getElementById('donationPopup').style.display = 'flex';
+    }, 1000);
+});
+
+document.getElementById('donationPopup').querySelector('.modalsupport-close').addEventListener('click', function() {
+    document.getElementById('donationPopup').style.display = 'none';
+});
+
+window.addEventListener('click', function(event) {
+    if (event.target === document.getElementById('donationPopup')) {
+        document.getElementById('donationPopup').style.display = 'none';
+    }
+});
+
+document.getElementById('donationPopup').querySelector('.donate-button').addEventListener('click', function() {
+    window.open('https://buymeacoffee.com/kevindonisaputra', '_blank');
+});
+
+</script>
 
 
 
