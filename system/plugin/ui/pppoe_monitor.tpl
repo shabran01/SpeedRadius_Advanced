@@ -429,7 +429,16 @@ $j(document).ready(function() {
         searching: true,
         ajax: {
             url: '{$_url}plugin/pppoe_monitor_router_get_combined_users/{$router}',
-            dataSrc: ''
+            dataSrc: function(json) {
+                // Filter to only show PPPoE users
+                return json.filter(function(item) {
+                    return item.service && item.service.toLowerCase().includes('pppoe');
+                });
+            }
+        },
+        createdRow: function(row, data, dataIndex) {
+            // Add PPPoE specific styling if needed
+            $(row).addClass('pppoe-user');
         }
     });
 
