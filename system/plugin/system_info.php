@@ -293,8 +293,8 @@ function system_info_format_bytes($bytes, $precision = 2)
 {
     $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
 
-    $bytes = max($bytes, 0);
-    $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+    $bytes = max((float)$bytes, 0);
+    $pow = floor(($bytes ? log((float)$bytes, 1024) : 0));
     $pow = min($pow, count($units) - 1);
 
     $bytes /= pow(1024, $pow);
