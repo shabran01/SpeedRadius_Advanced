@@ -64,7 +64,7 @@ function pppoe_monitor_router_get_combined_users() {
         $client = Mikrotik::getClient($mikrotik['ip_address'], $mikrotik['username'], $mikrotik['password']);
 
         // Fetch PPP online users
-        $pppUsers = $client->sendSync(new RouterOS\Request('/ppp/active/print where service=pppoe'));
+        $pppUsers = $client->sendSync(new RouterOS\Request('/ppp/active/print'));
         $interfaceTraffic = $client->sendSync(new RouterOS\Request('/interface/print'));
 
         $interfaceData = [];
