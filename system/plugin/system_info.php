@@ -92,6 +92,47 @@ function system_info()
     return null;
 }
 
+function system_info_get_cpu_usage() {
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        // Windows system
+        $cmd = 'wmic cpu get loadpercentage';
+        $output = [];
+        exec($cmd, $output);
+        
+        if (isset($output[1])) {
+            $cpu_usage = trim($output[1]);
+            return $cpu_usage . '%';
+        }
+    } else {
+        // Linux system
+        $cmd = "top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\\([0-9.]*\\)%* id.*/\\1/' | awk '{print 100 - $1}'";
+        $cpu_usage = shell_exec($cmd);
+        
+        if ($cpu_usage !== null) {
+            return round(floatval(trim($cpu_usage)), 1) . '%';
+        }
+    }
+    return 'Unknown';
+}
+
+function system_info_get_cpu_cores() {
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        // Windows system
+        $output = [];
+        exec('wmic cpu get NumberOfCores', $output);
+        if (isset($output[1])) {
+            return trim($output[1]);
+        }
+    } else {
+        // Linux system
+        $cores = shell_exec('nproc');
+        if ($cores) {
+            return trim($cores);
+        }
+    }
+    return 'Unknown';
+}
+
 function system_info_getSystemInfo()
 {
     $memory_usage = system_info_get_server_memory_usage();
@@ -115,6 +156,8 @@ function system_info_getSystemInfo()
         'Server Name' => $serverName,
         'Operating System' => php_uname('s'),
         'System Distro' => system_info_getSystemDistro(),
+        'CPU Cores' => system_info_get_cpu_cores(),
+        'CPU Usage' => system_info_get_cpu_usage(),
         'PHP Version' => phpversion(),
         'Server Software' => $_SERVER['SERVER_SOFTWARE'],
         'Server IP Address' => $_SERVER['SERVER_ADDR'],
