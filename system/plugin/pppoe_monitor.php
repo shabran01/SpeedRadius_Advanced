@@ -368,6 +368,7 @@ function pppoe_monitor_router_daily_data_usage()
             ];
         }
 
+        
         // Tambahkan penggunaan harian untuk pengguna ini
         $daily_usage[$date]['total'] += $totalDataMB;
         $daily_usage[$date]['users'][] = [
