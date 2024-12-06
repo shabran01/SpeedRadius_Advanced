@@ -126,7 +126,7 @@ function system_info_getSystemInfo()
         'System Time' => date("F j, Y g:i a"),
         'Database Time' => date("F j, Y g:i a", strtotime($currentTime)),
         'Shell Exec Enabled' => $shellExecEnabled ? 'Yes' : 'No',
-
+        'Server Uptime' => system_info_get_uptime(),
         // Add more system information here
     ];
 
@@ -189,6 +189,56 @@ function system_info_get_disk_usage()
     }
 
     return null;
+}
+
+function system_info_get_uptime() {
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        // Windows system
+        $output = [];
+        exec('wmic os get lastbootuptime', $output);
+        
+        if (isset($output[1])) {
+            $boot_time = substr($output[1], 0, 14); // Format: YYYYMMDDHHMMSS
+            $year = substr($boot_time, 0, 4);
+            $month = substr($boot_time, 4, 2);
+            $day = substr($boot_time, 6, 2);
+            $hour = substr($boot_time, 8, 2);
+            $minute = substr($boot_time, 10, 2);
+            $second = substr($boot_time, 12, 2);
+            
+            $boot_timestamp = mktime($hour, $minute, $second, $month, $day, $year);
+            $current_timestamp = time();
+            $uptime_seconds = $current_timestamp - $boot_timestamp;
+            
+            return system_info_format_uptime($uptime_seconds);
+        }
+    } else {
+        // Linux system
+        $uptime = shell_exec('cat /proc/uptime');
+        if ($uptime) {
+            $uptime = explode(' ', $uptime)[0];
+            return system_info_format_uptime((float)$uptime);
+        }
+    }
+    return 'Unknown';
+}
+
+function system_info_format_uptime($seconds) {
+    $days = floor($seconds / 86400);
+    $hours = floor(($seconds % 86400) / 3600);
+    $minutes = floor(($seconds % 3600) / 60);
+    
+    $uptime = '';
+    if ($days > 0) {
+        $uptime .= $days . ' days ';
+    }
+    if ($hours > 0) {
+        $uptime .= $hours . ' hours ';
+    }
+    if ($minutes > 0) {
+        $uptime .= $minutes . ' minutes';
+    }
+    return trim($uptime);
 }
 
 function system_info_format_bytes($bytes, $precision = 2)
