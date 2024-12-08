@@ -1,6 +1,6 @@
 <?php
 // Your API key
-$apiKey = "dacd1b2df32e4f21840650d98d69f838";
+$apiKey = "your api key";
 
 // API endpoint
 $url = "https://blessedtexts.com/api/sms/v1/credit-balance";
