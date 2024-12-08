@@ -6,7 +6,7 @@
  **/
 
 _admin();
-$ui->assign('_title', 'PHPNuxBill Logs');
+$ui->assign('_title', 'SpeedRadius Logs');
 $ui->assign('_system_menu', 'logs');
 
 $action = $routes['1'];
