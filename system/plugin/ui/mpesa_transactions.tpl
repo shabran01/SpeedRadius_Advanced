@@ -41,7 +41,26 @@
                 </table>
             </div>
             <div class="panel-footer">
-                {include file="pagination.tpl"}
+                <div class="row">
+                    <div class="col-sm-12">
+                        <ul class="pagination">
+                            {if $current_page > 1}
+                                <li><a href="?_route=plugin/mpesa_transactions&page={$current_page - 1}">&laquo; Previous</a></li>
+                            {/if}
+                            
+                            {for $p=1 to $total_pages}
+                                <li {if $p == $current_page}class="active"{/if}>
+                                    <a href="?_route=plugin/mpesa_transactions&page={$p}">{$p}</a>
+                                </li>
+                            {/for}
+                            
+                            {if $current_page < $total_pages}
+                                <li><a href="?_route=plugin/mpesa_transactions&page={$current_page + 1}">Next &raquo;</a></li>
+                            {/if}
+                        </ul>
+                        <p class="text-muted">Showing {($current_page - 1) * 10 + 1} to {min($current_page * 10, $total_items)} of {$total_items} entries</p>
+                    </div>
+                </div>
                 <div class="bs-callout bs-callout-info" id="callout-navbar-role">
                     <h4>All Mpesa Transaction </h4>
                     <p>Transaction </p>
