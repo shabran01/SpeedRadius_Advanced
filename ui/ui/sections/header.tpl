@@ -1486,10 +1486,6 @@
                                     </a>
                                 </li>
                                 {$_MENU_SETTINGS}
-                                <li {if $_routes[0] eq 'pluginmanager' }class="active" {/if}>
-                                    <a href="{$_url}pluginmanager"><i class="glyphicon glyphicon-tasks"></i>
-                                        {Lang::T('Plugin Manager')}</a>
-                                </li>
                             {/if}
                         </ul>
                     </li>
