@@ -33,9 +33,24 @@
     {/literal}
 
     <style>
-	
-	
-	
+        /* SweetAlert2 Success Popup customization */
+        .swal2-popup {
+            width: 360px !important;
+            font-size: 0.9rem !important;
+        }
+        .swal2-icon {
+            width: 50px !important;
+            height: 50px !important;
+            margin: 0.75rem auto !important;
+        }
+        .swal2-icon .swal2-icon-content {
+            font-size: 1.75rem !important;
+        }
+        .swal2-title {
+            font-size: 1.2rem !important;
+            margin: 0.75rem 0 !important;
+            padding: 0 !important;
+        }
         /* New Customize Interface Start Here */
         @import url(https://fonts.googleapis.com/css?family=Open+Sans);
 
