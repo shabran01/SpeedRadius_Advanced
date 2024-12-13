@@ -71,32 +71,18 @@ function initiatebankstk()
     die();
  }
 
-          
-          
-          
-          
            $getpaybill = ORM::for_table('tbl_banks')
     ->where('name', $bankname)
     ->find_one();
           
-        
-     
-          
-          
-          
+      
           $paybill=$getpaybill->paybill;
           
           
           
         // echo $paybill;
           
-          
-          
-          
-          
-          
-          
-          
+
           
           $cburl = U . 'callback/BankStkPush' ;
           
@@ -133,15 +119,11 @@ function initiatebankstk()
               die();
           }
           
-          
-          
-          
-          
-          
+    
           
             
-  $consumerKey = '3AmVP1WFDQn7GrDH8GcSSKxcAvnJdZGC'; //Fill with your app Consumer Key
-  $consumerSecret = '71Lybl6jUtxM0F35'; // Fill with your app Secret
+  $consumerKey = 'AfFmBfoTA93kjkWeR36Y4VJFtUIMgWU8hPOgmp6TOVYcP7MK'; //Fill with your app Consumer Key
+  $consumerSecret = 'bGojphiSAfVAyElAC83WjAGgz1BnXJgGXE0DAtHAanFhGpkvBsVOww4HkA3Jn7T2'; // Fill with your app Secret
 
   $headers = ['Content-Type:application/json; charset=utf8'];
 
@@ -171,8 +153,8 @@ $PartyA = $phone; // This is your phone number,
   $AccountReference = $bankaccount; 
   $TransactionDesc = 'TestMapayment';
   $Amount = $amount;
-  $BusinessShortCode='4122323';
-  $Passkey='aaebecea73082fa56af852606106b1316d5b4dfa2f12d0088800b0b88e4bb6e3';
+  $BusinessShortCode='4134527';
+  $Passkey='d5549a89787be68c65d064b2da7910b9a6580be3a8ae26167ee2c0a8579883e8';
   $Timestamp = date("YmdHis",time());    
   $Password = base64_encode($BusinessShortCode.$Passkey.$Timestamp);
   $CallBackURL = $cburl; 
