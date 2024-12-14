@@ -111,4 +111,4 @@
 
 {/if}
 
-{include file="customer/footer.tpl"}
+{include file="customer/footer.tpl"}  
