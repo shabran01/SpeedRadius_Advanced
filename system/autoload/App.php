@@ -9,7 +9,7 @@ class App{
     public static function _run(){
         return true;
     }
-
+ 
     public static function getToken(){
         return md5(microtime());
     }
