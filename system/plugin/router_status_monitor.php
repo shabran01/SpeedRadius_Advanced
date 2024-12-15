@@ -9,7 +9,7 @@ use PEAR2\Net\RouterOS\Client;
 use PEAR2\Net\RouterOS\Request;
 use PEAR2\Net\RouterOS\Response;
 
-register_menu("Router Status Monitor", true, "router_status_monitor", 'AFTER_SETTINGS', 'ion ion-wifi' ,"Latest", "green");
+register_menu("Router Status Monitor", true, "router_status_monitor", 'AFTER_SETTINGS', 'ion ion-wifi' ,"Hot", "red");
 
 // Create database table if not exists
 $sql = file_get_contents(__DIR__ . '/create_router_status_table.sql');
