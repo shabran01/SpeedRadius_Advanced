@@ -217,6 +217,42 @@ CREATE TABLE `tbl_voucher` (
   `generated_by` int NOT NULL DEFAULT '0' COMMENT 'id admin'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+DROP TABLE IF EXISTS `tbl_router_status`;
+CREATE TABLE `tbl_router_status` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `router_id` INT(11) NOT NULL,
+    `status` VARCHAR(20) NOT NULL DEFAULT 'unknown',
+    `last_online` TIMESTAMP NULL,
+    `last_offline` TIMESTAMP NULL,
+    `notification_number` VARCHAR(50),
+    `whatsapp_api_url` TEXT,
+    `whatsapp_api_secret` VARCHAR(255),
+    `last_notification_sent` TIMESTAMP NULL,
+    `notification_status` TEXT,
+    `last_check` TIMESTAMP NULL,
+    `last_uptime` VARCHAR(255) NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `router_id` (`router_id`),
+    FOREIGN KEY (`router_id`) REFERENCES `tbl_routers`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+SET @dbname = DATABASE();
+SET @tablename = "tbl_router_status";
+SET @columnname = "last_uptime";
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      TABLE_SCHEMA = @dbname
+      AND TABLE_NAME = @tablename
+      AND COLUMN_NAME = @columnname
+  ) > 0,
+  "SELECT 1",
+  CONCAT("ALTER TABLE ", @tablename, " ADD COLUMN ", @columnname, " VARCHAR(255) NULL")
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
 
 DROP TABLE IF EXISTS `rad_acct`;
 CREATE TABLE `rad_acct` (
@@ -355,7 +391,6 @@ COMMIT;
 INSERT INTO
     `tbl_appconfig` (`id`, `setting`, `value`)
 VALUES (1, 'CompanyName', 'SpeedRadius'), (2, 'currency_code', 'Ksh.'), (3, 'language', 'english'), (4, 'show-logo', '1'), (5, 'nstyle', 'blue'), (6, 'timezone', 'Asia/Jakarta'), (7, 'dec_point', ','), (8, 'thousands_sep', '.'), (9, 'rtl', '0'), (10, 'address', ''), (11, 'phone', ''), (12, 'date_format', 'd M Y'), (13, 'note', 'Thank you...');
-
 
 INSERT INTO
     `tbl_users` (
