@@ -294,6 +294,19 @@ CREATE TABLE IF NOT EXISTS `tbl_meta` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='This Table to add additional data for any table';
 
+DROP TABLE IF EXISTS `tbl_sms_logs`;
+CREATE TABLE `tbl_sms_logs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `phone` varchar(20) NOT NULL,
+  `message` text NOT NULL,
+  `message_id` varchar(50) DEFAULT NULL,
+  `status` varchar(20) NOT NULL,
+  `status_message` text,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 ALTER TABLE `rad_acct`
   ADD PRIMARY KEY (`id`),
   ADD KEY `username` (`username`),
