@@ -1,121 +1,145 @@
 {include file="sections/header.tpl"}
 
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <div class="form-group mb-0">
+                    <label for="router_filter">{Lang::T('Filter by Router')}:</label>
+                    <select class="form-control" id="router_filter" onchange="filterDashboard()">
+                        <option value="all">{Lang::T('All Routers')}</option>
+                        {foreach $routers as $router}
+                            <option value="{$router['id']}">{$router['name']}</option>
+                        {/foreach}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     {if in_array($_admin['user_type'], ['SuperAdmin', 'Admin', 'Report'])}
-        <div class="col-lg-3 col-xs-6 d-flex">
-            <div class="small-box bg-aqua flex-fill">
+        <div class="col-lg-3 col-xs-6">
+            <div class="small-box bg-aqua">
                 <div class="inner">
-                    <h4 class="text-bold" style="font-size: large;">
+                    <h4 class="text-bold income-today" style="font-size: large;">
                         <sup>{$_c['currency_code']}</sup>
-                        {number_format($iday, 0, $_c['dec_point'], $_c['thousands_sep'])}
+                        <span class="amount">{number_format($iday, 0, $_c['dec_point'], $_c['thousands_sep'])}</span>
                     </h4>
+                    <p>{Lang::T('Income Today')}</p>
                 </div>
                 <div class="icon">
                     <i class="ion ion-cash"></i>
                 </div>
                 <a href="{$_url}reports/by-date" class="small-box-footer">
-                    {Lang::T('Income Today')}
+                    {Lang::T('View Report')} <i class="fa fa-arrow-circle-right"></i>
                 </a>
             </div>
         </div>
-        <div class="col-lg-3 col-xs-6 d-flex">
-            <div class="small-box bg-green flex-fill">
+        <div class="col-lg-3 col-xs-6">
+            <div class="small-box bg-green">
                 <div class="inner">
-                    <h4 class="text-bold" style="font-size: large;">
+                    <h4 class="text-bold income-month" style="font-size: large;">
                         <sup>{$_c['currency_code']}</sup>
-                        {number_format($imonth, 0, $_c['dec_point'], $_c['thousands_sep'])}
+                        <span class="amount">{number_format($imonth, 0, $_c['dec_point'], $_c['thousands_sep'])}</span>
                     </h4>
+                    <p>{Lang::T('Income This Month')}</p>
                 </div>
                 <div class="icon">
                     <i class="ion ion-stats-bars"></i>
                 </div>
                 <a href="{$_url}reports/by-period" class="small-box-footer">
-                    {Lang::T('Income This Month')}
+                    {Lang::T('View Report')} <i class="fa fa-arrow-circle-right"></i>
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-3 col-xs-6">
+            <div class="small-box bg-yellow">
+                <div class="inner">
+                    <h4 class="text-bold users-stats" style="font-size: large;">
+                        <span class="amount">{$u_act}/{$u_all - $u_act}</span>
+                    </h4>
+                    <p>{Lang::T('Active')}/{Lang::T('Expired')}</p>
+                </div>
+                <div class="icon">
+                    <i class="ion ion-person"></i>
+                </div>
+                <a href="{$_url}customers/list" class="small-box-footer">
+                    {Lang::T('View Customers')} <i class="fa fa-arrow-circle-right"></i>
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-3 col-xs-6">
+            <div class="small-box bg-blue">
+                <div class="inner">
+                    <h4 class="text-bold online-users" style="font-size: large;">
+                        <span class="amount">{$online_users}</span>
+                    </h4>
+                    <p>{Lang::T('Online PPPoE Users')}</p>
+                </div>
+                <div class="icon">
+                    <i class="ion ion-wifi"></i>
+                </div>
+                <a href="{$_url}customers/online" class="small-box-footer">
+                    {Lang::T('View Online')} <i class="fa fa-arrow-circle-right"></i>
                 </a>
             </div>
         </div>
     {/if}
-    <div class="col-lg-3 col-xs-6 d-flex">
-        <div class="small-box bg-yellow flex-fill">
-            <div class="inner">
-                <h4 class="text-bold" style="font-size: large;">{$u_act}/{$u_all - $u_act}</h4>
-            </div>
-            <div class="icon">
-                <i class="ion ion-person"></i>
-            </div>
-            <a href="{$_url}plan/list" class="small-box-footer">
-                {Lang::T('Active')}/{Lang::T('Expired')}
-            </a>
-        </div>
-    </div>
-    <div class="col-lg-3 col-xs-6 d-flex">
-        <div class="small-box bg-light-blue flex-fill">
-            <div class="inner">
-                <h4 class="text-2xl font-bold" id="online-ppp-users">0</h4>
-            </div>
-            <div class="icon">
-                <i class="ion ion-network"></i>
-            </div>
-            <a href="{$_url}plugin/pppoe_monitor_router_menu" class="small-box-footer">
-                {Lang::T('Online PPPoE Users')}
-            </a>
-        </div>
-    </div>
 </div>
+
 <div class="row">
-    <div class="col-lg-3 col-xs-6 d-flex">
-        <div class="small-box bg-orange flex-fill">
+    <div class="col-lg-3 col-xs-6">
+        <div class="small-box bg-orange">
             <div class="inner">
-                <h4 class="text-2xl font-bold" id="online-hotspot-users">0</h4>
+                <h4 class="text-bold hotspot-users" style="font-size: large;">
+                    <span class="amount">{$hotspot_users}</span>
+                </h4>
+                <p>{Lang::T('Online Hotspot Users')}</p>
             </div>
             <div class="icon">
                 <i class="ion ion-wifi"></i>
             </div>
-            <a href="{$_url}onlineusers/hotspot" class="small-box-footer">
-                {Lang::T('Online Hotspot Users')}
+            <a href="{$_url}customers/online" class="small-box-footer">
+                {Lang::T('View Online')} <i class="fa fa-arrow-circle-right"></i>
             </a>
         </div>
     </div>
-    <div class="col-lg-3 col-xs-6 d-flex">
-        <div class="small-box bg-purple flex-fill">
+    <div class="col-lg-3 col-xs-6">
+        <div class="small-box bg-purple">
             <div class="inner">
-                <h4 class="text-2xl font-bold" id="total-online-users">0</h4>
+                <h4 class="text-bold total-online" style="font-size: large;">
+                    <span class="amount">{$total_online}</span>
+                </h4>
+                <p>{Lang::T('Total Online Users')}</p>
             </div>
             <div class="icon">
-                <i class="ion ion-ios-people"></i>
+                <i class="ion ion-person-stalker"></i>
             </div>
-            <a href="{$_url}reports/by-date" class="small-box-footer">
-                {Lang::T('Total Online Users')}
+            <a href="{$_url}customers/online" class="small-box-footer">
+                {Lang::T('View All')} <i class="fa fa-arrow-circle-right"></i>
             </a>
         </div>
     </div>
-    <div class="col-lg-3 col-xs-6 d-flex">
-        <div class="small-box bg-red flex-fill">
+    <div class="col-lg-3 col-xs-6">
+        <div class="small-box bg-red">
             <div class="inner">
-                <h4 class="text-bold" style="font-size: large;">{$c_all}</h4>
+                <h4 class="text-bold total-customers" style="font-size: large;">
+                    <span class="amount">{$c_all}</span>
+                </h4>
+                <p>{Lang::T('Total Customers')}</p>
             </div>
             <div class="icon">
-                <i class="ion ion-android-people"></i>
+                <i class="ion ion-android-contacts"></i>
             </div>
             <a href="{$_url}customers/list" class="small-box-footer">
-                {Lang::T('Customers')}
+                {Lang::T('View All')} <i class="fa fa-arrow-circle-right"></i>
             </a>
         </div>
     </div>
 </div>
 
-
-
-<ol class="breadcrumb">
-    <li>{Lang::dateFormat($start_date)}</li>
-    <li>{Lang::dateFormat($current_date)}</li>
-    {if $_c['enable_balance'] == 'yes' && in_array($_admin['user_type'],['SuperAdmin','Admin', 'Report'])}
-        <li onclick="window.location.href = '{$_url}customers&search=&order=balance&filter=Active&orderby=desc'" style="cursor: pointer;">
-            {Lang::T('Customer Balance')} <sup>{$_c['currency_code']}</sup>
-            <b>{number_format($cb,0,$_c['dec_point'],$_c['thousands_sep'])}</b>
-        </li>
-    {/if}
-</ol>
 <div class="row">
     <div class="col-md-7">
 
@@ -471,46 +495,53 @@
         {/literal}
     {/if}
 </script>
-{if $_c['new_version_notify'] != 'disable'}
-    <script>
-        window.addEventListener('DOMContentLoaded', function() {
-            $.getJSON("./version.json?" + Math.random(), function(data) {
-                var localVersion = data.version;
-                $('#version').html('Version: ' + localVersion);
-                $.getJSON(
-                    "https://raw.githubusercontent.com/hotspotbilling/phpnuxbill/master/version.json?" +
-                    Math
-                    .random(),
-                    function(data) {
-                        var latestVersion = data.version;
-                        if (localVersion !== latestVersion) {
-                            $('#version').html('Latest Version: ' + latestVersion);
-                            if (getCookie(latestVersion) != 'done') {
-                                Swal.fire({
-                                    icon: 'info',
-                                    title: "New Version Available\nVersion: " + latestVersion,
-                                    toast: true,
-                                    position: 'bottom-right',
-                                    showConfirmButton: true,
-                                    showCloseButton: true,
-                                    timer: 30000,
-                                    confirmButtonText: '<a href="{$_url}community#latestVersion" style="color: white;">Update Now</a>',
-                                    timerProgressBar: true,
-                                    didOpen: (toast) => {
-                                        toast.addEventListener('mouseenter', Swal.stopTimer)
-                                        toast.addEventListener('mouseleave', Swal
-                                            .resumeTimer)
-                                    }
-                                });
-                                setCookie(latestVersion, 'done', 7);
-                            }
-                        }
-                    });
-            });
-
+<script type="text/javascript">
+    function filterDashboard() {
+        var routerId = $('#router_filter').val();
+        console.log('Filtering for router:', routerId);
+        
+        $.ajax({
+            url: '{$_url}dashboard/filter',
+            type: 'POST',
+            data: { router_id: routerId },
+            dataType: 'json',
+            success: function(data) {
+                // Update income today
+                $('.income-today .amount').text(data.income_today);
+                
+                // Update income this month
+                $('.income-month .amount').text(data.income_month);
+                
+                // Update users stats
+                $('.users-stats .amount').text(data.active_users + '/' + data.expired_users);
+                
+                // Update online PPPoE users
+                $('.online-users .amount').text(data.online_users);
+                
+                // Update hotspot users
+                $('.hotspot-users .amount').text(data.hotspot_users);
+                
+                // Update total online users
+                $('.total-online .amount').text(data.total_online);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error filtering dashboard:', error);
+            }
         });
-    </script>
-{/if}
+    }
+    
+    // Store original values when page loads
+    $(document).ready(function() {
+        $('.amount').each(function() {
+            var $this = $(this);
+            $this.data('original-value', $this.html());
+        });
+        
+        // Add change event listener to router filter
+        $('#router_filter').on('change', filterDashboard);
+    });
+</script>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
     $(document).ready(function() {
