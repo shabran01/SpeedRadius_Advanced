@@ -55,6 +55,24 @@ if ($imonth == '') {
 }
 $ui->assign('imonth', $imonth);
 
+// Get total online PPPoE users across all routers
+$online_pppoe = ORM::for_table('tbl_user_recharges')
+    ->where('status', 'on')
+    ->where('type', 'PPPOE')
+    ->count();
+$ui->assign('online_users', $online_pppoe);
+
+// Get total online Hotspot users across all routers
+$online_hotspot = ORM::for_table('tbl_user_recharges')
+    ->where('status', 'on')
+    ->where('type', 'Hotspot')
+    ->count();
+$ui->assign('hotspot_users', $online_hotspot);
+
+// Calculate total online users
+$total_online = $online_pppoe + $online_hotspot;
+$ui->assign('total_online', $total_online);
+
 if ($config['enable_balance'] == 'yes'){
     $cb = ORM::for_table('tbl_customers')->whereGte('balance', 0)->sum('balance');
     $ui->assign('cb', $cb);
@@ -228,6 +246,125 @@ $ui->assign('xfooter', '');
 $ui->assign('monthlyRegistered', $monthlyRegistered);
 $ui->assign('stocks', $stocks);
 $ui->assign('plans', $plans);
+
+// Get all routers for the filter dropdown
+$routers = ORM::for_table('tbl_routers')->find_many();
+$ui->assign('routers', $routers);
+
+if (isset($routes[1]) && $routes[1] == 'filter') {
+    header('Content-Type: application/json');
+    
+    try {
+        $router_id = _post('router_id');
+        error_log("Router ID received: " . $router_id);
+        
+        // Get router name if specific router selected
+        if($router_id != 'all') {
+            $router = ORM::for_table('tbl_routers')->find_one($router_id);
+            if(!$router) {
+                throw new Exception('Router not found');
+            }
+            $router_name = $router->name;
+            error_log("Router name: " . $router_name);
+        }
+        
+        $data = array();
+        $current_date = date('Y-m-d');
+        $start_date = date('Y-m-01');
+        
+        if ($router_id == 'all') {
+            $data['income_today'] = ORM::for_table('tbl_transactions')
+                ->where('recharged_on', $current_date)
+                ->sum('price') ?: "0";
+                
+            $data['income_month'] = ORM::for_table('tbl_transactions')
+                ->where_gte('recharged_on', $start_date)
+                ->where_lte('recharged_on', $current_date)
+                ->sum('price') ?: "0";
+            
+            // Get active users (status = 'on')
+            $data['active_users'] = ORM::for_table('tbl_user_recharges')
+                ->where('status', 'on')
+                ->count();
+            
+            // Get expired users (status = 'off')
+            $data['expired_users'] = ORM::for_table('tbl_user_recharges')
+                ->where('status', 'off')
+                ->count();
+            
+            // Get all online PPPoE users across all routers
+            $data['online_users'] = ORM::for_table('tbl_user_recharges')
+                ->where('status', 'on')
+                ->where('type', 'PPPOE')
+                ->count();
+                
+            // Get all online Hotspot users across all routers
+            $data['hotspot_users'] = ORM::for_table('tbl_user_recharges')
+                ->where('status', 'on')
+                ->where('type', 'Hotspot')
+                ->count();
+            
+            // Calculate total online users
+            $data['total_online'] = $data['online_users'] + $data['hotspot_users'];
+            
+        } else {
+            $data['income_today'] = ORM::for_table('tbl_transactions')
+                ->where('recharged_on', $current_date)
+                ->where('routers', $router_name)
+                ->sum('price') ?: "0";
+            
+            $data['income_month'] = ORM::for_table('tbl_transactions')
+                ->where('routers', $router_name)
+                ->where_gte('recharged_on', $start_date)
+                ->where_lte('recharged_on', $current_date)
+                ->sum('price') ?: "0";
+            
+            // Get active users for this router
+            $data['active_users'] = ORM::for_table('tbl_user_recharges')
+                ->where('routers', $router_name)
+                ->where('status', 'on')
+                ->count();
+            
+            // Get expired users for this router
+            $data['expired_users'] = ORM::for_table('tbl_user_recharges')
+                ->where('routers', $router_name)
+                ->where('status', 'off')
+                ->count();
+            
+            // Get online PPPoE users for this router
+            $data['online_users'] = ORM::for_table('tbl_user_recharges')
+                ->where('routers', $router_name)
+                ->where('status', 'on')
+                ->where('type', 'PPPOE')
+                ->count();
+                
+            // Get online Hotspot users for this router
+            $data['hotspot_users'] = ORM::for_table('tbl_user_recharges')
+                ->where('routers', $router_name)
+                ->where('status', 'on')
+                ->where('type', 'Hotspot')
+                ->count();
+                
+            // Calculate total online users for this router
+            $data['total_online'] = $data['online_users'] + $data['hotspot_users'];
+        }
+        
+        // Format the numbers
+        $data['income_today'] = number_format((float)$data['income_today'], 0, $_c['dec_point'], $_c['thousands_sep']);
+        $data['income_month'] = number_format((float)$data['income_month'], 0, $_c['dec_point'], $_c['thousands_sep']);
+        
+        error_log("Final data being sent: " . print_r($data, true));
+        echo json_encode($data);
+        
+    } catch (Exception $e) {
+        error_log("Error in dashboard filter: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    
+    exit();
+}
 
 run_hook('view_dashboard'); #HOOK
 $ui->display('dashboard.tpl');
