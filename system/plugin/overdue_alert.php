@@ -29,6 +29,7 @@ function overdue_alert()
     }
 
     $today = date('Y-m-d');
+    $tomorrow = date('Y-m-d', strtotime('+1 day'));
     $five_days_later = date('Y-m-d', strtotime('+5 days'));
 
     $d = ORM::for_table('tbl_transactions')
@@ -38,13 +39,23 @@ function overdue_alert()
         ->select('tbl_customers.phonenumber')
         ->select('tbl_customers.email')
         ->join('tbl_customers', array('tbl_transactions.username', '=', 'tbl_customers.username'))
-        ->where_gte('expiration', $today)
+        ->where_gte('expiration', $tomorrow) // Only show from tomorrow onwards
         ->where_lte('expiration', $five_days_later)
         ->where('tbl_customers.status', 'Active')
         ->order_by_desc('expiration')
         ->find_many();
 
-    $ui->assign('d', $d);
+    // Filter out any records with less than 1 day remaining
+    $filtered_d = array();
+    foreach ($d as $record) {
+        $days_left = ceil((strtotime($record['expiration']) - time()) / 86400);
+        if ($days_left >= 1) {
+            $record['days_left'] = $days_left;
+            $filtered_d[] = $record;
+        }
+    }
+
+    $ui->assign('d', $filtered_d);
     $ui->assign('xfooter', '<script type="text/javascript" src="ui/lib/c/overdue_alert.js"></script>');
     $ui->display('overdue_alert.tpl');
 }
