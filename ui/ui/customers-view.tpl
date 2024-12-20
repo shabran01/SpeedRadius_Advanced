@@ -244,7 +244,11 @@
                                     class="btn btn-danger btn-block btn-sm"
                                     onclick="return ask(this, 'This will deactivate Customer Plan, and make it expired')">{Lang::T('Deactivate')}</a>
                             </div>
-                            <div class="col-xs-8">
+                            <div class="col-xs-4">
+                                <a href="{$_url}plan/edit/{$package['id']}&token={$csrf_token}"
+                                    class="btn btn-warning btn-sm btn-block">{Lang::T('Edit Plan')}</a>
+                            </div>
+                            <div class="col-xs-4">
                                 <a href="{$_url}customers/recharge/{$d['id']}/{$package['plan_id']}&token={$csrf_token}"
                                     class="btn btn-success btn-sm btn-block">{Lang::T('Recharge')}</a>
                             </div>
