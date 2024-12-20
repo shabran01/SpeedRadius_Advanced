@@ -19,11 +19,13 @@
 - Whatsapp Notification to Consumer
 - Telegram Notification for Admin
 
-See [How it Works / Cara Kerja](https://github.com/hotspotbilling/phpnuxbill/wiki/How-It-Works---Cara-kerja)
+See [How it Works ](https://github.com/hotspotbilling/phpnuxbill/wiki/How-It-Works---Cara-kerja)
 
 ## Payment Gateway And Plugin
 
-- MPESA
+- Mpesa Paybill C2B
+- Mpesa Till
+- Paystack
 - BANK
 
 You can download payment gateway and Plugin from Plugin Manager
