@@ -65,7 +65,7 @@
                 <div class="icon">
                     <i class="ion ion-person"></i>
                 </div>
-                <a href="{$_url}customers/list" class="small-box-footer">
+                <a href="{$_url}plan/list" class="small-box-footer">
                     {Lang::T('View Customers')} <i class="fa fa-arrow-circle-right"></i>
                 </a>
             </div>
@@ -117,8 +117,8 @@
             </a>
         </div>
     </div>
-    <div class="col-lg-3 col-xs-6">
-        <div class="small-box bg-red">
+    <div class="col-lg-3 col-xs-6 d-flex">
+        <div class="small-box bg-red flex-fill">
             <div class="inner">
                 <h4 class="text-bold total-customers" style="font-size: large;">
                     <span class="amount">{$c_all}</span>
@@ -128,9 +128,7 @@
             <div class="icon">
                 <i class="ion ion-android-contacts"></i>
             </div>
-            <a href="{$_url}customers/list" class="small-box-footer">
-                {Lang::T('View All')} <i class="fa fa-arrow-circle-right"></i>
-            </a>
+          
         </div>
     </div>
 </div>
