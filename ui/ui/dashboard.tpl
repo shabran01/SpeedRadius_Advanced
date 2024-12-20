@@ -70,10 +70,14 @@
                 </a>
             </div>
         </div>
-      <div class="col-lg-3 col-xs-6 d-flex">
-        <div class="small-box bg-light-blue flex-fill">
-            <div class="inner">
-                <h4 class="text-2xl font-bold" id="online-ppp-users">0</h4>
+     <div class="col-lg-3 col-xs-6">
+            <div class="small-box bg-blue">
+                <div class="inner">
+                 <h4 class="text-bold online-users" style="font-size: large;">
+                        <span class="amount">{$online_users}</span>
+                    </h4>
+                    <p>{Lang::T('Online PPPoE Users')}</p>
+
             </div>
             <div class="icon">
                 <i class="ion ion-network"></i>
