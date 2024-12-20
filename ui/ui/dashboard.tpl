@@ -70,55 +70,46 @@
                 </a>
             </div>
         </div>
-        <div class="col-lg-3 col-xs-6">
-            <div class="small-box bg-blue">
-                <div class="inner">
-                    <h4 class="text-bold online-users" style="font-size: large;">
-                        <span class="amount">{$online_users}</span>
-                    </h4>
-                    <p>{Lang::T('Online PPPoE Users')}</p>
-                </div>
-                <div class="icon">
-                    <i class="ion ion-wifi"></i>
-                </div>
-                <a href="{$_url}customers/online" class="small-box-footer">
-                    {Lang::T('View Online')} <i class="fa fa-arrow-circle-right"></i>
-                </a>
+      <div class="col-lg-3 col-xs-6 d-flex">
+        <div class="small-box bg-light-blue flex-fill">
+            <div class="inner">
+                <h4 class="text-2xl font-bold" id="online-ppp-users">0</h4>
             </div>
+            <div class="icon">
+                <i class="ion ion-network"></i>
+            </div>
+            <a href="{$_url}plugin/pppoe_monitor_router_menu" class="small-box-footer">
+                {Lang::T('Online PPPoE Users')}
+            </a>
+        </div>
         </div>
     {/if}
 </div>
 
 <div class="row">
-    <div class="col-lg-3 col-xs-6">
-        <div class="small-box bg-orange">
+     <div class="col-lg-3 col-xs-6 d-flex">
+        <div class="small-box bg-orange flex-fill">
             <div class="inner">
-                <h4 class="text-bold hotspot-users" style="font-size: large;">
-                    <span class="amount">{$hotspot_users}</span>
-                </h4>
-                <p>{Lang::T('Online Hotspot Users')}</p>
+                <h4 class="text-2xl font-bold" id="online-hotspot-users">0</h4>
             </div>
             <div class="icon">
                 <i class="ion ion-wifi"></i>
             </div>
-            <a href="{$_url}customers/online" class="small-box-footer">
-                {Lang::T('View Online')} <i class="fa fa-arrow-circle-right"></i>
+            <a href="{$_url}onlineusers/hotspot" class="small-box-footer">
+                {Lang::T('Online Hotspot Users')}
             </a>
         </div>
     </div>
-    <div class="col-lg-3 col-xs-6">
-        <div class="small-box bg-purple">
+  <div class="col-lg-3 col-xs-6 d-flex">
+        <div class="small-box bg-purple flex-fill">
             <div class="inner">
-                <h4 class="text-bold total-online" style="font-size: large;">
-                    <span class="amount">{$total_online}</span>
-                </h4>
-                <p>{Lang::T('Total Online Users')}</p>
+                <h4 class="text-2xl font-bold" id="total-online-users">0</h4>
             </div>
             <div class="icon">
-                <i class="ion ion-person-stalker"></i>
+                <i class="ion ion-ios-people"></i>
             </div>
-            <a href="{$_url}customers/online" class="small-box-footer">
-                {Lang::T('View All')} <i class="fa fa-arrow-circle-right"></i>
+            <a href="{$_url}reports/by-date" class="small-box-footer">
+                {Lang::T('Total Online Users')}
             </a>
         </div>
     </div>
