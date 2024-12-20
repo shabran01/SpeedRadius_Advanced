@@ -1,4 +1,3 @@
-![ReadMeSupportPalestine](https://speedcomwifi.co.ke/ui/theme/default/images/logo.png)
 
 # SpeedRadius - API Based PHP Mikrotik Billing System
 
