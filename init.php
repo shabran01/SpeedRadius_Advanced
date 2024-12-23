@@ -5,6 +5,16 @@
  *  by https://t.me/ibnux
  **/
 
+if(function_exists('opcache_enable')) {
+    opcache_enable();
+    opcache_set_directive('opcache.memory_consumption', 128);
+    opcache_set_directive('opcache.interned_strings_buffer', 8);
+    opcache_set_directive('opcache.max_accelerated_files', 4000);
+    opcache_set_directive('opcache.revalidate_freq', 60);
+    opcache_set_directive('opcache.fast_shutdown', 1);
+    opcache_set_directive('opcache.enable_cli', 1);
+}
+
 if (realpath(__FILE__) == realpath($_SERVER['SCRIPT_FILENAME'])) {
     header('HTTP/1.0 403 Forbidden', TRUE, 403);
     header('location: ../');
