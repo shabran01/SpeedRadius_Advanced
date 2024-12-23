@@ -32,7 +32,7 @@
                                 <th>{Lang::T('Router Name')}</th>
                                 <th>{Lang::T('IP Address')}</th>
                                 <th>{Lang::T('Status')}</th>
-                                <th>{Lang::T('Uptime')}</th>
+                                <th>{Lang::T('Uptime/Offline Duration')}</th>
                                 <th>{Lang::T('Free Memory')}</th>
                                 <th>{Lang::T('CPU Load')}</th>
                                 <th>{Lang::T('Manage')}</th>
@@ -159,12 +159,24 @@ $(document).ready(function() {
                         row.find('.router-cpu-load').html(resources.cpuLoad);
                     }
 
-                    // Update router status
+                    // Update router status and uptime/offline duration
                     var statusElement = row.find('.router-status');
+                    var uptimeElement = row.find('.router-uptime');
+                    
                     if (resources.status === 'Online') {
                         statusElement.html('<span class="status online">Online</span>');
+                        uptimeElement.html(resources.uptime || 'N/A');
+                        uptimeElement.css('color', '#28a745'); // Green for uptime
+                        
+                        row.find('.router-used-memory').html(resources.freeMemory);
+                        row.find('.router-cpu-load').html(resources.cpuLoad);
                     } else {
                         statusElement.html('<span class="status offline">Offline</span>');
+                        uptimeElement.html(resources.offline_duration || 'Unknown');
+                        uptimeElement.css('color', '#dc3545'); // Red for offline duration
+                        
+                        row.find('.router-used-memory').html('N/A');
+                        row.find('.router-cpu-load').html('N/A');
                     }
                 } else {
                     row.find('.' + elementClass).html('N/A');
