@@ -20,6 +20,17 @@ function _notify($msg, $type = 'e')
 }
 
 $ui = new Smarty();
+$ui->setCaching(Smarty::CACHING_LIFETIME_CURRENT);
+
+// Optimize template engine settings
+$ui->setCompileCheck(false); // Disable compile checking in production
+$ui->setCaching(true);
+$ui->setCacheLifetime(3600); // Cache templates for 1 hour
+$ui->setMergeCompiledIncludes(true);
+
+// Enable template compression
+$ui->loadFilter('output', 'trimwhitespace');
+
 $ui->assign('_kolaps', $_COOKIE['kolaps']);
 if (!empty($config['theme']) && $config['theme'] != 'default') {
     $_theme = APP_URL . '/' . $UI_PATH . '/themes/' . $config['theme'];
@@ -51,6 +62,11 @@ $ui->assign('UPLOAD_PATH', str_replace($root_path, '',  $UPLOAD_PATH));
 $ui->assign('CACHE_PATH', str_replace($root_path, '',  $CACHE_PATH));
 $ui->assign('PAGES_PATH', str_replace($root_path, '',  $PAGES_PATH));
 $ui->assign('_system_menu', 'dashboard');
+
+// Add Database Query Cache Configuration
+ORM::configure('caching', true);
+ORM::configure('caching_auto_clear', true);
+ORM::configure('cache_query_result', 3600); // Cache queries for 1 hour
 
 function _msglog($type, $msg)
 {
