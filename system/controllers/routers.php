@@ -30,14 +30,17 @@ function mikrotik_get_resources($routerId)
     if (!$mikrotik) {
         return [
             'status' => 'Offline',
+            'offline_duration' => 'N/A'
         ];
     }
 
     try {
         $client = Mikrotik::getClient($mikrotik['ip_address'], $mikrotik['username'], $mikrotik['password']);
-
-        $health = $client->sendSync(new RouterOS\Request('/system health print'));
         $res = $client->sendSync(new RouterOS\Request('/system resource print'));
+        
+        if (!$res) {
+            throw new Exception('No response from router');
+        }
 
         $resourceData = $res->getAllOfType(RouterOS\Response::TYPE_DATA)[0];
         $uptime = $resourceData->getProperty('uptime');
@@ -45,18 +48,64 @@ function mikrotik_get_resources($routerId)
         $totalMemory = $resourceData->getProperty('total-memory');
         $cpuLoad = $resourceData->getProperty('cpu-load');
 
-        $status = ($uptime !== null && $freeMemory !== null && $totalMemory !== null && $cpuLoad !== null) ? 'Online' : 'Offline';
+        if (!$uptime || !$freeMemory || !$totalMemory || !$cpuLoad) {
+            throw new Exception('Incomplete router response');
+        }
+
+        // Router is online - update status
+        $mikrotik->set('status', 'Online');
+        $mikrotik->set('last_seen', date('Y-m-d H:i:s'));
+        $mikrotik->set('offline_since', null);
+        $mikrotik->save();
 
         return [
-            'status' => $status,
+            'status' => 'Online',
             'uptime' => $uptime,
             'freeMemory' => mikrotik_formatSize($freeMemory),
             'totalMemory' => mikrotik_formatSize($totalMemory),
             'cpuLoad' => $cpuLoad . '%'
         ];
-    } catch (TimeoutException | ConnectionException $e) {
+
+    } catch (Exception | TimeoutException | ConnectionException $e) {
+        // Router is offline - update status
+        if ($mikrotik->status !== 'Offline') {
+            $mikrotik->set('status', 'Offline');
+            if ($mikrotik->offline_since === null) {
+                $mikrotik->set('offline_since', date('Y-m-d H:i:s'));
+            }
+            $mikrotik->save();
+        }
+
+        // Calculate offline duration
+        $offline_duration = '';
+        if ($mikrotik->offline_since) {
+            $offline_since = new DateTime($mikrotik->offline_since);
+            $now = new DateTime();
+            $interval = $offline_since->diff($now);
+            
+            if ($interval->d > 0) {
+                $offline_duration .= $interval->d . 'd ';
+            }
+            if ($interval->h > 0) {
+                $offline_duration .= $interval->h . 'h ';
+            }
+            if ($interval->i > 0) {
+                $offline_duration .= $interval->i . 'm';
+            }
+            if ($offline_duration === '') {
+                $offline_duration = 'Just now';
+            }
+        } else {
+            $offline_duration = 'Unknown';
+        }
+
         return [
             'status' => 'Offline',
+            'offline_duration' => $offline_duration,
+            'uptime' => null,
+            'freeMemory' => 'N/A',
+            'totalMemory' => 'N/A',
+            'cpuLoad' => 'N/A'
         ];
     }
 }
