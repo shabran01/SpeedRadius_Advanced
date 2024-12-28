@@ -1,0 +1,39 @@
+.sort-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-left: 5px;
+    position: relative;
+    opacity: 0.3;
+}
+
+.sorting_asc .sort-icon:after {
+    content: '▲';
+    position: absolute;
+    opacity: 1;
+}
+
+.sorting_desc .sort-icon:after {
+    content: '▼';
+    position: absolute;
+    opacity: 1;
+}
+
+#overdue_table th {
+    cursor: pointer;
+}
+
+#overdue_table th:hover .sort-icon {
+    opacity: 1;
+}
+
+/* Style the sorted column */
+#overdue_table th.sorting_asc,
+#overdue_table th.sorting_desc {
+    background-color: #f8f9fa;
+}
+
+/* Highlight sorted column */
+#overdue_table td.sorting_1 {
+    background-color: rgba(0,0,0,.05);
+}
