@@ -30,8 +30,8 @@
                                             {$router.status|ucfirst}
                                         </span>
                                     </td>
-                                    <td class="last-seen">{$router.last_check}</td>
-                                    <td class="uptime">{$router.last_uptime}</td>
+                                    <td class="last-seen">{$router.last_online|default:'Never'}</td>
+                                    <td class="uptime">{$router.last_uptime|default:''}</td>
                                     <td>
                                         <form class="notification-form" method="post">
                                             <input type="hidden" name="router_id" value="{$router.id}">
@@ -61,6 +61,24 @@
     </div>
 </div>
 
+<style>
+    .status-changed {
+        animation: flash-row 2s ease-out;
+    }
+    @keyframes flash-row {
+        0% { background-color: transparent; }
+        50% { background-color: rgba(255, 255, 0, 0.3); }
+        100% { background-color: transparent; }
+    }
+    .router-status .label {
+        display: inline-block;
+        min-width: 60px;
+        text-align: center;
+    }
+    .notification-form .input-group {
+        max-width: 250px;
+    }
+</style>
 <script>
     var baseURL = '{$_url}';
 </script>
