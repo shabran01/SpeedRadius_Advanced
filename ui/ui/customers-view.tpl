@@ -392,25 +392,30 @@
                                     {$package['routers']} <span class="pull-right">{$package['method']}</span>
                                 </li>
                             </ul>
-                            <div class="row">
+                            <div class="row" style="margin-bottom: 10px;">
                                 {if $_c['extend_expired']}
-                                <div class="col-xs-3">
+                                <div class="col-xs-4">
                                     <a href="{$_url}customers/deactivate/{$d['id']}/{$package['plan_id']}&token={$csrf_token}" id="{$d['id']}"
                                         class="btn btn-3d btn-3d-danger btn-sm btn-block"
                                         onclick="return ask(this, 'This will deactivate Customer Plan, and make it expired')">{Lang::T('Deactivate')}</a>
                                 </div>
-                                <div class="col-xs-3">
+                                <div class="col-xs-4">
                                     <a href="{$_url}plan/edit/{$package['id']}&token={$csrf_token}"
                                         class="btn btn-3d btn-3d-primary btn-sm btn-block">{Lang::T('Edit Plan')}</a>
                                 </div>
-                                <div class="col-xs-3">
+                                <div class="col-xs-4">
                                     <a href="{$_url}customers/recharge/{$d['id']}/{$package['plan_id']}&token={$csrf_token}"
                                         class="btn btn-3d btn-3d-success btn-sm btn-block">{Lang::T('Recharge')}</a>
                                 </div>
-                                <div class="col-xs-3">
+                                <div class="col-xs-6" style="margin-top: 5px;">
                                     <button onclick="extendPackage('{$package['id']}')" class="btn btn-3d btn-3d-warning btn-sm btn-block">
                                         <i class="fa fa-clock-o"></i> {Lang::T('Extend')}
                                     </button>
+                                </div>
+                                <div class="col-xs-6" style="margin-top: 5px;">
+                                    <a href="{$_url}customers/delete_package/{$d['id']}/{$package['id']}&token={$csrf_token}" id="{$d['id']}"
+                                        class="btn btn-3d btn-3d-danger btn-sm btn-block"
+                                        onclick="return ask(this, 'This will permanently delete this package. Are you sure?')"><i class="fa fa-trash"></i> Delete</a>
                                 </div>
                                 {else}
                                 <div class="col-xs-4">
@@ -425,6 +430,16 @@
                                 <div class="col-xs-4">
                                     <a href="{$_url}customers/recharge/{$d['id']}/{$package['plan_id']}&token={$csrf_token}"
                                         class="btn btn-3d btn-3d-success btn-sm btn-block">{Lang::T('Recharge')}</a>
+                                </div>
+                                <div class="col-xs-6" style="margin-top: 5px;">
+                                    <button onclick="extendPackage('{$package['id']}')" class="btn btn-3d btn-3d-warning btn-sm btn-block">
+                                        <i class="fa fa-clock-o"></i> {Lang::T('Extend')}
+                                    </button>
+                                </div>
+                                <div class="col-xs-6" style="margin-top: 5px;">
+                                    <a href="{$_url}customers/delete_package/{$d['id']}/{$package['id']}&token={$csrf_token}" id="{$d['id']}"
+                                        class="btn btn-3d btn-3d-danger btn-sm btn-block"
+                                        onclick="return ask(this, 'This will permanently delete this package. Are you sure?')"><i class="fa fa-trash"></i> Delete</a>
                                 </div>
                                 {/if}
                             </div>

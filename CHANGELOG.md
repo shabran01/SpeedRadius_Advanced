@@ -2,6 +2,26 @@
 
 # CHANGELOG
 
+## [2.1.23] - 2025-08-19
+
+### ADDED: Delete Package Feature
+- **✨ New Feature**: Added ability to delete customer packages
+  - **📁 Files Modified**:
+    - `system/controllers/customers.php` - Added new delete_package function to handle package deletion
+    - `ui/ui/customers-view.tpl` - Added Delete button to package management interface
+
+  - **🔧 Technical Implementation**:
+    - Created new controller function to safely delete packages
+    - Added confirmation dialog to prevent accidental deletions
+    - Implements proper cleanup of inactive packages
+    - Added responsive button layout with icon for better usability
+    - Arranged buttons in two rows for cleaner interface on all screen sizes
+
+  - **💡 Key Benefits**:
+    - Administrators can now completely remove unwanted packages from customer accounts
+    - Improved package management workflow with direct delete functionality
+    - Better cleanup of unused or expired packages in the system
+
 ## [2.1.22] - 2025-08-17
 
 ### REMOVED: VPN Services

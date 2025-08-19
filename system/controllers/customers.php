@@ -380,6 +380,48 @@ switch ($action) {
             r2(U . 'customers/view/' . $id_customer, 'e', 'Cannot find active plan');
         }
         break;
+    case 'delete_package':
+        if (!in_array($admin['user_type'], ['SuperAdmin', 'Admin'])) {
+            _alert(Lang::T('You do not have permission to access this page'), 'danger', "dashboard");
+        }
+        $id_customer = $routes['2'];
+        $package_id = $routes['3'];
+        $csrf_token = _req('token');
+        if (!Csrf::check($csrf_token)) {
+            r2(U . 'customers/view/' . $id_customer, 'e', Lang::T('Invalid or Expired CSRF Token') . ".");
+        }
+        $package = ORM::for_table('tbl_user_recharges')->find_one($package_id);
+        if ($package) {
+            // First deactivate if needed
+            if ($package['status'] == 'on') {
+                $p = ORM::for_table('tbl_plans')->where('id', $package['plan_id'])->find_one();
+                if ($p) {
+                    $c = User::_info($id_customer);
+                    $dvc = Package::getDevice($p);
+                    if ($_app_stage != 'demo') {
+                        if (file_exists($dvc)) {
+                            require_once $dvc;
+                            (new $p['device'])->remove_customer($c, $p);
+                        } else {
+                            new Exception(Lang::T("Devices Not Found"));
+                        }
+                    }
+                }
+            }
+            
+            // Now delete the package
+            $package_name = $package['namebp'];
+            $username = $package['username'];
+            $package->delete();
+            
+            _log('Admin ' . $admin['username'] . ' Deleted package ' . $package_name . ' for ' . $username, 'User', $id_customer);
+            Message::sendTelegram('Admin ' . $admin['username'] . ' Deleted package ' . $package_name . ' for u' . $username);
+            r2(U . 'customers/view/' . $id_customer, 's', 'Successfully deleted package');
+        } else {
+            r2(U . 'customers/view/' . $id_customer, 'e', 'Cannot find package');
+        }
+        break;
+        
     case 'deactivate':
         if (!in_array($admin['user_type'], ['SuperAdmin', 'Admin'])) {
             _alert(Lang::T('You do not have permission to access this page'), 'danger', "dashboard");

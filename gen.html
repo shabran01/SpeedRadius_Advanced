@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WireGuard Config Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="bg-gray-900 p-6 rounded-xl shadow-2xl border border-gray-700 w-full max-w-3xl">
+        <h2 class="text-3xl font-extrabold mb-4 text-center text-blue-400 drop-shadow-lg">WireGuard Config Generator</h2>
+        
+        <textarea id="configInput" rows="6" class="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-gray-400 text-sm" placeholder="Paste your WireGuard config here..."></textarea>
+        
+        <button onclick="generateScript()" class="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg">
+            Generate Script
+        </button>
+        
+        <p id="statusMessage" class="text-center text-sm mt-3 text-gray-400"></p>
+        
+        <!-- Output Section -->
+        <div id="outputContainer" class="hidden mt-6">
+            <h3 class="text-lg font-bold text-blue-400 mb-2">Generated Script:</h3>
+            <textarea id="outputText" rows="6" class="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-700 text-sm resize-none" readonly></textarea>
+            <div class="flex mt-3 space-x-2">
+                <button onclick="copyToClipboard()" class="w-1/2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg">
+                    Copy to Clipboard
+                </button>
+                <button onclick="downloadScript()" class="w-1/2 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg">
+                    Download Script
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let generatedScript = "";
+
+        function generateScript() {
+            let input = document.getElementById("configInput").value;
+            let statusMessage = document.getElementById("statusMessage");
+            let outputContainer = document.getElementById("outputContainer");
+            let outputText = document.getElementById("outputText");
+
+            let addressMatch = input.match(/Address\s*=\s*([\d.\/]+)/);
+            let privateKeyMatch = input.match(/PrivateKey\s*=\s*([\w+=\/]+)/);
+            let publicKeyMatch = input.match(/PublicKey\s*=\s*([\w+=\/]+)/);
+            let presharedKeyMatch = input.match(/PresharedKey\s*=\s*([\w+=\/]+)/);
+            let endpointMatch = input.match(/Endpoint\s*=\s*([\d.:]+)/);
+
+            if (!addressMatch || !privateKeyMatch || !publicKeyMatch || !presharedKeyMatch || !endpointMatch) {
+                statusMessage.textContent = "?? Invalid input. Please provide a full WireGuard config.";
+                statusMessage.classList.add("text-red-400");
+                return;
+            }
+
+            let clientName = `wg-client-${addressMatch[1].split('.')[3]}`;
+
+            generatedScript = `/interface/wireguard/add name=${clientName} listen-port=51820 private-key="${privateKeyMatch[1]}"
+/ip/address/add address=${addressMatch[1]} interface=${clientName}
+/ip/dns/set servers=8.8.8.8,8.8.4.4
+/interface/wireguard/peers/add interface=${clientName} public-key="${publicKeyMatch[1]}" \\
+preshared-key="${presharedKeyMatch[1]}" allowed-address=0.0.0.0/0,::/0 \\
+endpoint-address=${endpointMatch[1].split(':')[0]} endpoint-port=${endpointMatch[1].split(':')[1]} persistent-keepalive=25
+/ip/firewall/filter/add chain=input action=accept protocol=udp dst-port=51820 comment="Allow WireGuard traffic"
+/ip/firewall/filter/add chain=forward action=accept in-interface=${clientName} comment="Allow traffic from WireGuard clients"
+/interface/wireguard/print
+/interface/wireguard/peers/print`;
+
+            outputText.value = generatedScript;
+            outputContainer.classList.remove("hidden");
+
+            statusMessage.textContent = "? Script generated successfully!";
+            statusMessage.classList.remove("text-red-400");
+            statusMessage.classList.add("text-green-400");
+        }
+
+        function copyToClipboard() {
+            let outputText = document.getElementById("outputText");
+            outputText.select();
+            document.execCommand("copy");
+            alert("? Script copied to clipboard!");
+        }
+
+        function downloadScript() {
+            if (!generatedScript) return;
+            let clientName = `wg-client`;
+            let blob = new Blob([generatedScript], { type: "text/plain" });
+            let a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `${clientName}.rsc`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+
+</body>
+</html>
