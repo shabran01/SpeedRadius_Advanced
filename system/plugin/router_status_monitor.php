@@ -6,18 +6,7 @@
 
 use PEAR2\Net\RouterOS;
 use PEAR2\Net\RouterOS\Client;
-use PEAR2\Net\        $router_status = ORM::for_table('tbl_router_status')
-            ->where('router_id', $router['id'])
-            ->find_one();
-            
-        $response[] = array(
-            'router_id' => $router['id'],
-            'status' => $statusInfo['status'],
-            'last_online' => $router_status ? $router_status->last_online : null,
-            'last_offline' => $router_status ? $router_status->last_offline : null,
-            'last_notification' => $router_status ? $router_status->last_notification_sent : null,
-            'last_uptime' => isset($statusInfo['uptime']) ? $statusInfo['uptime'] : ($router_status ? $router_status->last_uptime : null)
-        );uest;
+use PEAR2\Net\RouterOS\Request;
 use PEAR2\Net\RouterOS\Response;
 
 register_menu("Router Status Monitor", true, "router_status_monitor", 'AFTER_SETTINGS', 'ion ion-wifi' ,"Hot", "yellow");
