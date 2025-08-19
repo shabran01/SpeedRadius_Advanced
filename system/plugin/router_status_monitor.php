@@ -140,9 +140,13 @@ function router_status_monitor()
         }
     }
 
+    // Check WhatsApp Gateway configuration
+    $whatsapp_configured = !empty($config['whatsapp_gateway_url']) && function_exists('whatsappGateway_hook_send_whatsapp');
+    
     // Assign template variables
     $ui->assign('routers', $routers);
     $ui->assign('_system_menu', 'settings');
+    $ui->assign('whatsapp_configured', $whatsapp_configured);
     
     // Display template
     $ui->display('router_status_monitor.tpl');
@@ -248,6 +252,9 @@ function updateRouterStatus($router_id, $statusInfo) {
 }
 
 function testNotification($router_id) {
+    // Enable error logging
+    error_log("Test Notification called for router ID: $router_id");
+    
     // Check if router exists
     $router = ORM::for_table('tbl_routers')->find_one($router_id);
     if (!$router) {
@@ -276,29 +283,58 @@ function testNotification($router_id) {
 
     // Validate WhatsApp Gateway configuration
     if (!function_exists('whatsappGateway_hook_send_whatsapp')) {
-        header('Content-Type: application/json');
-        echo json_encode([
-            'success' => false,
-            'message' => 'WhatsApp Gateway not properly configured'
-        ]);
-        return;
+        error_log("WhatsApp Gateway function not available");
+        
+        // Try to include the WhatsApp Gateway plugin
+        $whatsapp_plugin_path = __DIR__ . '/WhatsappGateway.php';
+        if (file_exists($whatsapp_plugin_path)) {
+            include_once $whatsapp_plugin_path;
+        }
+        
+        // Check again after inclusion attempt
+        if (!function_exists('whatsappGateway_hook_send_whatsapp')) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'WhatsApp Gateway not properly configured. Please make sure WhatsApp Gateway plugin is enabled.'
+            ]);
+            return;
+        }
     }
 
     // Prepare test message
     $message = "🔔 Router Monitor Test Message\n\n";
     $message .= "📡 Router: {$router->name}\n";
     $message .= "📍 IP: {$router->ip_address}\n";
-    $message .= "✅ Status: " . ($router_status->status === 'online' ? "ONLINE" : "OFFLINE") . "\n\n";
+    $message .= "✅ Status: " . ($router_status->status === 'online' ? "ONLINE" : "OFFLINE") . "\n";
+    $message .= "📅 Date: " . date('Y-m-d H:i:s') . "\n\n";
     $message .= "This is a test message to verify WhatsApp notifications are working correctly.";
 
     try {
+        global $config;
+        
+        // Check WhatsApp Gateway URL configuration
+        if (empty($config['whatsapp_gateway_url'])) {
+            error_log("WhatsApp Gateway URL not configured");
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'WhatsApp Gateway URL not configured. Please set it in System Settings.'
+            ]);
+            return;
+        }
+        
         // Send test message
+        error_log("Attempting to send test message to: " . $router_status->notification_number);
         $result = whatsappGateway_hook_send_whatsapp([
             $router_status->notification_number,
             $message
         ]);
+        
+        // Log the result
+        error_log("WhatsApp send result: " . ($result ? $result : "Empty result"));
 
-        if ($result) {
+        if ($result && strpos($result, 'error') === false) {
             // Update last notification time
             $router_status->last_notification_sent = date('Y-m-d H:i:s');
             $router_status->save();
@@ -309,10 +345,11 @@ function testNotification($router_id) {
                 'message' => 'Test notification sent successfully'
             ]);
         } else {
+            $error_msg = $result ? $result : 'Failed to send WhatsApp message';
             header('Content-Type: application/json');
             echo json_encode([
                 'success' => false,
-                'message' => 'Failed to send WhatsApp message'
+                'message' => $error_msg
             ]);
         }
     } catch (Exception $e) {

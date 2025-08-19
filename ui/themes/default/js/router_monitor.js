@@ -75,6 +75,14 @@ $(document).ready(function() {
             return;
         }
         
+        // First check if the button is disabled due to no number
+        if (btn.prop('disabled') && !btn.hasClass('testing')) {
+            showNotification('error', 'Please enter a WhatsApp number first and click Save');
+            return;
+        }
+        
+        // Add testing class to track state
+        btn.addClass('testing');
         btn.prop('disabled', true)
            .html('<i class="fa fa-spinner fa-spin"></i> Testing...');
            
@@ -97,7 +105,11 @@ $(document).ready(function() {
             showNotification('error', message);
         })
         .always(function() {
-            btn.prop('disabled', false)
+            btn.removeClass('testing');
+            // Only re-enable if there's a notification number
+            var form = btn.closest('tr').find('form.notification-form');
+            var number = form.find('input[name="notification_number"]').val();
+            btn.prop('disabled', !number)
                .html('Test Notification');
         });
     });

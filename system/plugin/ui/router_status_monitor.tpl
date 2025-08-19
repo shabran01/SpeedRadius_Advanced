@@ -2,6 +2,11 @@
 
 <div class="row">
     <div class="col-sm-12">
+        {if !$whatsapp_configured}
+            <div class="alert alert-warning">
+                <i class="fa fa-exclamation-triangle"></i> WhatsApp Gateway is not properly configured. Test notification feature will not work until you <a href="{$_url}plugin/whatsappGateway" class="alert-link">configure the WhatsApp Gateway</a>.
+            </div>
+        {/if}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <h3 class="panel-title">Router Status Monitor</h3>
