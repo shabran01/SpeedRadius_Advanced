@@ -164,12 +164,33 @@ function r2($to, $ntype = 'e', $msg = '')
 
 function copyFolder($from, $to, $exclude = [])
 {
+    // Paths to exclude from updates
+    $excludePaths = [
+        'settings/notifications',
+        'plugin/whatsappGateway'
+    ];
+    
     $files = scandir($from);
     foreach ($files as $file) {
         if (is_file($from . $file) && !in_array($file, $exclude)) {
             if (file_exists($to . $file)) unlink($to . $file);
             rename($from . $file, $to . $file);
         } else if (is_dir($from . $file) && !in_array($file, ['.', '..'])) {
+            // Check if this directory should be excluded from update
+            $relativePath = str_replace(pathFixer('./'), '', $to . $file);
+            $skipDir = false;
+            foreach ($excludePaths as $excludePath) {
+                if (strpos($relativePath, $excludePath) !== false) {
+                    $skipDir = true;
+                    break;
+                }
+            }
+            
+            if ($skipDir) {
+                // Skip this directory during update
+                continue;
+            }
+            
             if (!file_exists($to . $file)) {
                 mkdir($to . $file);
             }
