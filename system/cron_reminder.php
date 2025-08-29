@@ -55,19 +55,26 @@ foreach ($d as $ds) {
         $notif_type = 'sms'; // default fallback
         if (isset($_notifmsg['reminder_notification'])) {
             $notif_type = $_notifmsg['reminder_notification'];
+            echo "Using notification setting from _notifmsg: " . $notif_type . "\n";
         } else if (isset($config['reminder_notification'])) {
             // Fallback to old config system
             $notif_type = $config['reminder_notification'];
+            echo "Using notification setting from config: " . $notif_type . "\n";
         } else {
             $notif_type = 'sms';
+            echo "Using default notification setting: " . $notif_type . "\n";
         }
+        echo "Final notification type: " . $notif_type . "\n";
         
         if ($ds['expiration'] == $day7) {
-            Message::sendPackageNotification($c, $p['name_plan'], $price, Lang::getNotifText('reminder_7_day'), $notif_type);
+            echo "Sending 7-day reminder to: " . $c['fullname'] . " (" . $c['phonenumber'] . ") via: " . $notif_type . "\n";
+            echo Message::sendPackageNotification($c, $p['name_plan'], $price, Lang::getNotifText('reminder_7_day'), $notif_type) . "\n";
         } else if ($ds['expiration'] == $day3) {
-            Message::sendPackageNotification($c, $p['name_plan'], $price, Lang::getNotifText('reminder_3_day'), $notif_type);
+            echo "Sending 3-day reminder to: " . $c['fullname'] . " (" . $c['phonenumber'] . ") via: " . $notif_type . "\n";
+            echo Message::sendPackageNotification($c, $p['name_plan'], $price, Lang::getNotifText('reminder_3_day'), $notif_type) . "\n";
         } else if ($ds['expiration'] == $day1) {
-            Message::sendPackageNotification($c, $p['name_plan'], $price, Lang::getNotifText('reminder_1_day'), $notif_type);
+            echo "Sending 1-day reminder to: " . $c['fullname'] . " (" . $c['phonenumber'] . ") via: " . $notif_type . "\n";
+            echo Message::sendPackageNotification($c, $p['name_plan'], $price, Lang::getNotifText('reminder_1_day'), $notif_type) . "\n";
         }
     }
 }
