@@ -2,6 +2,215 @@
 
 # CHANGELOG
 
+## [2.1.26] - 2025-08-30
+
+### ADDED: Sales Audit Plugin - Comprehensive Sales Analysis & Comparison System
+- **✨ Major New Feature**: Complete sales audit and comparison plugin with advanced analytics and visual reporting
+  
+  - **🎯 Core Features Implemented**:
+    - **Today vs Yesterday**: Real-time daily sales comparison with transaction counts
+    - **Weekly Comparison**: Same weekday comparison (e.g., Tuesday vs last Tuesday)
+    - **Monthly Comparison**: Same date comparison between months  
+    - **Week/Month to Date**: Progressive running totals with percentage changes
+    - **Visual Performance Indicators**: Color-coded growth/decline arrows and percentages
+
+  - **📊 Advanced Analytics Dashboard**:
+    - **Interactive Charts**: Hourly sales distribution, payment method breakdowns, trend analysis
+    - **Top Performing Plans**: Revenue ranking with transaction counts and performance bars
+    - **Payment Gateway Analysis**: Distribution by method with percentages and visual charts
+    - **Performance Statistics**: Best/worst periods, success rates, growth momentum tracking
+
+  - **📈 Comprehensive Comparison Engine**:
+    - **Multiple Period Analysis**: Today, This Week, This Month, Custom date ranges
+    - **Detailed Metrics**: Sales amounts, transaction counts, average transaction values
+    - **Daily Breakdown Tables**: Side-by-side period comparisons with growth indicators
+    - **Percentage Change Calculations**: Accurate growth/decline analysis with visual indicators
+
+  - **📅 Trends Analysis System**:
+    - **Time Period Options**: 7 days (daily), 30 days (daily), 12 months (monthly)
+    - **Growth Analysis**: Period-over-period percentage changes with trend indicators
+    - **Activity Tracking**: Sales success rates and performance consistency metrics
+    - **Statistical Insights**: Highest/lowest performing periods, average calculations
+
+  - **📁 Files Created**:
+    - `system/plugin/SalesAudit.php` - Main plugin with comprehensive functionality
+    - `system/plugin/SalesAuditConfig.php` - Configuration settings and helper functions
+    - `system/plugin/install_SalesAudit.php` - Installation verification script
+    - `system/plugin/SalesAudit_README.md` - Complete documentation and usage guide
+    - `system/plugin/SalesAudit_SUMMARY.md` - Implementation summary and features overview
+    - `ui/ui/salesAudit.tpl` - Main dashboard template with comparison cards
+    - `ui/ui/salesAuditComparison.tpl` - Detailed comparison analysis interface
+    - `ui/ui/salesAuditTrends.tpl` - Trends analysis and visualization template
+    - `ui/ui/styles/salesAudit.css` - Enhanced styling for professional presentation
+
+  - **🔧 Technical Implementation**:
+    - **Database Integration**: Optimized queries using existing `tbl_transactions` table
+    - **Smart Filtering**: Excludes balance transfers and admin adjustments for accurate sales data
+    - **Performance Optimization**: 12-hour caching for monthly data, auto-refresh every 5 minutes
+    - **Security**: Role-based access (Admin/SuperAdmin), XSS protection, parameterized queries
+    - **Responsive Design**: Mobile-friendly interface with Bootstrap compatibility
+
+  - **🎨 Visual Enhancements**:
+    - **Chart.js Integration**: Interactive line charts, pie charts, and trend visualizations
+    - **Color-Coded Indicators**: Green for growth, red for decline, with percentage displays
+    - **Professional Styling**: Gradient backgrounds, hover effects, responsive layouts
+    - **Data Visualization**: Progress bars, performance metrics, statistical summaries
+
+  - **🔌 API Endpoints**:
+    - `/plugin/salesAudit&action=api&endpoint=comparison` - Sales comparison data
+    - `/plugin/salesAudit&action=api&endpoint=trends` - Trend analysis data
+    - `/plugin/salesAudit&action=api&endpoint=hourly` - Hourly sales breakdown
+    - `/plugin/salesAudit&action=api&endpoint=payment-methods` - Payment method distribution
+
+  - **💡 Business Impact**:
+    - **Performance Monitoring**: Real-time visibility into sales performance vs historical data
+    - **Trend Identification**: Spot seasonal patterns, growth momentum, and performance issues
+    - **Data-Driven Decisions**: Comprehensive analytics for business planning and optimization
+    - **Revenue Insights**: Understand top-performing plans and payment method preferences
+    - **Growth Tracking**: Monitor business growth with accurate percentage calculations and visual indicators
+
+  - **🚀 Usage Examples**:
+    - Daily morning reviews with "Today vs Yesterday" performance cards
+    - Weekly business assessments using same-day comparisons
+    - Monthly revenue analysis with detailed breakdown tables
+    - Long-term trend identification for strategic planning
+    - Payment gateway performance optimization
+
+## [2.1.25] - 2025-08-29
+
+### FIXED: Reminder Notification System Not Sending Automatically
+- **🐛 Critical Bug Fix**: Resolved issue where reminder notifications (7-day, 3-day, 1-day expiry warnings) were not being sent automatically via SMS and WhatsApp
+  
+  - **🔍 Root Cause Identified**: 
+    - Cron job `system/cron_reminder.php` was not executing automatically on the server
+    - Configuration was correct but automation mechanism was failing
+    
+  - **📁 Files Modified/Created**:
+    - `system/cron_reminder.php` - Added comprehensive debugging output
+    - `test_reminder.php` - Created diagnostic script to verify notification system functionality
+    - `manual_reminder_trigger.php` - Created manual trigger for immediate testing
+    - `web_cron_reminder.php` - Created web-based cron alternative for external scheduling
+    - `check_cron_status.php` - Created cron diagnostic tool
+    - `cron_reminder_debug.php` - Created detailed debug version with logging
+    - `setup_windows_reminder_cron.bat` - Created Windows Task Scheduler setup script
+    - `run_reminders.bat` - Created manual batch execution script
+
+  - **🔧 Technical Improvements**:
+    - Enhanced notification type detection from `$_notifmsg['reminder_notification']` with fallback to `$config['reminder_notification']`
+    - Added comprehensive logging and debugging output for troubleshooting
+    - Verified notification configuration reads "both" (SMS + WhatsApp) correctly
+    - Confirmed `Message::sendPackageNotification()` method handles dual-channel notifications properly
+    - Implemented multiple automation solutions for different server environments
+
+  - **✅ Verification Results**:
+    - Manual testing confirmed 12 reminder notifications sent successfully
+    - Both SMS and WhatsApp channels working correctly
+    - Notification messages properly formatted with customer details, pricing, and payment information
+    - All expiry periods (1-day, 3-day, 7-day) functioning as expected
+
+  - **🚀 Automation Solutions Provided**:
+    - **Linux Servers**: Verified existing cron job syntax and provided troubleshooting steps
+    - **Windows Servers**: Created automated Task Scheduler setup
+    - **Web-based Alternative**: Implemented external cron service compatibility
+    - **Manual Triggers**: Created immediate testing and backup execution methods
+
+  - **💡 Impact**:
+    - Customers now receive timely SMS and WhatsApp reminders before package expiration
+    - Reduced support requests about unexpected service disconnections
+    - Improved customer retention through proactive renewal notifications
+    - Enhanced system reliability with multiple backup execution methods
+
+## [2.1.26] - 2025-08-30
+
+### ADDED: Sales Audit Plugin - Comprehensive Sales Analysis & Comparison System
+- **✨ Major New Feature**: Complete sales audit and comparison plugin with advanced analytics and visual reporting
+  
+  - **🎯 Core Features Implemented**:
+    - **Today vs Yesterday**: Real-time daily sales comparison with transaction counts
+    - **Weekly Comparison**: Same weekday comparison (e.g., Tuesday vs last Tuesday)
+    - **Monthly Comparison**: Same date comparison between months  
+    - **Week/Month to Date**: Progressive running totals with percentage changes
+    - **Visual Performance Indicators**: Color-coded growth/decline arrows and percentages
+
+  - **📊 Advanced Analytics Dashboard**:
+    - **Interactive Charts**: Hourly sales distribution, payment method breakdowns, trend analysis
+    - **Top Performing Plans**: Revenue ranking with transaction counts and performance bars
+    - **Payment Gateway Analysis**: Distribution by method with percentages and visual charts
+    - **Performance Statistics**: Best/worst periods, success rates, growth momentum tracking
+
+  - **📈 Comprehensive Comparison Engine**:
+    - **Multiple Period Analysis**: Today, This Week, This Month, Custom date ranges
+    - **Detailed Metrics**: Sales amounts, transaction counts, average transaction values
+    - **Daily Breakdown Tables**: Side-by-side period comparisons with growth indicators
+    - **Percentage Change Calculations**: Accurate growth/decline analysis with visual indicators
+
+  - **📅 Trends Analysis System**:
+    - **Time Period Options**: 7 days (daily), 30 days (daily), 12 months (monthly)
+    - **Growth Analysis**: Period-over-period percentage changes with trend indicators
+    - **Activity Tracking**: Sales success rates and performance consistency metrics
+    - **Statistical Insights**: Highest/lowest performing periods, average calculations
+
+  - **📁 Files Created**:
+    - `system/plugin/SalesAudit.php` - Main plugin with comprehensive functionality
+    - `system/plugin/SalesAuditConfig.php` - Configuration settings and helper functions
+    - `system/plugin/install_SalesAudit.php` - Installation verification script
+    - `system/plugin/SalesAudit_README.md` - Complete documentation and usage guide
+    - `system/plugin/SalesAudit_SUMMARY.md` - Implementation summary and features overview
+    - `ui/ui/salesAudit.tpl` - Main dashboard template with comparison cards
+    - `ui/ui/salesAuditComparison.tpl` - Detailed comparison analysis interface
+    - `ui/ui/salesAuditTrends.tpl` - Trends analysis and visualization template
+    - `ui/ui/styles/salesAudit.css` - Enhanced styling for professional presentation
+
+  - **🔧 Technical Implementation**:
+    - **Database Integration**: Optimized queries using existing `tbl_transactions` table
+    - **Smart Filtering**: Excludes balance transfers and admin adjustments for accurate sales data
+    - **Performance Optimization**: 12-hour caching for monthly data, auto-refresh every 5 minutes
+    - **Security**: Role-based access (Admin/SuperAdmin), XSS protection, parameterized queries
+    - **Responsive Design**: Mobile-friendly interface with Bootstrap compatibility
+
+  - **🎨 Visual Enhancements**:
+    - **Chart.js Integration**: Interactive line charts, pie charts, and trend visualizations
+    - **Color-Coded Indicators**: Green for growth, red for decline, with percentage displays
+    - **Professional Styling**: Gradient backgrounds, hover effects, responsive layouts
+    - **Data Visualization**: Progress bars, performance metrics, statistical summaries
+
+  - **🔌 API Endpoints**:
+    - `/plugin/salesAudit&action=api&endpoint=comparison` - Sales comparison data
+    - `/plugin/salesAudit&action=api&endpoint=trends` - Trend analysis data
+    - `/plugin/salesAudit&action=api&endpoint=hourly` - Hourly sales breakdown
+    - `/plugin/salesAudit&action=api&endpoint=payment-methods` - Payment method distribution
+
+  - **💡 Business Impact**:
+    - **Performance Monitoring**: Real-time visibility into sales performance vs historical data
+    - **Trend Identification**: Spot seasonal patterns, growth momentum, and performance issues
+    - **Data-Driven Decisions**: Comprehensive analytics for business planning and optimization
+    - **Revenue Insights**: Understand top-performing plans and payment method preferences
+    - **Growth Tracking**: Monitor business growth with accurate percentage calculations and visual indicators
+
+  - **🚀 Usage Examples**:
+    - Daily morning reviews with "Today vs Yesterday" performance cards
+    - Weekly business assessments using same-day comparisons
+    - Monthly revenue analysis with detailed breakdown tables
+    - Long-term trend identification for strategic planning
+    - Payment gateway performance optimization
+
+## [2.1.24] - 2025-08-27
+
+### FIXED: Template Syntax Error
+- **🐛 Bug Fix**: Fixed Smarty template syntax error in customer dashboard
+  - **📁 File Modified**:
+    - `ui/ui/customer/dashboard.tpl` - Removed erroneous `{/if}` tag on line 231
+
+  - **🔧 Technical Details**:
+    - Resolved "unclosed '{foreach}' tag" error caused by misplaced `{/if}` statement
+    - Fixed template compilation error that was preventing customer dashboard from loading
+    - Corrected Smarty template syntax to ensure proper tag closure
+
+  - **💡 Impact**:
+    - Customer dashboard now loads without template compilation errors
+    - Improved system stability and user experience
+    - Fixed critical issue preventing customers from accessing their dashboard
+
 ## [2.1.23] - 2025-08-19
 
 ### ADDED: Delete Package Feature
