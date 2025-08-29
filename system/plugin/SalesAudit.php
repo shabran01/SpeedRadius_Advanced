@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Sales Audit Plugin for SpeedRadius
+ * Sales Audit Plugin for SpeedRadius.
  * Provides comprehensive sales analysis and comparison reports
  */
 
@@ -532,3 +532,4 @@ function getSalesTrends($period)
 }
 
 ?>
+
