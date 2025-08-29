@@ -6,7 +6,8 @@
  */
 
 // Register menu item in admin panel under Reports
-register_menu("Sales Audit", true, "salesAudit", 'REPORTS', 'glyphicon glyphicon-stats', '', 'primary', ['Admin', 'SuperAdmin']);
+register_menu("Sales Audit", true, "salesAudit", 'REPORTS', 'glyphicon glyphicon-stats', "New", "red", ['Admin', 'SuperAdmin']);
+
 
 function salesAudit()
 {
