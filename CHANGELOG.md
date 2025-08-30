@@ -2,6 +2,27 @@
 
 # CHANGELOG
 
+## [2.1.27] - 2025-08-30
+
+### REMOVED: Price Before Discount Field
+- **🗑️ UI Cleanup**: Removed the "Price Before Discount" field from service edit forms
+  
+  - **Affected Templates**:
+    - `ui/ui/hotspot-edit.tpl` - Removed Price Before Discount form group
+    - `ui/ui/pppoe-edit.tpl` - Removed Price Before Discount form group
+  
+  - **Backend Cleanup**:
+    - `system/controllers/services.php` - Removed price_old processing from edit-post handler
+    - `system/controllers/services.php` - Removed price_old processing from edit-pppoe-post handler
+    - Removed validation logic for price_old field
+    - Removed database assignment of price_old values
+  
+  - **Benefits**:
+    - Simplified user interface for service editing
+    - Eliminated confusion from unused discount pricing field
+    - Cleaner form layout without unnecessary fields
+    - Streamlined service management workflow
+
 ## [2.1.26] - 2025-08-30
 
 ### ADDED: Sales Audit Plugin - Comprehensive Sales Analysis & Comparison System
