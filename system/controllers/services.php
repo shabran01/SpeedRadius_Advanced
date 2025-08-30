@@ -355,7 +355,6 @@ switch ($action) {
         $id_bw = _post('id_bw');
         $typebp = _post('typebp');
         $price = _post('price');
-        $price_old = _post('price_old');
         $limit_type = _post('limit_type');
         $time_limit = _post('time_limit');
         $time_unit = _post('time_unit');
@@ -389,10 +388,6 @@ switch ($action) {
             $msg .= Lang::T('Data Not Found') . '<br>';
         }
 
-        if ($price_old <= $price) {
-            $price_old = '';
-        }
-
         run_hook('edit_plan'); #HOOK
         if ($msg == '') {
             $b = ORM::for_table('tbl_bandwidth')->where('id', $id_bw)->find_one();
@@ -418,7 +413,6 @@ switch ($action) {
             $d->name_plan = $name;
             $d->id_bw = $id_bw;
             $d->price = $price; // Set price with or without tax based on configuration
-            $d->price_old = $price_old;
             $d->typebp = $typebp;
             $d->limit_type = $limit_type;
             $d->time_limit = $time_limit;
@@ -746,7 +740,6 @@ switch ($action) {
         $name = _post('name_plan');
         $id_bw = _post('id_bw');
         $price = _post('price');
-        $price_old = _post('price_old');
         $validity = _post('validity');
         $validity_unit = _post('validity_unit');
         $routers = _post('routers');
@@ -768,10 +761,6 @@ switch ($action) {
         }
         if ($name == '' or $id_bw == '' or $price == '' or $validity == '' or $pool == '') {
             $msg .= Lang::T('All field is required') . '<br>';
-        }
-
-        if ($price_old <= $price) {
-            $price_old = '';
         }
 
         $d = ORM::for_table('tbl_plans')->where('id', $id)->find_one();
@@ -804,7 +793,6 @@ switch ($action) {
             $d->name_plan = $name;
             $d->id_bw = $id_bw;
             $d->price = $price;
-            $d->price_old = $price_old;
             $d->plan_type = $plan_type;
             $d->validity = $validity;
             $d->validity_unit = $validity_unit;
