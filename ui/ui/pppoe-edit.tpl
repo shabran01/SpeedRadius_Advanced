@@ -109,16 +109,6 @@
                             {/if}
                         {/if}
                     </div>
-                    <div class="form-group has-warning">
-                        <label class="col-md-3 control-label">{Lang::T('Price Before Discount')}</label>
-                        <div class="col-md-9">
-                            <div class="input-group">
-                                <span class="input-group-addon">{$_c['currency_code']}</span>
-                                <input type="number" class="form-control" name="price_old" value="{$d['price_old']}">
-                            </div>
-                            <p class="help-block">{Lang::T('For Discount Rate, this is price before get discount, must be more expensive with real price')}</p>
-                        </div>
-                    </div>
                     <div class="form-group">
                         <label class="col-md-3 control-label">{Lang::T('Plan Validity')}</label>
                         <div class="col-md-3">
