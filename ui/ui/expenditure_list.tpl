@@ -55,7 +55,15 @@
                             <span class="glyphicon glyphicon-download" aria-hidden="true"></span> Export <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li><a href="{$_url}plugin/expenditure&action=export&format=csv&search={$search}&category={$category}&date_from={$date_from}&date_to={$date_to}">CSV</a></li>
+                            <li><a href="{$_url}plugin/expenditure&action=export&format=csv&search={$search}&category={$category}&date_from={$date_from}&date_to={$date_to}">
+                                <i class="fa fa-file-text-o"></i> CSV
+                            </a></li>
+                            <li><a href="{$_url}plugin/expenditure&action=export_pdf&search={$search}&category={$category}&date_from={$date_from}&date_to={$date_to}">
+                                <i class="fa fa-file-pdf-o"></i> PDF Report
+                            </a></li>
+                            <li><a href="{$_url}plugin/expenditure&action=export_excel&search={$search}&category={$category}&date_from={$date_from}&date_to={$date_to}">
+                                <i class="fa fa-file-excel-o"></i> Excel
+                            </a></li>
                         </ul>
                     </div>
                 </form>
