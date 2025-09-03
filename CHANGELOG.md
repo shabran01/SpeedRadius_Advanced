@@ -2,6 +2,49 @@
 
 # CHANGELOG
 
+## [2.1.28] - 2025-09-03
+
+### NEW: Expenditure Management Plugin
+- **💰 Complete Expense Tracking System**: Added comprehensive expenditure management plugin for ISP business financial tracking
+
+  - **Core Features**:
+    - Full CRUD operations for expenses and categories
+    - Real-time dashboard with expense statistics
+    - Advanced search and filtering capabilities
+    - Interactive reports with Chart.js visualizations
+    - CSV export functionality for accounting integration
+    - 10 pre-loaded ISP business categories
+
+  - **New Files Added**:
+    - `system/plugin/expenditure.php` - Main plugin file with complete functionality
+    - `system/plugin/install_expenditure_plugin.php` - Automated installation script
+    - `system/plugin/Expenditure_Plugin_README.md` - Comprehensive documentation
+    - `system/plugin/Expenditure_Plugin_CHANGELOG.md` - Detailed changelog
+    - `ui/ui/expenditure_dashboard.tpl` - Dashboard with statistics overview
+    - `ui/ui/expenditure_add.tpl` - Add expense form
+    - `ui/ui/expenditure_edit.tpl` - Edit expense form  
+    - `ui/ui/expenditure_list.tpl` - Expense listing with filters
+    - `ui/ui/expenditure_categories.tpl` - Category management
+    - `ui/ui/expenditure_reports.tpl` - Analytics and reporting
+
+  - **Database Changes**:
+    - Added `tbl_expenditure_categories` table for expense categorization
+    - Added `tbl_expenditures` table for expense tracking with full audit trail
+    - Foreign key relationships for data integrity
+    - Automatic default category creation during installation
+
+  - **Business Value**:
+    - Track equipment purchases, bandwidth costs, utilities, salaries
+    - Generate monthly, daily, and category-based expense reports
+    - Export expense data for tax and accounting purposes
+    - Gain complete financial visibility for better business decisions
+    - Monitor spending trends and budget compliance
+
+  - **Security & Access**:
+    - Admin/SuperAdmin role restrictions
+    - Input validation and SQL injection protection
+    - Audit trail with user tracking and timestamps
+
 ## [2.1.27] - 2025-08-30
 
 ### REMOVED: Price Before Discount Field
