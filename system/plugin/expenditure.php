@@ -40,6 +40,12 @@ function expenditure()
         case 'export':
             expenditure_export();
             break;
+        case 'export_pdf':
+            expenditure_export_pdf();
+            break;
+        case 'export_excel':
+            expenditure_export_excel();
+            break;
         case 'save':
             expenditure_save();
             break;
@@ -108,7 +114,7 @@ function expenditure_dashboard()
     $ui->assign('recentExpenses', $recentExpenses);
     $ui->assign('topCategories', $topCategories);
     
-    $ui->display('expenditure_dashboard.tpl');
+    $ui->display('expenditure_dashboard_modern.tpl');
 }
 
 function expenditure_add()
@@ -255,7 +261,7 @@ function expenditure_list()
     $ui->assign('date_from', $date_from);
     $ui->assign('date_to', $date_to);
     $ui->assign('_title', 'Expenditure List');
-    $ui->display('expenditure_list.tpl');
+    $ui->display('expenditure_list_modern.tpl');
 }
 
 function expenditure_categories()
@@ -446,6 +452,206 @@ function expenditure_export()
         fclose($output);
         exit;
     }
+}
+
+function expenditure_export_pdf()
+{
+    require_once('system/vendor/autoload.php');
+    
+    $date_from = _req('date_from');
+    $date_to = _req('date_to');
+    $category = _req('category');
+    
+    $query = ORM::for_table('tbl_expenditures')
+        ->left_outer_join('tbl_expenditure_categories', ['tbl_expenditures.category_id', '=', 'tbl_expenditure_categories.id'])
+        ->select('tbl_expenditures.*')
+        ->select('tbl_expenditure_categories.name', 'category_name');
+    
+    if ($date_from) {
+        $query->where_gte('expense_date', $date_from);
+    }
+    
+    if ($date_to) {
+        $query->where_lte('expense_date', $date_to);
+    }
+    
+    if ($category) {
+        $query->where('category_id', $category);
+    }
+    
+    $expenses = $query->order_by_desc('expense_date')->find_many();
+    
+    // Create new PDF document using mPDF
+    $mpdf = new \Mpdf\Mpdf([
+        'mode' => 'utf-8',
+        'format' => 'A4',
+        'orientation' => 'L', // Landscape for better table view
+        'margin_left' => 15,
+        'margin_right' => 15,
+        'margin_top' => 16,
+        'margin_bottom' => 16,
+        'margin_header' => 9,
+        'margin_footer' => 9
+    ]);
+    
+    // Set document information
+    $mpdf->SetTitle('Expenditure Report');
+    $mpdf->SetAuthor('ISP Billing System');
+    $mpdf->SetSubject('Expenditure Report');
+    
+    // Create HTML content
+    $html = '
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { color: #333; margin: 0; font-size: 24px; }
+        .header p { color: #666; margin: 5px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f5f5f5; font-weight: bold; }
+        .amount { text-align: right; }
+        .total-row { background-color: #e9e9e9; font-weight: bold; }
+        .category-badge { background-color: #007bff; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; }
+        .uncategorized { background-color: #6c757d; }
+    </style>
+    
+    <div class="header">
+        <h1>Expenditure Report</h1>
+        <p>Generated on ' . date('Y-m-d H:i:s') . '</p>
+        <p>Period: ' . ($date_from ? $date_from : 'All time') . ' to ' . ($date_to ? $date_to : 'Present') . '</p>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th width="10%">Date</th>
+                <th width="25%">Description</th>
+                <th width="15%">Category</th>
+                <th width="12%">Amount</th>
+                <th width="18%">Vendor</th>
+                <th width="10%">Receipt#</th>
+                <th width="10%">Notes</th>
+            </tr>
+        </thead>
+        <tbody>';
+    
+    $total = 0;
+    foreach ($expenses as $expense) {
+        $total += $expense->amount;
+        $categoryDisplay = $expense->category_name ? 
+            '<span class="category-badge">' . htmlspecialchars($expense->category_name) . '</span>' : 
+            '<span class="category-badge uncategorized">Uncategorized</span>';
+            
+        $html .= '
+            <tr>
+                <td>' . $expense->expense_date . '</td>
+                <td>' . htmlspecialchars($expense->description) . '</td>
+                <td>' . $categoryDisplay . '</td>
+                <td class="amount">$' . number_format($expense->amount, 2) . '</td>
+                <td>' . htmlspecialchars($expense->vendor ?: '-') . '</td>
+                <td>' . htmlspecialchars($expense->receipt_number ?: '-') . '</td>
+                <td>' . htmlspecialchars(substr($expense->notes ?: '', 0, 50)) . '</td>
+            </tr>';
+    }
+    
+    $html .= '
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="3">Total Expenses:</td>
+                <td class="amount">$' . number_format($total, 2) . '</td>
+                <td colspan="3">' . count($expenses) . ' records</td>
+            </tr>
+        </tfoot>
+    </table>';
+    
+    // Write HTML to PDF
+    $mpdf->WriteHTML($html);
+    
+    // Output PDF
+    $filename = 'expenditure_report_' . date('Y-m-d') . '.pdf';
+    $mpdf->Output($filename, 'D'); // 'D' for download
+    exit;
+}
+
+function expenditure_export_excel()
+{
+    $date_from = _req('date_from');
+    $date_to = _req('date_to');
+    $category = _req('category');
+    
+    $query = ORM::for_table('tbl_expenditures')
+        ->left_outer_join('tbl_expenditure_categories', ['tbl_expenditures.category_id', '=', 'tbl_expenditure_categories.id'])
+        ->select('tbl_expenditures.*')
+        ->select('tbl_expenditure_categories.name', 'category_name');
+    
+    if ($date_from) {
+        $query->where_gte('expense_date', $date_from);
+    }
+    
+    if ($date_to) {
+        $query->where_lte('expense_date', $date_to);
+    }
+    
+    if ($category) {
+        $query->where('category_id', $category);
+    }
+    
+    $expenses = $query->order_by_desc('expense_date')->find_many();
+    
+    // Set headers for Excel download
+    header('Content-Type: application/vnd.ms-excel');
+    header('Content-Disposition: attachment; filename="expenditure_report_' . date('Y-m-d') . '.xls"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    
+    // Start Excel content
+    echo '<?xml version="1.0"?>';
+    echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">';
+    echo '<Worksheet ss:Name="Expenditure Report">';
+    echo '<Table>';
+    
+    // Header row
+    echo '<Row>';
+    echo '<Cell><Data ss:Type="String">Date</Data></Cell>';
+    echo '<Cell><Data ss:Type="String">Description</Data></Cell>';
+    echo '<Cell><Data ss:Type="String">Category</Data></Cell>';
+    echo '<Cell><Data ss:Type="String">Amount</Data></Cell>';
+    echo '<Cell><Data ss:Type="String">Vendor</Data></Cell>';
+    echo '<Cell><Data ss:Type="String">Receipt Number</Data></Cell>';
+    echo '<Cell><Data ss:Type="String">Notes</Data></Cell>';
+    echo '</Row>';
+    
+    // Data rows
+    $total = 0;
+    foreach ($expenses as $expense) {
+        $total += $expense->amount;
+        echo '<Row>';
+        echo '<Cell><Data ss:Type="String">' . $expense->expense_date . '</Data></Cell>';
+        echo '<Cell><Data ss:Type="String">' . htmlspecialchars($expense->description) . '</Data></Cell>';
+        echo '<Cell><Data ss:Type="String">' . htmlspecialchars($expense->category_name ?: 'Uncategorized') . '</Data></Cell>';
+        echo '<Cell><Data ss:Type="Number">' . $expense->amount . '</Data></Cell>';
+        echo '<Cell><Data ss:Type="String">' . htmlspecialchars($expense->vendor ?: '') . '</Data></Cell>';
+        echo '<Cell><Data ss:Type="String">' . htmlspecialchars($expense->receipt_number ?: '') . '</Data></Cell>';
+        echo '<Cell><Data ss:Type="String">' . htmlspecialchars($expense->notes ?: '') . '</Data></Cell>';
+        echo '</Row>';
+    }
+    
+    // Total row
+    echo '<Row>';
+    echo '<Cell><Data ss:Type="String"></Data></Cell>';
+    echo '<Cell><Data ss:Type="String"></Data></Cell>';
+    echo '<Cell><Data ss:Type="String">TOTAL</Data></Cell>';
+    echo '<Cell><Data ss:Type="Number">' . $total . '</Data></Cell>';
+    echo '<Cell><Data ss:Type="String"></Data></Cell>';
+    echo '<Cell><Data ss:Type="String"></Data></Cell>';
+    echo '<Cell><Data ss:Type="String"></Data></Cell>';
+    echo '</Row>';
+    
+    echo '</Table>';
+    echo '</Worksheet>';
+    echo '</Workbook>';
+    exit;
 }
 
 // Initialize database tables if they don't exist
