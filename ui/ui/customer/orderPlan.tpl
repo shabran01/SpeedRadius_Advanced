@@ -359,51 +359,6 @@
                 {/foreach}
             </div>
             {/if}
-                                            <table class="table table-bordered table-striped">
-                                                <tbody>
-                                                    <tr>
-                                                        <td>{Lang::T('Type')}</td>
-                                                        <td>{$plan['type']}</td>
-                                                    </tr>
-                                                    {if $_c['show_bandwidth_plan'] == 'yes'}
-                                                        <tr>
-                                                            <td>{Lang::T('Bandwidth')}</td>
-                                                            <td api-get-text="{$_url}autoload_user/bw_name/{$plan['id_bw']}"></td>
-                                                        </tr>
-                                                    {/if}
-                                                    <tr>
-                                                        <td>{Lang::T('Price')}</td>
-                                                        <td>{Lang::moneyFormat($plan['price'])}
-                                                            {if !empty($plan['price_old'])}
-                                                                <sup
-                                                                    style="text-decoration: line-through; color: red">{Lang::moneyFormat($plan['price_old'])}</sup>
-                                                            {/if}
-                                                        </td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>{Lang::T('Validity')}</td>
-                                                        <td>{$plan['validity']} {$plan['validity_unit']}</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                    <div class="box-body">
-                                        <a href="{$_url}order/gateway/{$router['id']}/{$plan['id']}&stoken={App::getToken()}"
-                                            onclick="return ask(this, '{Lang::T('Buy this? your active package will be overwrite')}')"
-                                            class="btn btn-sm btn-block btn-warning text-black">{Lang::T('Buy')}</a>
-                                        {if $_c['enable_balance'] == 'yes' && $_c['allow_balance_transfer'] == 'yes' && $_user['balance']>=$plan['price']}
-                                        <a href="{$_url}order/send/{$router['id']}/{$plan['id']}&stoken={App::getToken()}"
-                                            onclick="return ask(this, '{Lang::T('Buy this for friend account?')}')"
-                                            class="btn btn-sm btn-block btn-primary">{Lang::T('Buy for friend')}</a>
-                                    {/if}
-                                </div>
-                            </div>
-                        </div>
-                    {/if}
-                {/foreach}
-            </div>
-            {/if}
             {if $_user['service_type'] == 'Others' || $_user['service_type'] == '' &&
             (Validator::countRouterPlan($plans_hotspot, $router['name'])>0 || Validator::countRouterPlan($plans_pppoe,
             $router['name'])>0 || Validator::countRouterPlan($plans_vpn,
