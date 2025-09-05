@@ -218,6 +218,7 @@
                         </td>
                     </tr>
 
+                        {if $cf}
                         {foreach $cf as $tcf}
                             <tr>
                                 {if $tcf['field_name'] == 'Winbox' or $tcf['field_name'] == 'Api' or $tcf['field_name'] == 'Web'}
@@ -227,7 +228,7 @@
                                 </tr>
                             {/if}
                         {/foreach}
-                    {/if}
+                        {/if}
 
                     {if $nux_ip neq ''}
                         <tr>
