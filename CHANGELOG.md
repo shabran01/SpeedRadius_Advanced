@@ -2,6 +2,85 @@
 
 # CHANGELOG
 
+## [2.1.30] - 2025-09-05
+
+### NEW FEATURE: Inactive Hotspot Accounts Plugin
+- **🔍 Advanced Hotspot Customer Activity Monitor**: Brand new plugin for identifying and managing inactive Hotspot customer accounts
+
+  - **📊 Smart Inactivity Detection**:
+    - **Multi-Factor Analysis**: Combines login activity, account age, and recharge history
+    - **Never Logged In Detection**: Identifies accounts that have never accessed the system
+    - **Login Inactivity**: Tracks accounts with no login activity for specified periods
+    - **Recharge Inactivity**: Monitors accounts with no payment activity
+    - **Activity Scoring**: 1-4 scale inactivity scoring system (higher = more inactive)
+
+  - **🎛️ Comprehensive Filtering System**:
+    - **Time Period Filters**: 7 days to 1 year inactivity periods
+    - **Account Status Filters**: Active, Inactive, Disabled, Suspended, Banned
+    - **Router-Specific Filtering**: Filter by specific MikroTik routers
+    - **Hotspot-Only Focus**: Exclusively targets Hotspot service type customers
+    - **Real-time Filter Application**: Instant results without page reload
+
+  - **📈 Advanced Statistics Dashboard**:
+    - **Total Hotspot Customers**: Complete count of Hotspot service accounts
+    - **Inactive Account Counter**: Real-time count of inactive accounts
+    - **Never Logged In Tracker**: Accounts that have never accessed the system
+    - **Completely Inactive Indicator**: Accounts with multiple inactivity factors
+    - **HD Gradient Design**: Modern statistics cards with professional styling
+
+  - **⚡ Bulk Management Operations**:
+    - **Disable Accounts**: Temporarily disable inactive accounts
+    - **Activate Accounts**: Re-enable selected accounts
+    - **Suspend Accounts**: Suspend accounts for investigation
+    - **Delete Accounts**: Permanent removal (SuperAdmin only)
+    - **Batch Processing**: Handle multiple accounts simultaneously
+    - **Safe Confirmation**: Protection against accidental bulk operations
+
+  - **📊 Export & Reporting**:
+    - **CSV Export**: Complete data export with all account details
+    - **Activity Reports**: Include login dates, recharge history, inactive reasons
+    - **Scoring Details**: Inactivity severity scoring in exports
+    - **Filtered Exports**: Export only selected criteria results
+
+  - **🛡️ Security & Performance**:
+    - **Permission-Based Access**: Admin/SuperAdmin access only
+    - **SQL Compliance**: ONLY_FULL_GROUP_BY compatible queries
+    - **Optimized Performance**: Efficient queries for large customer databases
+    - **Error Handling**: Comprehensive error management and logging
+    - **Safe Defaults**: Conservative settings to prevent accidental actions
+
+  - **New Files Added**:
+    - `system/plugin/inactive_accounts.php` - Main plugin logic with activity detection
+    - `ui/ui/inactive_accounts.tpl` - Complete user interface with statistics dashboard
+    - `system/plugin/INACTIVE_ACCOUNTS_README.md` - Comprehensive documentation
+
+  - **Database Integration**:
+    - Utilizes existing `tbl_customers` table for customer data
+    - Analyzes `tbl_user_recharges` for payment history
+    - Integrates with `tbl_routers` for router-specific filtering
+    - No new tables required - works with existing schema
+
+  - **Technical Improvements**:
+    - **Server-Side Pre-loading**: Data loads immediately with page for instant display
+    - **Smarty Template Compatibility**: All JavaScript properly escaped for template engine
+    - **Responsive Design**: Mobile-optimized interface with touch-friendly controls
+    - **Modern UI**: HD color scheme matching PHPNuxBill theme standards
+
+## [2.1.29] - 2025-09-05
+
+### FIXED: Template Syntax Error
+- **🔧 Customer Dashboard Template Fix**: Resolved Smarty template syntax error in customer dashboard
+  
+  - **Issue**: Unclosed `{foreach}` tag causing template compilation failure
+  - **Location**: `ui/ui/customer/dashboard.tpl` line 232
+  - **Root Cause**: Orphaned `{/if}` tag without matching opening `{if}` condition
+  - **Solution**: 
+    - Added proper `{if $cf}` condition before `{foreach $cf as $tcf}` loop
+    - Repositioned closing `{/if}` tag to properly close the condition
+    - Ensured safe execution when `$cf` variable is undefined
+  - **Impact**: Customer dashboard now loads without template errors
+  - **Files Modified**: `ui/ui/customer/dashboard.tpl`
+
 ## [2.1.28] - 2025-09-03
 
 ### NEW: Expenditure Management Plugin
