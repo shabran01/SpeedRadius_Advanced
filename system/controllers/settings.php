@@ -545,6 +545,22 @@ switch ($action) {
         $fullname = _post('fullname');
         $password = _post('password');
         $user_type = _post('user_type');
+        
+        // Validate user type permissions
+        if ($admin['user_type'] == 'Agent') {
+            if ($user_type != 'Sales') {
+                r2(U . 'settings/users-add', 'e', Lang::T('You can only create Sales accounts'));
+            }
+        } else if ($admin['user_type'] == 'Admin') {
+            if (!in_array($user_type, ['Report', 'Agent', 'Sales', 'Viewer'])) {
+                r2(U . 'settings/users-add', 'e', Lang::T('You do not have permission to create this user type'));
+            }
+        } else if ($admin['user_type'] == 'SuperAdmin') {
+            // SuperAdmin can create any user type
+            if (!in_array($user_type, ['Report', 'Agent', 'Sales', 'Viewer', 'Admin', 'SuperAdmin'])) {
+                r2(U . 'settings/users-add', 'e', Lang::T('Invalid user type'));
+            }
+        }
         $phone = _post('phone');
         $email = _post('email');
         $city = _post('city');
