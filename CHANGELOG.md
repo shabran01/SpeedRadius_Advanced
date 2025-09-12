@@ -2,6 +2,27 @@
 
 # CHANGELOG
 
+## [2.1.31] - 2025-09-13
+
+### ENHANCEMENT: Traffic Monitor UI Improvements
+- **🎨 Responsive Design Updates**:
+  - Optimized info boxes and buttons for all device sizes
+  - Implemented modern responsive typography
+  - Added fluid scaling for better mobile experience
+
+- **✨ UI Modernization**:
+  - Enhanced typography with system font stack
+  - Improved visual hierarchy and readability
+  - Added subtle animations and hover effects
+  - Optimized spacing and padding
+  - Updated shadow effects for better depth
+
+- **🔧 Technical Improvements**:
+  - Implemented CSS clamp() for responsive sizing
+  - Added performance-optimized transitions
+  - Improved accessibility with better contrast ratios
+  - Enhanced cross-browser compatibility
+
 ## [2.1.30] - 2025-09-05
 
 ### NEW FEATURE: Inactive Hotspot Accounts Plugin
