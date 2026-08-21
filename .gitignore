@@ -49,5 +49,6 @@ system/vendor/
 
 # ===== Cache =====
 ui/cache/
+ui/compiled/
 qrcode/cache/
 system/system/cache/
