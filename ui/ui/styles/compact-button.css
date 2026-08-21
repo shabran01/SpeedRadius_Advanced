@@ -1,0 +1,40 @@
+/* Refresh button has been removed as requested */
+.compact-refresh-btn {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    position: absolute;
+    pointer-events: none;
+}
+
+/* Removed refresh button styling */
+
+/* Additional fixes for panels */
+.panel-heading {
+    cursor: pointer;
+}
+
+.panel-heading:hover {
+    background-color: #f5f5f5;
+}
+
+/* Better styling for the navigation message */
+.quick-nav {
+    background-color: rgba(41, 128, 185, 0.1);
+    padding: 8px 15px;
+    border-radius: 3px;
+    margin-bottom: 15px;
+    border-left: 3px solid #3498db;
+}
+
+.quick-nav a {
+    color: #3498db;
+    padding: 2px 5px;
+    margin: 0 3px;
+}
+
+.quick-nav a:hover {
+    text-decoration: none;
+    background-color: #eaf2f8;
+    border-radius: 3px;
+}

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cron Expiry Fix — SpeedRadius Documentation</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <style>
+    body { background: #0f1117; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; }
+    .card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .badge-bug   { background:#7f1d1d; color:#fca5a5; padding:2px 10px; border-radius:999px; font-size:.75rem; font-weight:700; }
+    .badge-fix   { background:#14532d; color:#86efac; padding:2px 10px; border-radius:999px; font-size:.75rem; font-weight:700; }
+    .badge-info  { background:#1e3a5f; color:#93c5fd; padding:2px 10px; border-radius:999px; font-size:.75rem; font-weight:700; }
+    pre { background:#0d1117; border:1px solid #30363d; border-radius:8px; padding:1rem; overflow-x:auto; font-size:.85rem; line-height:1.6; }
+    code { color:#e6edf3; }
+    .red    { color:#f87171; }
+    .green  { color:#4ade80; }
+    .yellow { color:#fbbf24; }
+    .blue   { color:#60a5fa; }
+    .step-bad  { background:#2d1515; border-left:4px solid #ef4444; padding:.6rem 1rem; border-radius:0 6px 6px 0; margin:.4rem 0; }
+    .step-good { background:#0f2d1a; border-left:4px solid #22c55e; padding:.6rem 1rem; border-radius:0 6px 6px 0; margin:.4rem 0; }
+    .step-neutral { background:#1a2035; border-left:4px solid #60a5fa; padding:.6rem 1rem; border-radius:0 6px 6px 0; margin:.4rem 0; }
+    table { width:100%; border-collapse:collapse; }
+    th { background:#2d3748; color:#93c5fd; padding:.7rem 1rem; text-align:left; }
+    td { padding:.7rem 1rem; border-bottom:1px solid #2d3748; }
+    tr:last-child td { border-bottom:none; }
+    td:first-child { color:#94a3b8; }
+    h2 { color:#e2e8f0; font-size:1.3rem; font-weight:700; margin-bottom:.8rem; }
+    h3 { color:#93c5fd; font-size:1rem; font-weight:700; margin-bottom:.5rem; }
+    .hero { background: linear-gradient(135deg, #1e1b4b 0%, #1a1f2e 50%, #1a0a0a 100%); border: 1px solid #3730a3; border-radius:14px; padding:2rem; margin-bottom:2rem; }
+    .divider { border:none; border-top:1px solid #2d3748; margin:1.2rem 0; }
+  </style>
+</head>
+<body class="min-h-screen p-6 md:p-10">
+
+  <div class="max-w-4xl mx-auto">
+
+    <!-- Header -->
+    <div class="hero">
+      <div class="flex flex-wrap items-center gap-3 mb-3">
+        <span class="badge-bug">BUG</span>
+        <span class="badge-fix">FIXED</span>
+        <span class="badge-info">HOTSPOT</span>
+      </div>
+      <h1 style="font-size:1.8rem;font-weight:800;color:#fff;">Cron Expiry Fix</h1>
+      <p style="color:#94a3b8;margin-top:.4rem;">Customers expired on website but still active on MikroTik router</p>
+      <hr class="divider"/>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-1" style="font-size:.85rem;">
+        <div><span style="color:#64748b;">Date</span><br/><span style="color:#e2e8f0;">March 15, 2026</span></div>
+        <div><span style="color:#64748b;">File Fixed</span><br/><span style="color:#e2e8f0;">system/cron.php</span></div>
+        <div><span style="color:#64748b;">Cron Interval</span><br/><span style="color:#e2e8f0;">Every 5 minutes</span></div>
+        <div><span style="color:#64748b;">Hosting</span><br/><span style="color:#e2e8f0;">VPS + MikroTik API</span></div>
+      </div>
+    </div>
+
+    <!-- The Problem -->
+    <div class="card">
+      <h2>🔴 The Problem</h2>
+      <p style="color:#94a3b8;line-height:1.7;">
+        When a hotspot customer's package expired, the system was supposed to
+        <strong style="color:#e2e8f0;"> remove the customer from MikroTik first</strong>, then mark them as expired in the database.
+        But the code was doing it in the <strong class="red">wrong order</strong> — it marked the database first.
+        So when the router connection failed for any reason, the customer stayed active on MikroTik forever,
+        and the system never tried again.
+      </p>
+    </div>
+
+    <!-- Real World Scenario -->
+    <div class="card">
+      <h2>📋 Real World Example</h2>
+      <p style="color:#94a3b8;margin-bottom:1rem;">John buys a 1-day hotspot package. It expires at midnight.</p>
+
+      <h3 class="red">❌ What Happened (Before Fix)</h3>
+      <div class="step-bad">⏰ <strong>Midnight</strong> — John's package expires</div>
+      <div class="step-bad">⚙️ <strong>Cron runs</strong></div>
+      <div class="step-bad">✏️ <strong>Database updated first:</strong> John = EXPIRED <span class="red">(this happened BEFORE router removal)</span></div>
+      <div class="step-bad">💥 <strong>Router connection fails</strong> — brief hiccup, reboot, API timeout</div>
+      <div class="step-bad">🚫 <strong>John NOT removed from MikroTik</strong></div>
+      <div class="step-bad">🔄 <strong>Next cron run:</strong> looks for <code>WHERE status = 'on'</code> — John is <code>off</code> in DB → <strong>skipped forever</strong></div>
+
+      <div style="background:#2d1515;border-radius:8px;padding:1rem;margin-top:1rem;display:flex;gap:1.5rem;flex-wrap:wrap;">
+        <span>🌐 Website: <strong class="green">Shows Expired ✅</strong></span>
+        <span>📡 MikroTik: <strong class="red">John Still Active ❌</strong></span>
+        <span>🍿 John: <strong class="red">Free internet forever 😱</strong></span>
+      </div>
+    </div>
+
+    <!-- Simple Analogy -->
+    <div class="card">
+      <h2>💡 Simple Explanation — The Security Guard</h2>
+      <p style="color:#94a3b8;margin-bottom:1rem;">Think of the cron job as a <strong style="color:#e2e8f0;">security guard</strong> whose job is to kick out expired customers.</p>
+
+      <div style="display:grid;grid-template-columns:1fr;gap:1rem;">
+        <div style="background:#2d1515;border-radius:10px;padding:1.2rem;">
+          <h3 class="red">❌ Old (Broken) Way</h3>
+          <div class="step-bad">1. Guard writes in logbook: <em>"John removed"</em> ← <strong>writes FIRST</strong></div>
+          <div class="step-bad">2. Guard goes to the door to physically kick John out</div>
+          <div class="step-bad">3. Door is jammed (router offline) — John is NOT removed</div>
+          <div class="step-bad">4. Next shift: guard sees "John removed" in logbook → ignores John</div>
+          <div class="step-bad">5. John sits inside enjoying free internet forever 😅</div>
+        </div>
+
+        <div style="background:#0f2d1a;border-radius:10px;padding:1.2rem;">
+          <h3 class="green">✅ New (Fixed) Way</h3>
+          <div class="step-good">1. Guard goes to the door and <strong>physically kicks John out FIRST</strong></div>
+          <div class="step-good">2. John is successfully removed from the router</div>
+          <div class="step-good">3. Guard NOW writes in logbook: "John removed"</div>
+          <div class="step-good">4. If door was jammed → writes NOTHING → tries again next shift</div>
+          <div class="step-good">5. Next shift (5 mins later) — tries again until it works ✅</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Why The Connection Could Fail -->
+    <div class="card">
+      <h2>⚡ Why Router Connection Could Fail</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.8rem;margin-top:.5rem;">
+        <div style="background:#1e2240;border-radius:8px;padding:.8rem;font-size:.9rem;">🔄 Router rebooting at that exact moment</div>
+        <div style="background:#1e2240;border-radius:8px;padding:.8rem;font-size:.9rem;">🌐 Brief network hiccup between VPS and router</div>
+        <div style="background:#1e2240;border-radius:8px;padding:.8rem;font-size:.9rem;">🔒 RouterOS API port temporarily busy</div>
+        <div style="background:#1e2240;border-radius:8px;padding:.8rem;font-size:.9rem;">📶 Router overloaded with traffic</div>
+        <div style="background:#1e2240;border-radius:8px;padding:.8rem;font-size:.9rem;">🔑 Wrong credentials saved in settings</div>
+        <div style="background:#1e2240;border-radius:8px;padding:.8rem;font-size:.9rem;">⏱️ Connection timeout (even 1 second is enough)</div>
+      </div>
+    </div>
+
+    <!-- The Fix -->
+    <div class="card">
+      <h2>🔧 The Fix Applied — system/cron.php</h2>
+
+      <h3 class="red" style="margin-top:1rem;">❌ Before (Broken Code)</h3>
+      <pre><code><span class="red">// Set status to off first to prevent repeated attempts if router connection fails
+$u->status = 'off';
+$u->save();   // ← Database updated BEFORE router removal ❌</span>
+
+// Then try to remove from router...
+(new $p['device'])->remove_customer($c, $p);
+<span class="red">// If this fails → customer stuck on router forever, never retried</span></code></pre>
+
+      <h3 class="green" style="margin-top:1.2rem;">✅ After (Fixed Code)</h3>
+      <pre><code><span class="green">// Remove from router FIRST
+(new $p['device'])->remove_customer($c, $p);
+
+// Only mark as expired AFTER successful router removal ✅
+$u->status = 'off';
+$u->save();   // ← Database updated AFTER router removal
+// If router removal fails → status stays 'on' → cron retries in 5 minutes</span></code></pre>
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="card">
+      <h2>📊 Before vs After Comparison</h2>
+      <table>
+        <thead>
+          <tr><th>Situation</th><th>Old Code</th><th>New Code</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Router offline at expiry</td>
+            <td><span class="red">Website=Expired, Router=Still Active</span></td>
+            <td><span class="yellow">Website=Still Active, Router=Still Active</span></td>
+          </tr>
+          <tr>
+            <td>Router comes back online</td>
+            <td><span class="red">Customer stays free FOREVER ❌</span></td>
+            <td><span class="green">Removed at next cron run ✅</span></td>
+          </tr>
+          <tr>
+            <td>Manual fix needed</td>
+            <td><span class="red">Yes, every time ❌</span></td>
+            <td><span class="green">Never ✅</span></td>
+          </tr>
+          <tr>
+            <td>Max extra free internet</td>
+            <td><span class="red">Unlimited (days/weeks) 😱</span></td>
+            <td><span class="green">5–10 minutes max 😌</span></td>
+          </tr>
+          <tr>
+            <td>Self-healing</td>
+            <td><span class="red">No ❌</span></td>
+            <td><span class="green">Yes — retries every 5 mins ✅</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- VPS + Cron Setup -->
+    <div class="card">
+      <h2>🖥️ Your Setup — VPS + 5 Minute Cron</h2>
+      <pre><code>VPS (Your Server)            MikroTik (Your Router)
+       │                                │
+       │  ←─── Internet / API ─────────→│
+       │                                │
+  Cron runs here               Router at your location
+  every 5 minutes</code></pre>
+      <p style="color:#94a3b8;margin-top:1rem;line-height:1.7;">
+        Your VPS connects to MikroTik remotely over the internet via the RouterOS API.
+        Since cron runs every <strong style="color:#e2e8f0;">5 minutes</strong>, the worst case is now:
+        John gets <strong style="color:#fbbf24;">5–10 extra minutes</strong> of internet if the router was briefly offline
+        at the exact moment his package expired. After that, cron retries automatically — <strong class="green">no manual action needed ever.</strong>
+      </p>
+    </div>
+
+    <!-- Existing Stuck Customers -->
+    <div class="card" style="border-color:#92400e;">
+      <h2>⚠️ Existing Stuck Customers (Already In This State)</h2>
+      <p style="color:#94a3b8;margin-bottom:1rem;line-height:1.7;">
+        If customers were already stuck <strong style="color:#e2e8f0;">(expired on website, still active on MikroTik)</strong>
+        before this fix was applied, the new code will <strong class="red">NOT auto-heal them</strong>
+        because their database status is already <code>off</code> and cron skips them.
+      </p>
+
+      <h3 style="color:#fbbf24;">Option 1 — Manual MikroTik Removal</h3>
+      <div class="step-neutral">Go to MikroTik → IP → Hotspot → Users → delete the customer manually</div>
+
+      <h3 style="color:#fbbf24;margin-top:1rem;">Option 2 — Database Reset</h3>
+      <div class="step-neutral">In your database → <code>tbl_user_recharges</code> → find the customer's record</div>
+      <div class="step-neutral">Change <code>status</code> from <code>'off'</code> back to <code>'on'</code></div>
+      <div class="step-neutral">Wait for next cron run (max 5 minutes)</div>
+      <div class="step-neutral">Cron will now properly remove them from router and mark <code>off</code> ✅</div>
+    </div>
+
+    <!-- Summary -->
+    <div class="card" style="border-color:#1d4ed8;">
+      <h2>📝 Summary</h2>
+      <table>
+        <tbody>
+          <tr><td>Bug</td><td style="color:#e2e8f0;">Database marked expired before router removal</td></tr>
+          <tr><td>Effect</td><td style="color:#e2e8f0;">Failed removals were never retried — customers stayed on router permanently</td></tr>
+          <tr><td>Root Cause</td><td style="color:#e2e8f0;">Wrong order of operations in <code>system/cron.php</code></td></tr>
+          <tr><td>Fix</td><td style="color:#e2e8f0;">Move <code>$u->status = 'off'</code> to AFTER successful router removal</td></tr>
+          <tr><td>Self-Healing</td><td class="green">Yes — failed removals retry every 5 minutes automatically</td></tr>
+          <tr><td>Worst Case Now</td><td class="yellow">Customer gets 5–10 extra minutes if router was briefly offline</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="text-align:center;color:#374151;font-size:.8rem;padding-bottom:2rem;">SpeedRadius — Internal Documentation · March 15, 2026</p>
+
+  </div>
+</body>
+</html>

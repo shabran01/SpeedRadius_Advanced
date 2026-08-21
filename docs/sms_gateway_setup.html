@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMS Gateway Configuration Guide</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --text-color: #333;
+            --background-color: #f9f9f9;
+            --card-background: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            border-bottom: 3px solid var(--secondary-color);
+            padding-bottom: 10px;
+        }
+
+        .section {
+            background: var(--card-background);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .section:hover {
+            transform: translateY(-5px);
+        }
+
+        h2 {
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        h3 {
+            color: var(--primary-color);
+            margin: 15px 0;
+            font-size: 1.3em;
+        }
+
+        ul, ol {
+            padding-left: 25px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .note {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .troubleshooting {
+            background-color: #f8d7da;
+            border-left: 4px solid var(--accent-color);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .gateway-option {
+            background-color: #e8f4f8;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .section {
+                padding: 15px;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #666;
+        }
+
+        code {
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SMS Gateway Configuration Guide</h1>
+
+        <div class="section">
+            <h2>1. Accessing SMS Gateway Settings</h2>
+            <ol>
+                <li>Log in to your admin panel</li>
+                <li>Go to Settings</li>
+                <li>Scroll down to find "SMS Notification" section</li>
+                <li>Click to expand the section</li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h2>2. Configuring SMS Gateways</h2>
+            
+            <div class="gateway-option">
+                <h3>A. Blessed Texts Setup</h3>
+                <ol>
+                    <li>Click on "BlessedText SMS Gateway" in the side menu</li>
+                    <li>Enter your Blessed Texts API Key</li>
+                    <li>Enter your Blessed Texts Sender ID</li>
+                    <li>Click "Save Changes"</li>
+                </ol>
+            </div>
+
+            <div class="gateway-option">
+                <h3>B. Talk Sasa Setup</h3>
+                <ol>
+                    <li>Click on "TalkSasa SMS Gateway" in the side menu</li>
+                    <li>Enter your Talk Sasa API Token</li>
+                    <li>Enter your Talk Sasa Sender ID</li>
+                    <li>Click "Save Changes"</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>3. Switching Between Gateways</h2>
+            <ol>
+                <li>Go to Settings > SMS Notification</li>
+                <li>Look for "SMS Gateway" dropdown</li>
+                <li>Select your preferred gateway:
+                    <ul>
+                        <li>Choose "Blessed Texts" to use Blessed Texts gateway</li>
+                        <li>Choose "Talk Sasa" to use Talk Sasa gateway</li>
+                    </ul>
+                </li>
+                <li>Click "Save Changes" at the bottom of the section</li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h2>4. Testing the Configuration</h2>
+            <ol>
+                <li>After selecting and saving your preferred gateway:
+                    <ul>
+                        <li>In the SMS Notification section, look for "Test SMS" button</li>
+                        <li>Click the button to send a test message</li>
+                        <li>Check the response to confirm it's working</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h2>5. Troubleshooting</h2>
+            <div class="troubleshooting">
+                <p>If messages are not being sent through the selected gateway:</p>
+                <ol>
+                    <li>Verify your API credentials are correct</li>
+                    <li>Ensure you've clicked "Save Changes" after selecting the gateway</li>
+                    <li>Clear your browser cache or do a hard refresh (<code>Ctrl+F5</code>)</li>
+                    <li>Check the SMS logs in the respective gateway's menu item</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="note">
+            <strong>Note:</strong> Only one gateway can be active at a time. The system will use the selected gateway for all SMS communications.
+        </div>
+
+        <div class="footer">
+            <p>For technical support or questions, please contact your system administrator.</p>
+        </div>
+    </div>
+</body>
+</html>
