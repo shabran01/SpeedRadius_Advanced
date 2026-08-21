@@ -86,24 +86,6 @@
             </div>
         </div>
 
-        <!-- WhatsApp Gateway -->
-        <div class="cm-card">
-            <div class="cm-head">
-                <div class="cm-icon" style="background:rgba(16,185,129,.18);color:#6ee7b7;">&#x1F4AC;</div>
-                <div>
-                    <div class="cm-title">WhatsApp Gateway</div>
-                    <div class="cm-sub">Messaging API service</div>
-                </div>
-            </div>
-            <div class="cm-body">
-                WhatsApp API gateway for sending and receiving messages, notifications, schedulers and reminders &mdash; for your business or ISP automation.
-            </div>
-            <div class="cm-foot">
-                <a href="https://wa.nux.my.id/login" target="_blank" class="cm-btn cm-btn-whatsapp">&#x1F4AC; WA Gateway</a>
-                <a href="https://chat.whatsapp.com/HjnLYIEN6h0A0KMXbfNYP5" target="_blank" class="cm-btn cm-btn-ghost">&#x1F465; Join Group</a>
-            </div>
-        </div>
-
         <!-- Donations -->
         <div class="cm-card cm-full">
             <div class="cm-head">
