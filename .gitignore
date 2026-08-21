@@ -44,8 +44,10 @@ duplicate_transactions.log
 admin/index.html5555
 system/server_stats.php8776
 
-# ===== Dependencies (install via composer) =====
-system/vendor/
+# ===== Dependencies =====
+# system/vendor/ is intentionally committed for self-contained deployment,
+# but mpdf's runtime temp/cache directory is excluded:
+system/vendor/mpdf/mpdf/tmp/
 
 # ===== Cache =====
 ui/cache/
