@@ -2,6 +2,36 @@
 
  # CHANGELOG
 
+## [2.1.99] - 2026-08-21
+
+---
+
+### 🐛 FIXED: System Updater Crashing the Site (update.php)
+
+**`update.php`**
+
+Running an update could leave the site with a white screen / 500 error.
+
+- **Root cause:** Step 3 deleted `system/vendor/` (and `system/autoload/`, `ui/ui/`) before copying from the update ZIP, but the repo does not ship `system/vendor/` (composer dependencies are gitignored) — so Smarty/Idiorm/ORM were permanently deleted and the site crashed with `Class 'Smarty' not found`.
+- The updater now only deletes `system/autoload/`, `system/vendor/` and `ui/ui/` **when they exist in the update ZIP**, preserving the live composer dependencies otherwise.
+- Recreates `system/vendor/mpdf/mpdf/tmp/` + `ttfontdata/` after replacing vendor so PDF export keeps working.
+- Fixed the install-success check (it deleted the source folder before verifying, so it could never detect a failure).
+- Added a safety warning if `system/vendor/autoload.php` is missing after update (run `composer install`).
+
+---
+
+### ✨ IMPROVED: Per-Domain Notification Settings (Multi-Subdomain)
+
+**`system/controllers/settings.php` + `init.php`**
+
+Notification settings were stored in a single shared `system/uploads/notifications.json`, so when multiple subdomains shared a codebase, changing settings on one subdomain overwrote them for all.
+
+- Each subdomain now uses its own settings file: `notifications.<host>.json`.
+- Both the Settings page (view + save) and the notification-sending side (`init.php` → `$_notifmsg`, used by SMS/WhatsApp, expiry cron, reminders and invoices) read the per-domain file.
+- One-time migration copies the old shared `notifications.json` into each subdomain's own file, so no existing settings are lost.
+
+---
+
 ## [2.1.98] - 2026-08-21
 
 ---
