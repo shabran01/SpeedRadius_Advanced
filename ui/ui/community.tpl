@@ -121,9 +121,10 @@
                         <tr><td>M-Pesa Kenya</td><td>0718167262</td></tr>
                     </tbody>
                 </table>
+                <div style="margin-top:10px; font-size:.85rem; color:#94a3b8;">For support, join the official WhatsApp group:</div>
             </div>
             <div class="cm-foot">
-                <a href="https://www.paypal.com/ncp/payment/Y9JS7KVJ5PZJG" target="_blank" class="cm-btn cm-btn-primary">&#x1F6D2; Buy License</a>
+                <a href="https://chat.whatsapp.com/HjnLYIEN6h0A0KMXbfNYP5" target="_blank" class="cm-btn cm-btn-whatsapp">&#x1F4AC; Support</a>
             </div>
         </div>
     </div>
