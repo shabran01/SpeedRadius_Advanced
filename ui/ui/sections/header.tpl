@@ -1693,9 +1693,9 @@
                                 {/if}
                             </a>
                         </li>
-                        <li {if $_system_menu eq 'update' }class="active" {/if}>
-                            <a href="./update.php">
-                                <i class="ion ion-ios-refresh"></i>
+                        <li {if $_system_menu eq 'community' }class="active" {/if}>
+                            <a href="{$_url}community">
+                                <i class="ion ion-chatboxes"></i>
                                 <span class="text">System Update</span>
                             </a>
                         </li>
