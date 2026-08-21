@@ -848,10 +848,22 @@ switch ($action) {
             _alert(Lang::T('You do not have permission to access this page'), 'danger', "dashboard");
         }
         run_hook('view_notifications'); #HOOK
-        if (file_exists($UPLOAD_PATH . DIRECTORY_SEPARATOR . "notifications.json")) {
-            $ui->assign('_json', json_decode(file_get_contents($UPLOAD_PATH . DIRECTORY_SEPARATOR . 'notifications.json'), true));
+        // Per-domain settings file so multiple subdomains don't share the same notifications
+        $notif_host = preg_replace('/[^a-zA-Z0-9\.\-]/', '_', $_SERVER['HTTP_HOST'] ?? 'default');
+        $notif_file = $UPLOAD_PATH . DIRECTORY_SEPARATOR . "notifications." . $notif_host . ".json";
+        if (file_exists($notif_file)) {
+            $ui->assign('_json', json_decode(file_get_contents($notif_file), true));
         } else {
-            $ui->assign('_json', json_decode(file_get_contents($UPLOAD_PATH . DIRECTORY_SEPARATOR . 'notifications.default.json'), true));
+            // One-time migration from the old shared file, if it exists
+            $legacy_file = $UPLOAD_PATH . DIRECTORY_SEPARATOR . "notifications.json";
+            if (file_exists($legacy_file)) {
+                @copy($legacy_file, $notif_file);
+            }
+            if (file_exists($notif_file)) {
+                $ui->assign('_json', json_decode(file_get_contents($notif_file), true));
+            } else {
+                $ui->assign('_json', json_decode(file_get_contents($UPLOAD_PATH . DIRECTORY_SEPARATOR . 'notifications.default.json'), true));
+            }
         }
 
         $csrf_token = Csrf::generateAndStoreToken();
@@ -884,7 +896,9 @@ switch ($action) {
             }
         }
         
-        $json_path = $UPLOAD_PATH . "/notifications.json";
+        // Per-domain settings file so multiple subdomains don't share the same notifications
+        $notif_host = preg_replace('/[^a-zA-Z0-9\.\-]/', '_', $_SERVER['HTTP_HOST'] ?? 'default');
+        $json_path = $UPLOAD_PATH . "/notifications." . $notif_host . ".json";
         $written = file_put_contents($json_path, json_encode($_POST, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         if ($written === false) {
             r2(U . 'settings/notifications', 'e', 'Failed to save: file is not writable. Check permissions on ' . $json_path);

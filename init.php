@@ -90,9 +90,18 @@ if ($isApi) {
     define('U', APP_URL . '/?_route=');
 }
 
-// notification message
-if (file_exists($UPLOAD_PATH . DIRECTORY_SEPARATOR . "notifications.json")) {
-    $_notifmsg = json_decode(file_get_contents($UPLOAD_PATH . DIRECTORY_SEPARATOR . 'notifications.json'), true);
+// notification message (per-domain file so multiple subdomains don't share settings)
+$notif_host = preg_replace('/[^a-zA-Z0-9\.\-]/', '_', $_SERVER['HTTP_HOST'] ?? 'default');
+$notif_file = $UPLOAD_PATH . DIRECTORY_SEPARATOR . "notifications." . $notif_host . ".json";
+if (file_exists($notif_file)) {
+    $_notifmsg = json_decode(file_get_contents($notif_file), true);
+} else {
+    // One-time migration from the old shared file, if it exists
+    $legacy_file = $UPLOAD_PATH . DIRECTORY_SEPARATOR . "notifications.json";
+    if (file_exists($legacy_file)) {
+        @copy($legacy_file, $notif_file);
+        $_notifmsg = json_decode(file_get_contents($notif_file), true);
+    }
 }
 $_notifmsg_default = json_decode(file_get_contents($UPLOAD_PATH . DIRECTORY_SEPARATOR . 'notifications.default.json'), true);
 
