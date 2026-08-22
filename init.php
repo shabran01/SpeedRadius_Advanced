@@ -91,17 +91,40 @@ if ($isApi) {
 }
 
 // notification message (per-domain file so multiple subdomains don't share settings)
-$notif_host = preg_replace('/[^a-zA-Z0-9\.\-]/', '_', $_SERVER['HTTP_HOST'] ?? 'default');
-$notif_file = $UPLOAD_PATH . DIRECTORY_SEPARATOR . "notifications." . $notif_host . ".json";
-if (file_exists($notif_file)) {
-    $_notifmsg = json_decode(file_get_contents($notif_file), true);
-} else {
-    // One-time migration from the old shared file, if it exists
-    $legacy_file = $UPLOAD_PATH . DIRECTORY_SEPARATOR . "notifications.json";
-    if (file_exists($legacy_file)) {
-        @copy($legacy_file, $notif_file);
-        $_notifmsg = json_decode(file_get_contents($notif_file), true);
+$notif_host = isset($_SERVER['HTTP_HOST']) ? preg_replace('/[^a-zA-Z0-9\.\-]/', '_', $_SERVER['HTTP_HOST']) : '';
+$notif_file = '';
+if (!empty($notif_host)) {
+    // Web request — use this domain's own settings file
+    $notif_file = $UPLOAD_PATH . DIRECTORY_SEPARATOR . "notifications." . $notif_host . ".json";
+    if (!file_exists($notif_file)) {
+        // One-time migration from the old shared file, if it exists
+        $legacy_file = $UPLOAD_PATH . DIRECTORY_SEPARATOR . "notifications.json";
+        if (file_exists($legacy_file)) {
+            @copy($legacy_file, $notif_file);
+        }
     }
+} else {
+    // CLI (cron has no HTTP_HOST) — use the admin's real settings,
+    // NOT notifications.default.json (that is the defaults template).
+    $candidates = glob($UPLOAD_PATH . DIRECTORY_SEPARATOR . "notifications.*.json");
+    $candidates = array_values(array_filter($candidates, function ($f) {
+        return strpos(basename($f), 'notifications.default.json') === false;
+    }));
+    if (!empty($candidates)) {
+        // Use the most recently saved settings file
+        usort($candidates, function ($a, $b) {
+            return filemtime($b) - filemtime($a);
+        });
+        $notif_file = $candidates[0];
+    } else {
+        // Fall back to the old shared file, or finally the defaults
+        $legacy_file = $UPLOAD_PATH . DIRECTORY_SEPARATOR . "notifications.json";
+        $notif_file = (file_exists($legacy_file)) ? $legacy_file : $UPLOAD_PATH . DIRECTORY_SEPARATOR . "notifications.default.json";
+    }
+}
+
+if (!empty($notif_file) && file_exists($notif_file)) {
+    $_notifmsg = json_decode(file_get_contents($notif_file), true);
 }
 $_notifmsg_default = json_decode(file_get_contents($UPLOAD_PATH . DIRECTORY_SEPARATOR . 'notifications.default.json'), true);
 
