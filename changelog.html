@@ -58,6 +58,52 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.00] - 2026-08-22
+
+---
+
+### 🐛 FIXED: CLI Cron Loading Default Notification Templates Instead of Admin's Saved Settings
+
+**`init.php`**
+
+CLI cron jobs (`system/cron_reminder.php`, `system/cron.php`) were loading the default notification templates (`notifications.default.json`) instead of the admin's actual settings.
+
+- **Root cause:** The per-domain notification fix used `notifications.<host>.json` files. When cron runs via CLI (no `HTTP_HOST`), `init.php` fell back to `host='default'` which loaded `notifications.default.json` — the shipped defaults template, not the admin's saved settings.
+- CLI cron now scans for the most recently saved per-domain `notifications.*.json` file and uses that, falling back to the legacy `notifications.json` only if no per-domain file exists.
+- Web requests remain unchanged (still use per-domain isolation).
+
+---
+
+### 🔥 REMOVED: Unused AI Plugins
+
+**`system/plugin/mistral_ai.php`, `system/plugin/deepseek_ai.php` + UI templates + `ui/ui/sections/footer.tpl`**
+
+- Removed Mistral AI plugin (menu item, config, chat UI).
+- Removed DeepSeek AI plugin, including the floating chat widget and AI Assistant button from the admin footer.
+- The separate SPExpert AI plugin (which uses a DeepSeek API key) was kept.
+
+---
+
+### ✨ ADDED: Payment Gateway Plugins
+
+**`system/paymentgateway/`**
+
+- Added PesaPal (API v3) — redirect-based payment with IPN auto-registration.
+- Added PayHero, Paystack, ModemPay, UMS Pay gateway plugins.
+
+---
+
+### ✨ IMPROVED: Community Page & Sidebar
+
+**`ui/ui/community.tpl` + `ui/ui/sections/header.tpl`**
+
+- Community page redesigned: clean light layout, feature chips, copy-to-clipboard for donation values, compact version stats.
+- Removed WhatsApp Gateway card from community page.
+- Replaced "Buy License" with "💬 Support" button linking to WhatsApp group.
+- Sidebar: renamed "Support" → "System Update" (opens community page).
+
+---
+
 ## [2.1.99] - 2026-08-21
 
 ---
