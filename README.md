@@ -95,9 +95,9 @@ All release notes are maintained here:
 
 - This software is **for rent only — it is NOT for sale** and is **not open source**.
 - It is provided **as-is** and comes **without any warranty**.
-- **Technical support is not included** with the rental.
+- **Technical support is included for paid customers.**
 - Paid support is available starting at **Ksh 500 / $5** per request.
-- Contact for support: **SpeedcomWifi** — [speedcomwifi.xyz](https://speedcomwifi.xyz)
+- Contact for support: **SpeedRadius** — [speedcomwifi.co.ke](https://speedcomwifi.co.ke)
 
 Ask anything for free in the [Discussions](https://github.com/shabran01/SpeedRadius_Advanced/discussions) or join the [WhatsApp Support Group](https://chat.whatsapp.com/HjnLYIEN6h0A0KMXbfNYP5).
 
@@ -105,7 +105,7 @@ Ask anything for free in the [Discussions](https://github.com/shabran01/SpeedRad
 
 ## 📬 Contact
 
-- **Website:** [speedcomwifi.xyz](https://speedcomwifi.xyz)
+- **Website:** [speedcomwifi.co.ke](https://speedcomwifi.co.ke)
 - **GitHub:** [shabran01/SpeedRadius_Advanced](https://github.com/shabran01/SpeedRadius_Advanced)
 - **Developer:** Shabran Kweyu
 
