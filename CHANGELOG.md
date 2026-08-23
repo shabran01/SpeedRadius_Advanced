@@ -2,6 +2,32 @@
 
  # CHANGELOG
 
+## [2.2.02] - 2026-08-23
+
+---
+
+### 🐛 FIXED: Router Status Notifier Plugin & UI
+
+**`system/plugin/router_status_notifier.php` + `system/plugin/ui/router_status_notifier.tpl`**
+
+- Added **CSRF protection** to all POST actions (save settings, test send, template simulation).
+- Fixed **DataTables not loaded** on the Logs tab (added CDN + guarded init — no more console error).
+- Template Simulator now replaces the **`[[downtime]]`** placeholder.
+- Test log entries now show a **"Test"** badge instead of green "Online".
+- Removed the leading space in the menu name (" Router Notifier" → "Router Notifier").
+- Restricted the menu to **Admin / SuperAdmin** only.
+- Flapping-protection default aligned to **300 seconds** (5 min) in all places.
+
+---
+
+### ✨ IMPROVED: Emoji Support (utf8mb4)
+
+**`init.php`**
+
+- The main database connection now uses **`SET NAMES utf8mb4`**, so emojis and 4-byte UTF-8 characters in notification templates, router notifier messages and other text are stored and delivered correctly (the tables were already `utf8mb4`).
+
+---
+
 ## [2.2.01] - 2026-08-23
 
 ---
