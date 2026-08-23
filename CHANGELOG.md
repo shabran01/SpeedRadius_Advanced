@@ -2,6 +2,21 @@
 
  # CHANGELOG
 
+## [2.2.01] - 2026-08-23
+
+---
+
+### 🐛 FIXED: SMS Notifications Silently Failing ("Configuration missing")
+
+**`system/plugin/SMS_Gateway_Manager.php`**
+
+If the selected SMS gateway was misconfigured (e.g., missing API token / Sender ID), outgoing SMS — including **PPPoE payment notifications** — failed silently with "Configuration missing" and the customer received nothing.
+
+- The SMS gateway dispatcher now tries the **selected gateway first**, then **automatically falls back** to every other configured gateway until one actually delivers the message.
+- Payment, expiry, reminder and all other SMS notifications can no longer be lost due to a misconfigured or offline gateway.
+
+---
+
 ## [2.2.00] - 2026-08-22
 
 ---
