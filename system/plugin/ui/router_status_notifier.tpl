@@ -1,4 +1,4 @@
-{include file="sections/header.tpl"}
+t{include file="sections/header.tpl"}
 
 <div class="row">
     <div class="col-md-12">
@@ -23,6 +23,7 @@
                                 <div class="panel-heading">Test Notification</div>
                                 <div class="panel-body">
                                     <form method="post" action="">
+                                        <input type="hidden" name="csrf_token" value="{$csrf_token}">
                                         <div class="form-group">
                                             <label>Phone Number</label>
                                             <input type="text" class="form-control" name="phone" placeholder="e.g 2547..." required>
@@ -41,6 +42,7 @@
                                 <div class="panel-body">
                                     <p>Test your configured <b>Offline</b> and <b>Online</b> templates with dummy data.</p>
                                     <form method="post">
+                                        <input type="hidden" name="csrf_token" value="{$csrf_token}">
                                         <div class="form-group">
                                             <label>Select Router (Optional)</label>
                                             <select name="sim_router_id" class="form-control select2" style="width: 100%;">
@@ -82,6 +84,8 @@
                                             <td>
                                                 {if $log.type == 'offline'}
                                                     <span class="label label-danger">Offline</span>
+                                                {elseif $log.type == 'test'}
+                                                    <span class="label label-default">Test</span>
                                                 {else}
                                                     <span class="label label-success">Online</span>
                                                 {/if}
@@ -98,7 +102,8 @@
 
                 <!-- SETTINGS TAB -->
                 <div class="tab-pane" id="settings">
-                    <form method="post" action="">
+                    <forminput type="hidden" name="csrf_token" value="{$csrf_token}">
+                        < method="post" action="">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="panel panel-default">
@@ -169,11 +174,15 @@
 </div>
 
 {include file="sections/footer.tpl"}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 <script>
     $(document).ready(function() {
         $('.select2').select2();
-        $('#logs_table').DataTable({
-            "order": [[ 0, "desc" ]]
-        });
+        if ($.fn.DataTable) {
+            $('#logs_table').DataTable({
+                "order": [[ 0, "desc" ]]
+            });
+        }
     });
 </script>

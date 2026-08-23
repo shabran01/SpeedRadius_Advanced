@@ -65,7 +65,7 @@ function plugin_router_status_notifier($args)
     }
 
     // 2. Flapping Detection — apply to ALL notification types (including online)
-    $flap_seconds = isset($conf['router_notif_flap_seconds']) ? intval($conf['router_notif_flap_seconds']) : 60;
+    $flap_seconds = isset($conf['router_notif_flap_seconds']) ? intval($conf['router_notif_flap_seconds']) : 300;
     if ($flap_seconds > 0) {
         $last_log = ORM::for_table('tbl_router_notif_logs')
             ->where('router_id', $router['id'])
@@ -186,7 +186,7 @@ function router_status_notifier_cron()
         }
 
         // Flapping protection
-        $flap_seconds = isset($conf['router_notif_flap_seconds']) ? (int)$conf['router_notif_flap_seconds'] : 60;
+        $flap_seconds = isset($conf['router_notif_flap_seconds']) ? (int)$conf['router_notif_flap_seconds'] : 300;
         if ($flap_seconds > 0) {
             $last_log = ORM::for_table('tbl_router_notif_logs')
                 ->where('router_id', $router->id)
@@ -249,7 +249,7 @@ function router_status_notifier_cron()
 }
 
 // Register Menu
-register_menu(" Router Notifier", true, "router_status_notifier_ui", 'NETWORK', 'ion ion-ios-bell', "Router Notifier", "purple");
+register_menu("Router Notifier", true, "router_status_notifier_ui", 'NETWORK', 'ion ion-ios-bell', "Router Notifier", "purple", ['Admin', 'SuperAdmin']);
 
 function router_status_notifier_ui()
 {
@@ -260,6 +260,12 @@ function router_status_notifier_ui()
 
     $admin = Admin::_info();
     $ui->assign('_admin', $admin);
+
+    // CSRF protection for all POST actions on this page
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !Csrf::check(_post('csrf_token'))) {
+        r2(U . 'plugin/router_status_notifier_ui', 'e', Lang::T('Invalid or Expired CSRF Token') . ".");
+    }
+    $ui->assign('csrf_token', Csrf::generateAndStoreToken());
 
     // Handle Settings Save
     if (isset($_POST['save_settings'])) {
@@ -353,8 +359,8 @@ function router_status_notifier_ui()
         }
 
         $sim_msg = str_replace(
-            ['[[name]]', '[[ip]]', '[[time]]'],
-            [$r_name, $r_ip, date('Y-m-d H:i:s')],
+            ['[[name]]', '[[ip]]', '[[time]]', '[[downtime]]'],
+            [$r_name, $r_ip, date('Y-m-d H:i:s'), 'N/A'],
             $template
         );
 
@@ -409,7 +415,7 @@ function router_status_notifier_ui()
     if (!isset($pconf['router_notif_tpl_online']))
         $pconf['router_notif_tpl_online'] = "Router [[name]] ([[ip]]) is back ONLINE.\nTime: [[time]]";
     if (!isset($pconf['router_notif_flap_seconds']))
-        $pconf['router_notif_flap_seconds'] = 60;
+        $pconf['router_notif_flap_seconds'] = 300;
     if (!isset($pconf['router_notif_recipients']))
         $pconf['router_notif_recipients'] = '';
     if (!isset($pconf['router_notif_offline_delay']))

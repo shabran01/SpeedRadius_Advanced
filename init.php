@@ -80,6 +80,8 @@ if ($db_pass != null) {
 ORM::configure("mysql:host=$db_host;dbname=$db_name");
 ORM::configure('username', $db_user);
 ORM::configure('password', $db_pass);
+// Use utf8mb4 so emojis & 4-byte UTF-8 (e.g. notification templates, messages) are stored/read correctly
+ORM::configure('driver_options', array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8mb4'));
 ORM::configure('return_result_sets', true);
 if ($_app_stage != 'Live') {
     ORM::configure('logging', true);
