@@ -24,35 +24,35 @@ function sms_gateway_manager_hook_send_sms($data = []) {
 
     list($phone, $message) = $data;
     
-    // Route to the appropriate gateway
-    if ($selected_gateway === 'talksasa') {
-        // Use Talk Sasa gateway
-        if(function_exists('smsGatewayTalkSasa_hook_send_sms')) {
-            return smsGatewayTalkSasa_hook_send_sms($data) ? true : false;
-        }
-    } else if ($selected_gateway === 'blessed_texts') {
-        // Use Blessed Texts gateway
-        if(function_exists('smsGateway_hook_send_sms')) {
-            return smsGateway_hook_send_sms($data) ? true : false;
-        }
-    } else if ($selected_gateway === 'bytewave') {
-        // Use BytewaveSMS gateway
-        if(function_exists('smsGatewayBytewave_hook_send_sms')) {
-            return smsGatewayBytewave_hook_send_sms($data) ? true : false;
-        }
-    } else if ($selected_gateway === 'smsgate') {
-        // Use sms-gate.app gateway
-        if(function_exists('smsGatewaySmSGate_hook_send_sms')) {
-            return smsGatewaySmSGate_hook_send_sms($data) ? true : false;
-        }
-    } else if ($selected_gateway === 'texin') {
-        // Use Texin SMS gateway
-        if(function_exists('smsGatewayTexin_hook_send_sms')) {
-            return smsGatewayTexin_hook_send_sms($data) ? true : false;
+    // Map gateway key → its hook function
+    $map = [
+        'talksasa'      => 'smsGatewayTalkSasa_hook_send_sms',
+        'blessed_texts' => 'smsGateway_hook_send_sms',
+        'bytewave'      => 'smsGatewayBytewave_hook_send_sms',
+        'smsgate'       => 'smsGatewaySmSGate_hook_send_sms',
+        'texin'         => 'smsGatewayTexin_hook_send_sms',
+    ];
+    
+    // Try the selected gateway first, then fall back to every other gateway so
+    // a payment/expiry SMS is never lost due to a misconfigured/offline gateway.
+    $order = array_keys($map);
+    if (($key = array_search($selected_gateway, $order)) !== false) {
+        unset($order[$key]);
+        array_unshift($order, $selected_gateway);
+    }
+    
+    foreach ($order as $gw) {
+        $fn = $map[$gw];
+        if (function_exists($fn)) {
+            $result = call_user_func($fn, $data);
+            if ($result === true) {
+                return true; // delivered by this gateway
+            }
+            // Failed (misconfigured / offline) — try the next configured gateway
         }
     }
     
-    // If selected gateway is not available or failed, let other hooks try
+    // If no gateway could deliver, let other hooks try
     return true;
 }
 
