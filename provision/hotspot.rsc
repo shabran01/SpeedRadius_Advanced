@@ -58,8 +58,8 @@
 # 9. WALLED GARDEN
 ############################################
 /ip hotspot walled-garden add dst-host=hotspot.wifi comment="Hotspot Login"
-/ip hotspot walled-garden ip add dst-host=speedcomwifi.xyz action=accept
-/ip hotspot walled-garden ip add dst-host=*.speedcomwifi.xyz action=accept
+/ip hotspot walled-garden ip add dst-host=speedcomwifi.co.ke action=accept
+/ip hotspot walled-garden ip add dst-host=*.speedcomwifi.co.ke action=accept
 /ip hotspot walled-garden ip add dst-host=code.jquery.com action=accept
 /ip hotspot walled-garden ip add dst-host=cdn.jsdelivr.net action=accept
 /ip hotspot walled-garden ip add dst-host=cdnjs.cloudflare.com action=accept
