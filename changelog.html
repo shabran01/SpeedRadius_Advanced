@@ -58,6 +58,23 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.03] - 2026-08-25
+
+---
+
+### 🐛 FIXED: PPPoE Router Comment Expiry Not Matching the Website
+
+**`system/autoload/Package.php` + `system/devices/MikrotikPppoe.php`**
+
+The MikroTik **PPP Secret comment** ("Expires on: ...") showed a different expiry from the website after a customer recharged.
+
+- **Root cause:** the comment was built using "now + plan validity" instead of the actual recharge expiry, and the router update ran **before** the new recharge was saved.
+- The device update now runs **after** the recharge record is saved.
+- Both `add_customer()` (existing secret) and `addPpoeUser()` (new secret) now use the customer's **actual active recharge expiration** from `tbl_user_recharges` — the same value the website shows.
+- Clicking **Sync** on a customer (or any recharge) now refreshes the router comment to match the website.
+
+---
+
 ## [2.2.02] - 2026-08-23
 
 ---
