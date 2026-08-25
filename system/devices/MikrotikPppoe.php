@@ -77,23 +77,34 @@ class MikrotikPppoe
                     $pppoe_comment .= ' | Phone: ' . $customer['phonenumber'];
                 }
                 
-                // Add expiry date
-                if ($plan['validity_unit'] == 'Period') {
-                    $day_exp = User::getAttribute("Expired Date", $customer['id']);
-                    if (!$day_exp) {
-                        $day_exp = 20;
-                        if ($plan['prepaid'] == 'no') {
-                            $day_exp = $plan['expired_date'];
-                        }
-                        if (empty($day_exp)) {
-                            $day_exp = 20;
-                        }
-                    }
-                    $expiry_date = date('d M Y H:i', strtotime("+$day_exp days"));
+                // Add expiry date — use the actual recharge expiration (matches the website)
+                $recharge = ORM::for_table('tbl_user_recharges')
+                    ->where('customer_id', $customer['id'])
+                    ->where('status', 'on')
+                    ->order_by_desc('id')
+                    ->find_one();
+                if ($recharge && !empty($recharge['expiration'])) {
+                    $expiry_date = date('d M Y H:i', strtotime($recharge['expiration'] . ' ' . $recharge['time']));
                     $pppoe_comment .= ' | Expires on: ' . $expiry_date;
                 } else {
-                    $expiry_date = date('d M Y H:i', strtotime("+$plan[validity] $plan[validity_unit]"));
-                    $pppoe_comment .= ' | Expires on: ' . $expiry_date;
+                    // Fallback: compute from plan validity
+                    if ($plan['validity_unit'] == 'Period') {
+                        $day_exp = User::getAttribute("Expired Date", $customer['id']);
+                        if (!$day_exp) {
+                            $day_exp = 20;
+                            if ($plan['prepaid'] == 'no') {
+                                $day_exp = $plan['expired_date'];
+                            }
+                            if (empty($day_exp)) {
+                                $day_exp = 20;
+                            }
+                        }
+                        $expiry_date = date('d M Y H:i', strtotime("+$day_exp days"));
+                        $pppoe_comment .= ' | Expires on: ' . $expiry_date;
+                    } else {
+                        $expiry_date = date('d M Y H:i', strtotime("+$plan[validity] $plan[validity_unit]"));
+                        $pppoe_comment .= ' | Expires on: ' . $expiry_date;
+                    }
                 }
                 
                 // Add bandwidth information
@@ -666,23 +677,34 @@ class MikrotikPppoe
             $pppoe_comment .= ' | Phone: ' . $customer['phonenumber'];
         }
         
-        // Add expiry date
-        if ($plan['validity_unit'] == 'Period') {
-            $day_exp = User::getAttribute("Expired Date", $customer['id']);
-            if (!$day_exp) {
-                $day_exp = 20;
-                if ($plan['prepaid'] == 'no') {
-                    $day_exp = $plan['expired_date'];
-                }
-                if (empty($day_exp)) {
-                    $day_exp = 20;
-                }
-            }
-            $expiry_date = date('d M Y H:i', strtotime("+$day_exp days"));
+        // Add expiry date — use the actual recharge expiration (matches the website)
+        $recharge = ORM::for_table('tbl_user_recharges')
+            ->where('customer_id', $customer['id'])
+            ->where('status', 'on')
+            ->order_by_desc('id')
+            ->find_one();
+        if ($recharge && !empty($recharge['expiration'])) {
+            $expiry_date = date('d M Y H:i', strtotime($recharge['expiration'] . ' ' . $recharge['time']));
             $pppoe_comment .= ' | Expires on: ' . $expiry_date;
         } else {
-            $expiry_date = date('d M Y H:i', strtotime("+$plan[validity] $plan[validity_unit]"));
-            $pppoe_comment .= ' | Expires on: ' . $expiry_date;
+            // Fallback: compute from plan validity
+            if ($plan['validity_unit'] == 'Period') {
+                $day_exp = User::getAttribute("Expired Date", $customer['id']);
+                if (!$day_exp) {
+                    $day_exp = 20;
+                    if ($plan['prepaid'] == 'no') {
+                        $day_exp = $plan['expired_date'];
+                    }
+                    if (empty($day_exp)) {
+                        $day_exp = 20;
+                    }
+                }
+                $expiry_date = date('d M Y H:i', strtotime("+$day_exp days"));
+                $pppoe_comment .= ' | Expires on: ' . $expiry_date;
+            } else {
+                $expiry_date = date('d M Y H:i', strtotime("+$plan[validity] $plan[validity_unit]"));
+                $pppoe_comment .= ' | Expires on: ' . $expiry_date;
+            }
         }
         
         // Add bandwidth information

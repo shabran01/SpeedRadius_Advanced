@@ -279,6 +279,29 @@ class Package
             }
 
             //if ($b['status'] == 'on') {
+            // if contains 'mikrotik', 'hotspot', 'pppoe', 'radius' then recharge it
+            if (Validator::containsKeyword($p['device'])) {
+                $b->customer_id = $id_customer;
+                $b->username = $c['username'];
+                $b->plan_id = $plan_id;
+                $b->namebp = $p['name_plan'];
+                $b->recharged_on = $date_only;
+                $b->recharged_time = $time_only;
+                $b->expiration = $date_exp;
+                $b->time = $time;
+                $b->status = "on";
+                $b->method = "$gateway - $channel";
+                $b->routers = $router_name;
+                $b->type = $p['type'];
+                if ($admin) {
+                    $b->admin_id = ($admin['id']) ? $admin['id'] : '0';
+                } else {
+                    $b->admin_id = '0';
+                }
+                $b->save();
+            }
+
+            // Now update the router secret with the new recharge expiry
             $dvc = Package::getDevice($p);
             if ($_app_stage != 'Demo') {
                 try {
@@ -309,28 +332,6 @@ class Package
                 }
             }
             //}
-
-            // if contains 'mikrotik', 'hotspot', 'pppoe', 'radius' then recharge it
-            if (Validator::containsKeyword($p['device'])) {
-                $b->customer_id = $id_customer;
-                $b->username = $c['username'];
-                $b->plan_id = $plan_id;
-                $b->namebp = $p['name_plan'];
-                $b->recharged_on = $date_only;
-                $b->recharged_time = $time_only;
-                $b->expiration = $date_exp;
-                $b->time = $time;
-                $b->status = "on";
-                $b->method = "$gateway - $channel";
-                $b->routers = $router_name;
-                $b->type = $p['type'];
-                if ($admin) {
-                    $b->admin_id = ($admin['id']) ? $admin['id'] : '0';
-                } else {
-                    $b->admin_id = '0';
-                }
-                $b->save();
-            }
 
             // Check for duplicate transactions before creating new one
             if (class_exists('TransactionDuplicateHelper') && !$isVoucher) {
