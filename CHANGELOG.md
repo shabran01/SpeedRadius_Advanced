@@ -2,6 +2,21 @@
 
  # CHANGELOG
 
+## [2.2.04] - 2026-08-26
+
+---
+
+### 🐛 FIXED: Dashboard "Users Expiring Today" Count Was Inflated
+
+**`system/controllers/dashboard.php`**
+
+The dashboard alert was counting **every recharge record** that expired in the last 2 days — including old/historical records from customers who had already renewed, and already-expired (`status != 'on'`) records.
+
+- The "expiring today" list and count now filter to **`status = 'on'`** only.
+- The alert now shows the **real number of active users** who actually need renewal.
+
+---
+
 ## [2.2.03] - 2026-08-25
 
 ---
