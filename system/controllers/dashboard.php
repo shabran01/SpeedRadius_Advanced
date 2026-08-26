@@ -446,15 +446,17 @@ if (empty($c_all)) {
 $ui->assign('c_all', $c_all);
 
 if ($config['hide_uet'] != 'yes') {
-    //user expire today
+    //user expire today — only ACTIVE packages so old/replaced records don't inflate the count
     $query = ORM::for_table('tbl_user_recharges')
+        ->where('status', 'on')
         ->where_lte('expiration', $current_date)
         ->where_gte('expiration', date('Y-m-d', strtotime('-1 day')))
         ->order_by_desc('expiration');
     $expire = Paginator::findMany($query);
 
-    // Get the total count of expired records for pagination
+    // Get the total count of active records expiring in the window
     $totalCount = ORM::for_table('tbl_user_recharges')
+        ->where('status', 'on')
         ->where_lte('expiration', $current_date)
         ->where_gte('expiration', date('Y-m-d', strtotime('-1 day')))
         ->count();
