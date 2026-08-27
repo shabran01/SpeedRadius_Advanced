@@ -38,11 +38,15 @@ switch ($action) {
         }
         
         $syncRouter = isset($_GET['router']) ? trim($_GET['router']) : '';
+        $syncType = isset($_GET['type']) ? trim($_GET['type']) : '';
 
         // Display sync interface with progress
         $syncQuery = ORM::for_table('tbl_user_recharges')->where('status', 'on');
         if ($syncRouter !== '') {
             $syncQuery->where('routers', $syncRouter);
+        }
+        if ($syncType !== '') {
+            $syncQuery->where('type', $syncType);
         }
         $totalUsers = $syncQuery->count();
 
@@ -56,6 +60,7 @@ switch ($action) {
         $ui->assign('isViewer', $admin['user_type'] == 'Viewer');
         $ui->assign('allRouters', $allRouters);
         $ui->assign('syncRouter', $syncRouter);
+        $ui->assign('syncType', $syncType);
         $ui->display('plan-sync.tpl');
         break;
         
@@ -65,11 +70,13 @@ switch ($action) {
         }
 
         $filterRouter = isset($_GET['router']) ? trim($_GET['router']) : '';
+        $filterType = isset($_GET['type']) ? trim($_GET['type']) : '';
 
         // count_only: just return the total for that router (used by dropdown change event)
         if (!empty($_GET['count_only'])) {
             $cq = ORM::for_table('tbl_user_recharges')->where('status', 'on');
             if ($filterRouter !== '') { $cq->where('routers', $filterRouter); }
+            if ($filterType !== '') { $cq->where('type', $filterType); }
             header('Content-Type: application/json');
             die(json_encode(['success' => true, 'stats' => ['total' => $cq->count()]]));
         }
@@ -82,6 +89,9 @@ switch ($action) {
             ->where('status', 'on');
         if ($filterRouter !== '') {
             $tursQuery->where('routers', $filterRouter);
+        }
+        if ($filterType !== '') {
+            $tursQuery->where('type', $filterType);
         }
         $turs = $tursQuery->limit($limit)->offset($offset)->find_many();
 
@@ -133,6 +143,9 @@ switch ($action) {
         $totalCountQuery = ORM::for_table('tbl_user_recharges')->where('status', 'on');
         if ($filterRouter !== '') {
             $totalCountQuery->where('routers', $filterRouter);
+        }
+        if ($filterType !== '') {
+            $totalCountQuery->where('type', $filterType);
         }
         $totalUsers = $totalCountQuery->count();
         $hasMore = ($offset + $limit) < $totalUsers;

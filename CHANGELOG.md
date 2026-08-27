@@ -2,6 +2,24 @@
 
  # CHANGELOG
 
+## [2.2.05] - 2026-08-27
+
+---
+
+### ✨ NEW: Service-Type Scope Filter on Plan Sync Page
+
+**`system/controllers/plan.php` + `ui/ui/plan-sync.tpl`**
+
+The plan sync page (`/?_route=plan/sync`) now lets you choose which service type to sync — **Hotspot Only**, **PPPoE Only**, or **All Types** — alongside the existing router filter.
+
+- Added a **Service Type** dropdown (All Types / Hotspot / PPPoE) on the sync page.
+- Both the sync count and the actual sync processing respect the selected type filter.
+- When changing either the router or type dropdown, the user count updates live via AJAX.
+- The confirmation message now mentions the scope (e.g. "Sync active PPPoE users on router [...]").
+- Removed leftover `alert('Button clicked!')` debug line from the template.
+
+---
+
 ## [2.2.04] - 2026-08-26
 
 ---

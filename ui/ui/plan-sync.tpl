@@ -29,6 +29,16 @@
                             </select>
                             <p class="help-block">Choose a specific router to sync only its customers, or leave as <em>All Routers</em>.</p>
                         </div>
+
+                        <div class="form-group">
+                            <label for="typeSelect"><strong>Service Type</strong></label>
+                            <select id="typeSelect" class="form-control" style="max-width:400px;">
+                                <option value=""{if $syncType eq ''} selected{/if}>All Types</option>
+                                <option value="Hotspot"{if $syncType eq 'Hotspot'} selected{/if}>Hotspot Only</option>
+                                <option value="PPPOE"{if $syncType eq 'PPPOE'} selected{/if}>PPPoE Only</option>
+                            </select>
+                            <p class="help-block">Choose a service type to sync only those customers, or leave as <em>All Types</em>.</p>
+                        </div>
                         {/if}
                         
                         {if $isViewer}
@@ -119,12 +129,28 @@ $(document).ready(function() {
     let totalUsers = {$totalUsers};
     let isSyncing = false;
     let selectedRouter = '{$syncRouter|escape:"javascript"}';
+    let selectedType = '{$syncType|escape:"javascript"}';
     
     // Update banner count when router dropdown changes
     $('#routerSelect').on('change', function() {
         selectedRouter = $(this).val();
         let router = selectedRouter;
-        $.getJSON('{$_url}plan/sync-process', { offset: 0, limit: 0, router: router, count_only: 1 })
+        let type = $('#typeSelect').length ? $('#typeSelect').val() : selectedType;
+        $.getJSON('{$_url}plan/sync-process', { offset: 0, limit: 0, router: router, type: type, count_only: 1 })
+            .done(function(data) {
+                if (data && data.stats) {
+                    totalUsers = data.stats.total;
+                    $('#totalUsersLabel').text(totalUsers);
+                }
+            });
+    });
+
+    // Update banner count when service type dropdown changes
+    $('#typeSelect').on('change', function() {
+        selectedType = $(this).val();
+        let type = selectedType;
+        let router = $('#routerSelect').length ? $('#routerSelect').val() : selectedRouter;
+        $.getJSON('{$_url}plan/sync-process', { offset: 0, limit: 0, router: router, type: type, count_only: 1 })
             .done(function(data) {
                 if (data && data.stats) {
                     totalUsers = data.stats.total;
@@ -139,7 +165,6 @@ $(document).ready(function() {
     
     $('#startSyncBtn').click(function(e) {
         e.preventDefault();
-        alert('Button clicked!'); // Simple test
         console.log('Sync button clicked');
         
         if (isSyncing) {
@@ -148,17 +173,20 @@ $(document).ready(function() {
         }
         
         selectedRouter = $('#routerSelect').length ? $('#routerSelect').val() : selectedRouter;
+        selectedType = $('#typeSelect').length ? $('#typeSelect').val() : selectedType;
+        let typeLabel = selectedType ? (selectedType == 'PPPOE' ? 'PPPoE' : selectedType) : 'All Types';
         let confirmMsg = selectedRouter
-            ? 'Sync active users on router [' + selectedRouter + '] to Mikrotik?'
-            : 'Sync ALL active users across all routers to Mikrotik? This may take several minutes.';
+            ? 'Sync active ' + typeLabel + ' users on router [' + selectedRouter + '] to Mikrotik?'
+            : 'Sync ALL active ' + typeLabel + ' users across all routers to Mikrotik? This may take several minutes.';
         if (!confirm(confirmMsg)) {
             console.log('User cancelled sync');
             return;
         }
         
-        // Lock the dropdown during sync
+        // Lock the dropdowns during sync
         $('#routerSelect').prop('disabled', true);
-        console.log('Starting sync process, router filter:', selectedRouter || 'ALL');
+        $('#typeSelect').prop('disabled', true);
+        console.log('Starting sync process, router filter:', selectedRouter || 'ALL', '| type filter:', selectedType || 'ALL');
         isSyncing = true;
         $('#syncControls').hide();
         $('#syncProgress').show();
@@ -169,6 +197,7 @@ $(document).ready(function() {
         console.log('Starting syncNextBatch, offset:', offset);
         let ajaxData = { offset: offset };
         if (selectedRouter) { ajaxData.router = selectedRouter; }
+        if (selectedType) { ajaxData.type = selectedType; }
         $.ajax({
             url: '{$_url}plan/sync-process',
             method: 'GET',
