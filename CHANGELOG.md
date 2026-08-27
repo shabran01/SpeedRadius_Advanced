@@ -2,6 +2,21 @@
 
  # CHANGELOG
 
+## [2.2.06] - 2026-08-28
+
+---
+
+### 🐛 FIXED: PayHero Gateway Showing Generic "Unknown error from Pay Hero"
+
+**`system/plugin/initiatepayhero.php`**
+
+When PayHero rejected an STK push, the customer saw a generic *"Could not initiate payment: Unknown error from Pay Hero"* even though PayHero returned a specific reason (e.g. *"merchant has insufficient balance"*).
+
+- **Root cause:** the code only checked `$mpesaResponse->error`, but PayHero actually returns the reason in **`error_message`** (sometimes `message` / `error`).
+- The error handler now checks all PayHero response fields (`error_message`, `message`, `error`, `error_description`) and surfaces the **real reason** to the customer and the error log.
+
+---
+
 ## [2.2.05] - 2026-08-27
 
 ---

@@ -109,7 +109,14 @@ function initiatepayhero()
     $mpesaResponse = json_decode($curl_response);
 
     if (!$mpesaResponse || !isset($mpesaResponse->success) || !$mpesaResponse->success) {
-        $errorMsg = isset($mpesaResponse->error) ? $mpesaResponse->error : 'Unknown error from Pay Hero';
+        // Pay Hero returns the real reason in "error_message" (or "error"/"message") — surface it
+        $errorMsg = 'Unknown error from Pay Hero';
+        if (is_object($mpesaResponse) || is_array($mpesaResponse)) {
+            $r = (array)$mpesaResponse;
+            foreach (['error_message', 'message', 'error', 'error_description'] as $f) {
+                if (!empty($r[$f])) { $errorMsg = $r[$f]; break; }
+            }
+        }
         error_log("PayHero initiatepayhero: STK Push failed — " . $errorMsg);
         echo json_encode([
             "status"  => "error",
