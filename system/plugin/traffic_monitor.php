@@ -3,17 +3,22 @@ use PEAR2\Net\RouterOS;
 
 register_menu("Traffic Monitor", true, "traffic_monitor_ui", 'AFTER_SETTINGS', 'ion ion-stats-bars', "Live", "blue");
 
-// Auto-create traffic cache table (holds latest sample per router+interface)
+// Auto-create traffic cache table (holds latest sample per router+interface).
+// Wrapped in try/catch so a permission/schema issue can NEVER block the page.
 if (!isTableExist('tbl_traffic_monitor')) {
-    ORM::raw_execute("CREATE TABLE IF NOT EXISTS tbl_traffic_monitor (
-        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        router_id INT(11) NOT NULL,
-        interface VARCHAR(100) NOT NULL,
-        rx_bps BIGINT NOT NULL DEFAULT 0,
-        tx_bps BIGINT NOT NULL DEFAULT 0,
-        updated_at DATETIME NOT NULL,
-        UNIQUE KEY uq_router_iface (router_id, interface)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;");
+    try {
+        ORM::raw_execute("CREATE TABLE IF NOT EXISTS tbl_traffic_monitor (
+            id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            router_id INT(11) NOT NULL,
+            interface VARCHAR(100) NOT NULL,
+            rx_bps BIGINT NOT NULL DEFAULT 0,
+            tx_bps BIGINT NOT NULL DEFAULT 0,
+            updated_at DATETIME NOT NULL,
+            UNIQUE KEY uq_router_iface (router_id, interface)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8;");
+    } catch (\Exception $e) {
+        // cache table creation failed — monitoring still works live
+    }
 }
 
 /**
@@ -120,19 +125,26 @@ function traffic_monitor_get_data()
 
     $rx = 0; $tx = 0; $fresh = false;
 
-    // Read last cached sample for this router+interface
-    $row = ORM::for_table('tbl_traffic_monitor')
-        ->where('router_id', $router)
-        ->where('interface', $interface)
-        ->find_one();
+    // Cache is OPTIONAL — if the cache table has any problem we simply skip
+    // it and always query the router live. A DB warning must never block
+    // the traffic monitor from working.
+    $cachedRow = null;
+    try {
+        $cachedRow = ORM::for_table('tbl_traffic_monitor')
+            ->where('router_id', $router)
+            ->where('interface', $interface)
+            ->find_one();
+    } catch (\Exception $e) {
+        $cachedRow = null; // cache table unavailable — fall through to live query
+    }
 
-    // If cache is fresh (< 1.6s), reuse it — this shares ONE router poll
-    // across all open tabs instead of each tab opening its own connection.
-    if ($row && strtotime($row['updated_at']) > time() - 1.6) {
-        $rx = intval($row['rx_bps']);
-        $tx = intval($row['tx_bps']);
+    // If cache is fresh (< 1.6s), reuse it — shares ONE router poll across tabs
+    if ($cachedRow && strtotime($cachedRow['updated_at']) > time() - 1.6) {
+        $rx = intval($cachedRow['rx_bps']);
+        $tx = intval($cachedRow['tx_bps']);
         $fresh = true;
     } else {
+        $errMsg = null;
         try {
             $client = traffic_monitor_connect($mikrotik);
             $results = $client->sendSync(
@@ -144,22 +156,28 @@ function traffic_monitor_get_data()
                 $rx = intval($result->getProperty('rx-bits-per-second'));
                 $tx = intval($result->getProperty('tx-bits-per-second'));
             }
-            // Save to cache
-            if (!$row) {
-                $row = ORM::for_table('tbl_traffic_monitor')->create();
-                $row->router_id = $router;
-                $row->interface = $interface;
-            }
-            $row->rx_bps = $rx;
-            $row->tx_bps = $tx;
-            $row->updated_at = date('Y-m-d H:i:s');
-            $row->save();
             $fresh = true;
+
+            // Try to save to cache — never let a cache write failure break live data
+            try {
+                $row = $cachedRow;
+                if (!$row) {
+                    $row = ORM::for_table('tbl_traffic_monitor')->create();
+                    $row->router_id = $router;
+                    $row->interface = $interface;
+                }
+                $row->rx_bps = $rx;
+                $row->tx_bps = $tx;
+                $row->updated_at = date('Y-m-d H:i:s');
+                $row->save();
+            } catch (\Exception $e2) {
+                // cache write failed — ignore, live data still returned
+            }
         } catch (\Exception $e) {
             // Router unreachable — return last known cached value + expose the real error
-            if ($row) {
-                $rx = intval($row['rx_bps']);
-                $tx = intval($row['tx_bps']);
+            if ($cachedRow) {
+                $rx = intval($cachedRow['rx_bps']);
+                $tx = intval($cachedRow['tx_bps']);
             }
             $errMsg = $e->getMessage();
         }
