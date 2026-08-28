@@ -60,17 +60,17 @@
 <div id="tm-app" class="p-3 sm:p-5 lg:p-7">
 
     <!-- Page Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div>
-            <h1 class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-800">&#x1F4CA; Live Traffic Monitor</h1>
-            <p class="text-slate-400 text-xs sm:text-sm mt-1">Real-time bandwidth usage per interface</p>
+            <h1 class="text-lg sm:text-xl lg:text-2xl font-extrabold tracking-tight text-slate-800">&#x1F4CA; Live Traffic Monitor</h1>
+            <p class="text-slate-400 text-xs sm:text-sm mt-0.5">Real-time bandwidth usage per interface</p>
         </div>
-        <div class="inline-flex items-center justify-center gap-2.5 text-xs font-semibold rounded-full px-4 py-2 bg-white border border-emerald-200 text-emerald-600 w-fit">
-            <span class="relative flex h-2.5 w-2.5">
-                <span class="tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        <div id="tm-live-badge" class="inline-flex items-center justify-center gap-2 text-xs font-semibold rounded-full px-3 py-1.5 bg-white border border-emerald-200 text-emerald-600 w-fit">
+            <span class="relative flex h-2 w-2">
+                <span id="tm-ping" class="tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span id="tm-dot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            LIVE &bull; 1s refresh
+            <span id="tm-status-text">LIVE &bull; 1s refresh</span>
         </div>
     </div>
 
@@ -78,23 +78,23 @@
     <div class="flex flex-wrap gap-2 mb-5">
         {foreach $routers as $r}
         <a href="{$_url}plugin/traffic_monitor_ui/{$r['id']}"
-           class="tm-router-tab {if $r['id']==$router}tm-active{/if} px-4 sm:px-5 py-2 text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-indigo-600 hover:border-indigo-300">
+           class="tm-router-tab {if $r['id']==$router}tm-active{/if} px-3 py-1.5 text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-indigo-600 hover:border-indigo-300">
             {$r['name']}
         </a>
         {/foreach}
     </div>
 
     <!-- Interface selector + peak stats -->
-    <div class="flex flex-wrap items-end gap-4 mb-6">
+    <div class="flex flex-wrap items-end gap-3 mb-5">
         <div>
-            <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Interface</label>
+            <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Interface</label>
             <select id="iface-select" class="tm-select w-full sm:w-auto">
                 {foreach $interfaces as $iface}
                 <option value="{$iface}">{$iface}</option>
                 {/foreach}
             </select>
         </div>
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-wrap gap-2">
             <div class="tm-stat">
                 <div class="tm-stat-lbl" style="color:#0284c7">Peak RX</div>
                 <div class="tm-stat-val" id="peak-rx" style="color:#0369a1">&mdash;</div>
@@ -111,22 +111,22 @@
     </div>
 
     <!-- Speed Gauge Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-5 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
 
         <!-- Download RX -->
-        <div class="tm-card p-5 sm:p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-2.5">
-                    <span class="relative flex h-2.5 w-2.5">
+        <div class="tm-card p-4 sm:p-5">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="relative flex h-2 w-2">
                         <span class="tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-500"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
                     </span>
                     <span class="text-xs font-bold uppercase tracking-widest text-sky-600">Download &darr; (RX)</span>
                 </div>
             </div>
 
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8">
-                <svg width="140" height="140" viewBox="0 0 120 120" class="tm-ring shrink-0">
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+                <svg width="120" height="120" viewBox="0 0 120 120" class="tm-ring shrink-0">
                     <defs>
                         <linearGradient id="rxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                             <stop offset="0%" stop-color="#38bdf8"/>
@@ -137,9 +137,9 @@
                     <circle class="tm-ring-fill" id="rx-ring" cx="60" cy="60" r="52" stroke="url(#rxGrad)"></circle>
                 </svg>
                 <div class="text-center">
-                    <div id="rx-speed" class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-none mb-3 text-sky-600">0 bps</div>
-                    <div class="text-[11px] uppercase tracking-widest text-slate-400 mb-2">of peak</div>
-                    <div class="w-40 sm:w-44 mx-auto bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div id="rx-speed" class="text-2xl sm:text-3xl font-extrabold leading-none mb-2 text-sky-600">0 bps</div>
+                    <div class="text-[10px] uppercase tracking-widest text-slate-400 mb-1.5">of peak</div>
+                    <div class="w-36 mx-auto bg-slate-100 rounded-full h-1.5 overflow-hidden">
                         <div id="rx-bar" class="tm-bar" style="width:0%;background:linear-gradient(90deg,#0284c7,#38bdf8)"></div>
                     </div>
                 </div>
@@ -147,19 +147,19 @@
         </div>
 
         <!-- Upload TX -->
-        <div class="tm-card p-5 sm:p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-2.5">
-                    <span class="relative flex h-2.5 w-2.5">
+        <div class="tm-card p-4 sm:p-5">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="relative flex h-2 w-2">
                         <span class="tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-violet-500"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
                     </span>
                     <span class="text-xs font-bold uppercase tracking-widest text-violet-600">Upload &uarr; (TX)</span>
                 </div>
             </div>
 
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8">
-                <svg width="140" height="140" viewBox="0 0 120 120" class="tm-ring shrink-0">
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+                <svg width="120" height="120" viewBox="0 0 120 120" class="tm-ring shrink-0">
                     <defs>
                         <linearGradient id="txGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                             <stop offset="0%" stop-color="#a78bfa"/>
@@ -170,9 +170,9 @@
                     <circle class="tm-ring-fill" id="tx-ring" cx="60" cy="60" r="52" stroke="url(#txGrad)"></circle>
                 </svg>
                 <div class="text-center">
-                    <div id="tx-speed" class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-none mb-3 text-violet-600">0 bps</div>
-                    <div class="text-[11px] uppercase tracking-widest text-slate-400 mb-2">of peak</div>
-                    <div class="w-40 sm:w-44 mx-auto bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div id="tx-speed" class="text-2xl sm:text-3xl font-extrabold leading-none mb-2 text-violet-600">0 bps</div>
+                    <div class="text-[10px] uppercase tracking-widest text-slate-400 mb-1.5">of peak</div>
+                    <div class="w-36 mx-auto bg-slate-100 rounded-full h-1.5 overflow-hidden">
                         <div id="tx-bar" class="tm-bar" style="width:0%;background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div>
                     </div>
                 </div>
@@ -182,12 +182,12 @@
     </div>
 
     <!-- Chart -->
-    <div class="tm-card p-4 sm:p-6">
-        <div class="flex items-center justify-between mb-4">
+    <div class="tm-card p-3 sm:p-5">
+        <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Bandwidth History</span>
-            <button id="btn-clear" class="text-xs font-semibold transition-colors px-3 py-1.5 rounded-lg text-slate-500 hover:text-indigo-600 border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50">&#x21BA; Clear</button>
+            <button id="btn-clear" class="text-xs font-semibold transition-colors px-2.5 py-1 rounded-lg text-slate-500 hover:text-indigo-600 border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50">&#x21BA; Clear</button>
         </div>
-        <div style="height:280px;">
+        <div style="height:220px;">
             <canvas id="trafficChart"></canvas>
         </div>
     </div>
@@ -206,6 +206,7 @@
     var rxData      = Array(MAX_POINTS).fill(0);
     var txData      = Array(MAX_POINTS).fill(0);
     var peakRx = 0, peakTx = 0, sampleCount = 0;
+    var lastUpdateTime = null;
 
     var ctx = document.getElementById('trafficChart').getContext('2d');
     var chart = new Chart(ctx, {
@@ -298,9 +299,26 @@
         fetch(tmBaseUrl + 'plugin/traffic_monitor_get_data/' + tmRouter + '?interface=' + encodeURIComponent(ifaceName))
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                if (data.error || !data.rows || !data.rows.tx || !data.rows.rx) return;
+                if (data.error || !data.rows || !data.rows.tx || !data.rows.rx) {
+                    // Show offline status
+                    document.getElementById('tm-status-text').textContent = 'OFFLINE &bull; check router';
+                    document.getElementById('tm-dot').className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500';
+                    document.getElementById('tm-ping').className = 'tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75';
+                    document.getElementById('tm-live-badge').className = 'inline-flex items-center justify-center gap-2.5 text-xs font-semibold rounded-full px-4 py-2 bg-white border border-red-200 text-red-600 w-fit';
+                    return;
+                }
                 var rx  = parseInt(data.rows.rx[0]) || 0;
                 var tx  = parseInt(data.rows.tx[0]) || 0;
+
+                // Update status badge based on fresh/online flag
+                if (data.fresh || data.online) {
+                    var now = new Date();
+                    lastUpdateTime = now.toLocaleTimeString();
+                    document.getElementById('tm-status-text').textContent = 'LIVE &bull; last: ' + lastUpdateTime;
+                    document.getElementById('tm-dot').className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500';
+                    document.getElementById('tm-ping').className = 'tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
+                    document.getElementById('tm-live-badge').className = 'inline-flex items-center justify-center gap-2.5 text-xs font-semibold rounded-full px-4 py-2 bg-white border border-emerald-200 text-emerald-600 w-fit';
+                }
                 var lbl = data.labels[0] || '';
 
                 if (rx > peakRx) { peakRx = rx; document.getElementById('peak-rx').textContent = fmtSpeed(rx); }

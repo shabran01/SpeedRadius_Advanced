@@ -58,6 +58,28 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.09] - 2026-08-28
+
+---
+
+### 🚀 IMPROVED: Traffic Monitor — Much Faster & Accurate Real-Time from MikroTik
+
+**`system/plugin/traffic_monitor.php` + `system/plugin/ui/traffic_monitor.tpl`**
+
+The Live Traffic Monitor page was slow and often stuck at 0 bps because it opened a **new MikroTik API connection every second** (no connection timeout) and blocked page-load on `/interface/print`. Fixed for speed + accuracy:
+
+- **Connection timeout capped at 5s** — no more long hangs when a router is slow/unreachable.
+- **Server-side traffic cache** (new `tbl_traffic_monitor` table, auto-created) — samples cached for ~1.6s so all open tabs **share one router poll** instead of each opening its own connection (connection storm fixed → faster, more accurate).
+- **Interface list cached for 60s** — page loads instantly without blocking on the router.
+- **Graceful fallback** — returns last known values when the router is unreachable (instead of dropping to 0).
+- **Live status badge** — shows "LIVE • last: hh:mm:ss" while data flows, and turns red "OFFLINE" when the router can't be reached (no more silent zeros).
+
+### 🎨 UI: Compact Medium Sizing
+
+- Page title, LIVE badge, router tabs, gauge cards, speed numbers, progress bars and the chart card were all reduced to a **clean medium size** (not oversized), keeping the light modern theme.
+
+---
+
 ## [2.2.08] - 2026-08-28
 
 ---
