@@ -2,6 +2,22 @@
 
  # CHANGELOG
 
+## [2.2.10] - 2026-08-28
+
+---
+
+### 🐛 FIXED: M-Pesa Till STK — Custom Balance Top-Ups Stayed UNPAID After Payment
+
+**`system/paymentgateway/MpesatillStk.php`**
+
+When a customer topped up **account balance** ("Custom Balance") via M-Pesa Till STK, the payment was deducted from their phone but the transaction stayed **UNPAID** — no balance was credited.
+
+- **Root cause:** the M-Pesa callback ran `$plans->type` on a plan lookup. Custom Balance top-ups store `plan_id = 0` (there is no real plan row), so `$plans` was `null` → the callback crashed with a PHP fatal error before it could mark the transaction PAID or credit the balance. Regular plan purchases (e.g. "1 Hour", "20 Mins") were unaffected.
+- **Fix:** the callback now detects the Custom Balance case (`routers == 'Custom Balance'` OR `plan_id == 0` OR no plan found) and calls `Package::rechargeCustomBalance()` to credit the customer's account balance, then marks the transaction PAID with *"Payment successful - account balance credited"*.
+- Regular plan payments keep the exact same path.
+
+---
+
 ## [2.2.09] - 2026-08-28
 
 ---

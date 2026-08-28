@@ -267,10 +267,21 @@ function MpesatillStk_payment_notification()
             require_once(__DIR__ . '/../helpers/TransactionDuplicateHelper.php');
         }
 
-        $plan_type = $plans->type;
-        $UserId = $userid->id;
+        // ⚠️ Custom Balance top-up (plan_id = 0, no plan row in tbl_plans)
+        // Must be handled separately or the callback crashes on $plans->type.
+        if ($user['routers'] == 'Custom Balance' || !$plans || $plan_id == 0) {
+            $UserId = $userid->id;
+            // Include Package.php if not already loaded
+            if (!class_exists('Package', false)) {
+                require_once __DIR__ . '/../autoload/Package.php';
+            }
+            $rechargeResult = Package::rechargeCustomBalance($userid, null, $user['gateway'], $mpesa_code);
+        } else {
+            $plan_type = $plans->type;
+            $UserId = $userid->id;
 
-        $rechargeResult = Package::rechargeUser($UserId, $user['routers'], $user['plan_id'], $user['gateway'], $mpesa_code);
+            $rechargeResult = Package::rechargeUser($UserId, $user['routers'], $user['plan_id'], $user['gateway'], $mpesa_code);
+        }
 
         if ($rechargeResult === false) {
 
@@ -305,13 +316,16 @@ function MpesatillStk_payment_notification()
 
         } else {
 
-            // Package activation SUCCESS
+            // Package activation / balance top-up SUCCESS
+            $isBalanceTopup = ($user['routers'] == 'Custom Balance' || !$plans || $plan_id == 0);
             $PaymentGatewayRecord->status = 2;
             $PaymentGatewayRecord->paid_date = $now;
-            $PaymentGatewayRecord->pg_paid_response = 'Payment successful and package activated';
+            $PaymentGatewayRecord->pg_paid_response = $isBalanceTopup
+                ? 'Payment successful - account balance credited'
+                : 'Payment successful and package activated';
             $PaymentGatewayRecord->save();
 
-            error_log("MpesatillStk: Payment successful for user: " . $PaymentGatewayRecord->username . ", Amount: " . $amount_paid . ", Mpesa Code: " . $mpesa_code);
+            error_log("MpesatillStk: Payment successful for user: " . $PaymentGatewayRecord->username . ", Amount: " . $amount_paid . ", Mpesa Code: " . $mpesa_code . ($isBalanceTopup ? " (Balance top-up)" : " (Package)"));
         }
 
 
