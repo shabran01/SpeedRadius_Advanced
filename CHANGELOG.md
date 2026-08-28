@@ -2,6 +2,27 @@
 
  # CHANGELOG
 
+## [2.2.08] - 2026-08-28
+
+---
+
+### ✨ REDESIGNED: Live Traffic Monitor UI
+
+**`system/plugin/ui/traffic_monitor.tpl`**
+
+The Live Traffic Monitor page (`/?_route=plugin/traffic_monitor_ui`) received a full "Aurora" dark redesign:
+
+- **Deep dark gradient background** with animated indigo/fuchsia glow blobs.
+- **Glassmorphism cards** (backdrop blur, subtle borders, soft shadows).
+- **Animated SVG ring gauges** for Download (RX) and Upload (TX) showing current speed vs peak.
+- **Gradient speed text** and matching gradient progress bars.
+- **Router pill tabs** with active gradient glow.
+- **Chart.js chart** re-themed for dark mode with matching gradient fills and styled tooltips.
+- **Dark interface selector** and peak stat chips.
+- All functionality preserved (1s polling, peak stats, samples, clear button, interface switching).
+
+---
+
 ## [2.2.07] - 2026-08-28
 
 ---
