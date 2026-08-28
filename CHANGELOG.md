@@ -2,6 +2,32 @@
 
  # CHANGELOG
 
+## [2.2.07] - 2026-08-28
+
+---
+
+### ✨ REDESIGNED: Router Status Notifier UI
+
+**`system/plugin/ui/router_status_notifier.tpl`**
+
+The Router Notifier page (`/?_route=plugin/router_status_notifier_ui`) received a full visual overhaul:
+
+- **Gradient header banner** with a live "Monitoring Active" status pill.
+- **Stat cards** showing Total Routers, Offline Now, Online Now, and Recent Notifications.
+- **Clean rounded cards** with soft shadows replacing the flat AdminLTE panels.
+- **Redesigned tabs** with active underline indicator and icons.
+- **Modern pill badges** for Offline / Online / Test status in the notification logs.
+- **Consistent buttons** with icons and rounded focus-friendly form fields.
+- Template variables shown as code chips (`[[name]]`, `[[ip]]`, etc.).
+- Empty state ("No notifications yet") instead of a blank table.
+
+### 🐛 FIXED: Broken Template Markup
+
+- Removed a stray `t` at the top of the file that was corrupting the page output.
+- Fixed the **malformed Settings form** (broken `<forminput>` / `< method>` tags) that was breaking the entire settings form HTML.
+
+---
+
 ## [2.2.06] - 2026-08-28
 
 ---
