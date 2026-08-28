@@ -1,4 +1,32 @@
 <?php
+
+/**
+ * JSON status endpoint used by the payment progress page.
+ * Call:  ?_route=plugin/initiatetillstk_status/{transactionId}
+ * Returns the current payment status of a tbl_payment_gateway record.
+ */
+function initiatetillstk_status()
+{
+    global $routes;
+    header('Content-Type: application/json');
+    $id = isset($routes['2']) ? intval($routes['2']) : 0;
+    if ($id <= 0) {
+        echo json_encode(['status' => 0, 'paid' => false]);
+        exit;
+    }
+    $trx = ORM::for_table('tbl_payment_gateway')->find_one($id);
+    if (!$trx) {
+        echo json_encode(['status' => 0, 'paid' => false]);
+        exit;
+    }
+    echo json_encode([
+        'status' => intval($trx['status']),
+        'paid'   => (intval($trx['status']) == 2),
+        'msg'    => $trx['pg_paid_response'],
+    ]);
+    exit;
+}
+
 function initiatetillstk()
 {
     
@@ -231,13 +259,20 @@ $resultDesc = $mpesaResponse->CustomerMessage;
         if(!empty($_POST['channel'])){
             echo json_encode(["status" => "success", "message" => "Enter Pin to complete","phone"=> $phone]);
         }else{
-            // For web interface, show a user-friendly message and redirect
-            echo "<script>
-                alert('M-Pesa payment initiated successfully! Please check your phone and enter your M-Pesa PIN to complete the payment.');
-                setTimeout(function() {
-                    window.location.href = '" . U . "order/view/" . $PaymentGatewayRecord->id . "';
-                }, 3000);
-            </script>";
+            // Web interface: show a live payment-progress page that auto-detects
+            // when M-Pesa confirms the payment (polls server every 3s) and
+            // auto-redirects — no more blocking alert().
+            if (file_exists(__DIR__ . '/lib_payment_progress.php')) {
+                require_once __DIR__ . '/lib_payment_progress.php';
+                payment_progress_render($PaymentGatewayRecord->id);
+            } else {
+                echo "<script>
+                    alert('M-Pesa payment initiated successfully! Please check your phone and enter your M-Pesa PIN to complete the payment.');
+                    setTimeout(function() {
+                        window.location.href = '" . U . "order/view/" . $PaymentGatewayRecord->id . "';
+                    }, 3000);
+                </script>";
+            }
         }
         
  

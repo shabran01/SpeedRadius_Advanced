@@ -145,12 +145,17 @@ function initiatepayhero()
             "phone"   => $phone,
         ]);
     } else {
-        // Web redirect — show alert then redirect to order view
-        echo "<script>
-            alert('M-Pesa payment initiated successfully! Please check your phone and enter your M-Pesa PIN to complete the payment.');
-            setTimeout(function() {
-                window.location.href = '" . U . "order/view/" . $PaymentGatewayRecord->id . "';
-            }, 3000);
-        </script>";
+        // Web interface: live payment-progress page (auto-detect + auto-redirect)
+        if (file_exists(__DIR__ . '/lib_payment_progress.php')) {
+            require_once __DIR__ . '/lib_payment_progress.php';
+            payment_progress_render($PaymentGatewayRecord->id);
+        } else {
+            echo "<script>
+                alert('M-Pesa payment initiated successfully! Please check your phone and enter your M-Pesa PIN to complete the payment.');
+                setTimeout(function() {
+                    window.location.href = '" . U . "order/view/" . $PaymentGatewayRecord->id . "';
+                }, 3000);
+            </script>";
+        }
     }
 }

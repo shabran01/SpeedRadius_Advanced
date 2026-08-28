@@ -58,6 +58,25 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.12] - 2026-08-28
+
+---
+
+### ✨ NEW: Auto-Detecting Payment Progress Page (replaces blocking alert)
+
+**`system/plugin/lib_payment_progress.php` (new) · `system/plugin/payment_status.php` (new) · `system/plugin/initiatetillstk.php` · `system/plugin/initiatebankstk.php` · `system/plugin/initiatempesa.php` · `system/plugin/initiatepayhero.php`**
+
+After an M-Pesa STK push, the old blocking `alert()` ("...enter your PIN...") is replaced with a **live payment-progress page** that:
+
+- Shows a **spinning countdown ring + "Time remaining: 35s"** timer.
+- **Polls the server every 3 seconds** via a new JSON endpoint (`plugin/payment_status/{id}`) to auto-detect whether the payment was confirmed.
+- **Auto-redirects** to the order view the moment M-Pesa confirms the payment (green "✓ Payment received!").
+- Shows a clear **failed/cancelled** message if the transaction errors, and a "not completed" state after ~35s.
+
+Applied to all STK initiators: **MpesatillStk, BankStkPush, mpesa, and PayHero** (via one shared renderer — no code duplication).
+
+---
+
 ## [2.2.11] - 2026-08-28
 
 ---

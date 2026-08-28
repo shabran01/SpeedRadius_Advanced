@@ -169,13 +169,18 @@ function initiatempesa()
       if (!empty($_POST['channel'])) {
         echo json_encode(["status" => "success", "message" => "Enter Mpesa Pin to complete $mpesa_business_code  $Type_of_Transaction , Party B: $PartyB, Amount: $amount, Phone: $phone, CheckoutRequestID: $CheckoutRequestID"]);
       } else {
-        // For web interface, show a user-friendly message and redirect
-        echo "<script>
-            alert('M-Pesa payment initiated successfully! Please check your phone and enter your M-Pesa PIN to complete the payment.');
-            setTimeout(function() {
-                window.location.href = '" . U . "order/view/" . $PaymentGatewayRecord->id . "';
-            }, 3000);
-        </script>";
+        // Web interface: live payment-progress page (auto-detect + auto-redirect)
+        if (file_exists(__DIR__ . '/lib_payment_progress.php')) {
+            require_once __DIR__ . '/lib_payment_progress.php';
+            payment_progress_render($PaymentGatewayRecord->id);
+        } else {
+            echo "<script>
+                alert('M-Pesa payment initiated successfully! Please check your phone and enter your M-Pesa PIN to complete the payment.');
+                setTimeout(function() {
+                    window.location.href = '" . U . "order/view/" . $PaymentGatewayRecord->id . "';
+                }, 3000);
+            </script>";
+        }
       }
     } else {
       echo json_encode(["status" => "error", "message" => "Failed to save the payment gateway record"]);
