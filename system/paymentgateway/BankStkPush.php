@@ -242,10 +242,19 @@ function BankStkPush_payment_notification()
                 require_once(__DIR__ . '/../helpers/TransactionDuplicateHelper.php');
             }
 
-            $plan_type = $plans->type;
-            $UserId = $userid->id;
+            // ⚠️ Custom Balance top-up (plan_id = 0, no plan row) — must be handled
+            // separately or $plans->type crashes the callback after payment taken.
+            if ($user['routers'] == 'Custom Balance' || !$plans || $plan_id == 0) {
+                if (!class_exists('Package', false)) {
+                    require_once __DIR__ . '/../autoload/Package.php';
+                }
+                $rechargeResult = Package::rechargeCustomBalance($userid, null, $user['gateway'], $mpesa_code);
+            } else {
+                $plan_type = $plans->type;
+                $UserId = $userid->id;
 
-            $rechargeResult = Package::rechargeUser($UserId, $user['routers'], $user['plan_id'], $user['gateway'], $mpesa_code);
+                $rechargeResult = Package::rechargeUser($UserId, $user['routers'], $user['plan_id'], $user['gateway'], $mpesa_code);
+            }
 
             if ($rechargeResult === false) {
                 // Package activation FAILED - but payment was successful
@@ -277,13 +286,16 @@ function BankStkPush_payment_notification()
                 }
 
             } else {
-                // Package activation SUCCESS
+                // Package activation / balance top-up SUCCESS
+                $isBalanceTopup = ($user['routers'] == 'Custom Balance' || !$plans || $plan_id == 0);
                 $PaymentGatewayRecord->status = 2;
                 $PaymentGatewayRecord->paid_date = $now;
-                $PaymentGatewayRecord->pg_paid_response = 'Payment successful and package activated';
+                $PaymentGatewayRecord->pg_paid_response = $isBalanceTopup
+                    ? 'Payment successful - account balance credited'
+                    : 'Payment successful and package activated';
                 $PaymentGatewayRecord->save();
 
-                error_log("BankStkPush: Payment successful for user: " . $PaymentGatewayRecord->username . ", Amount: " . $amount_paid . ", Mpesa Code: " . $mpesa_code);
+                error_log("BankStkPush: Payment successful for user: " . $PaymentGatewayRecord->username . ", Amount: " . $amount_paid . ", Mpesa Code: " . $mpesa_code . ($isBalanceTopup ? " (Balance top-up)" : " (Package)"));
             }
 
 

@@ -2,6 +2,22 @@
 
  # CHANGELOG
 
+## [2.2.11] - 2026-08-28
+
+---
+
+### 🐛 FIXED: Custom Balance Top-Ups Stayed UNPAID on All Payment Gateways
+
+**`system/autoload/Package.php` · `system/paymentgateway/mpesa.php` · `system/paymentgateway/BankStkPush.php`**
+
+The same bug that affected MpesatillStk was present in **every other payment gateway** — when a customer topped up account balance ("Custom Balance", `plan_id = 0`), the callback crashed on `$plans->type` (null plan) and the transaction stayed UNPAID.
+
+**`system/autoload/Package.php`** — Added a **universal guard** at the top of `Package::rechargeUser()` that routes Custom Balance top-ups to `rechargeCustomBalance()` before any plan properties are accessed. This single fix protects **PayHero, ModemPay, paystack, umspay, and PesaPal** (all call `rechargeUser()` directly).
+
+**`system/paymentgateway/mpesa.php`** and **`system/paymentgateway/BankStkPush.php`** — Added the same callback guard (detect `routers == 'Custom Balance'` → call `rechargeCustomBalance()` directly, skip the crashing `$plans->type` line).
+
+---
+
 ## [2.2.10] - 2026-08-28
 
 ---

@@ -61,6 +61,15 @@ class Package
             ];
         }
 
+        // ── CUSTOM BALANCE GUARD ──
+        // Custom Balance top-ups use plan_id = 0 (no real plan row), so $p is
+        // false/null and must NOT be dereferenced below. Route straight to
+        // rechargeCustomBalance() BEFORE the duplicate check / plan handling,
+        // otherwise this crashes on $p['name_plan'] / $p['type'].
+        if ($router_name == 'Custom Balance' || $plan_id == 0) {
+            return self::rechargeCustomBalance($c, $p, $gateway, $channel, $note);
+        }
+
         // ── Prevent duplicate recharges within 60 seconds ──
         try {
             $recent = ORM::for_table('tbl_transactions')
