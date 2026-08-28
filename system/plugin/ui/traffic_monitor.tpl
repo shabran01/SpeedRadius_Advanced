@@ -300,8 +300,10 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.error || !data.rows || !data.rows.tx || !data.rows.rx) {
-                    // Show offline status
-                    document.getElementById('tm-status-text').textContent = 'OFFLINE &bull; check router';
+                    // Show offline status with the real reason
+                    var reason = (data.error && data.error !== 'null') ? 'OFFLINE &bull; ' + data.error : 'OFFLINE &bull; check router';
+                    if (reason.length > 40) reason = reason.substring(0, 40) + '...';
+                    document.getElementById('tm-status-text').textContent = reason;
                     document.getElementById('tm-dot').className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500';
                     document.getElementById('tm-ping').className = 'tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75';
                     document.getElementById('tm-live-badge').className = 'inline-flex items-center justify-center gap-2.5 text-xs font-semibold rounded-full px-4 py-2 bg-white border border-red-200 text-red-600 w-fit';
