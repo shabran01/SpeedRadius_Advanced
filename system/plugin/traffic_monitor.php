@@ -17,20 +17,19 @@ if (!isTableExist('tbl_traffic_monitor')) {
 }
 
 /**
- * Connect to a router with a hard timeout (the generic Mikrotik::getClient
- * has NO timeout and can hang the page for minutes when a router is down).
+ * Connect to a router using the SAME proven connection path as the rest of
+ * the system (Mikrotik::getClient), but cap the socket timeout so a
+ * slow/unreachable router never hangs the page for minutes.
  */
 function traffic_monitor_connect($routerRow)
 {
-    $iport = explode(":", $routerRow['ip_address']);
-    return new RouterOS\Client(
-        $iport[0],
-        $routerRow['username'],
-        $routerRow['password'],
-        (!empty($iport[1])) ? $iport[1] : null,
-        null,
-        5 // connection timeout in seconds
-    );
+    $oldTimeout = ini_get('default_socket_timeout');
+    ini_set('default_socket_timeout', '8');
+    try {
+        return Mikrotik::getClient($routerRow['ip_address'], $routerRow['username'], $routerRow['password']);
+    } finally {
+        ini_set('default_socket_timeout', $oldTimeout);
+    }
 }
 
 /**
@@ -157,11 +156,12 @@ function traffic_monitor_get_data()
             $row->save();
             $fresh = true;
         } catch (\Exception $e) {
-            // Router unreachable — return last known cached value instead of 0
+            // Router unreachable — return last known cached value + expose the real error
             if ($row) {
                 $rx = intval($row['rx_bps']);
                 $tx = intval($row['tx_bps']);
             }
+            $errMsg = $e->getMessage();
         }
     }
 
@@ -171,6 +171,7 @@ function traffic_monitor_get_data()
         'rows' => ['tx' => [$tx], 'rx' => [$rx]],
         'fresh' => $fresh,
         'online' => $fresh,
+        'error' => isset($errMsg) ? $errMsg : null,
     ]);
 }
 
