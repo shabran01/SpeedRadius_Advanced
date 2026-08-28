@@ -1,6 +1,7 @@
 {include file="sections/header.tpl"}
 
 <style>
+{literal}
 /* ================= Router Status Notifier UI ================= */
 .rn-wrap{padding:0 4px}
 .rn-head{background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 55%,#0f172a 130%);border-radius:16px;padding:24px 28px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:22px;box-shadow:0 10px 30px rgba(37,99,235,.22)}
@@ -49,6 +50,7 @@
 .rn-kbd{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:1px 7px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#475569}
 .rn-alert{border:none;border-radius:12px;padding:13px 16px;font-size:13.5px}
 @media(max-width:768px){.rn-head{padding:18px}.rn-tabs .tab-content{padding:16px}}
+{/literal}
 </style>
 
 <div class="rn-wrap">
@@ -304,12 +306,14 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
 <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 <script>
-    $(document).ready(function() {
-        $('.select2').select2();
-        if ($.fn.DataTable) {
-            $('#logs_table').DataTable({
-                "order": [[ 0, "desc" ]]
-            });
-        }
-    });
+{literal}
+$(document).ready(function() {
+    $('.select2').select2();
+    if ($.fn.DataTable) {
+        $('#logs_table').DataTable({
+            "order": [[ 0, "desc" ]]
+        });
+    }
+});
+{/literal}
 </script>

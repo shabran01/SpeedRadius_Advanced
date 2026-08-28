@@ -62,6 +62,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 ---
 
+### 🐛 FIXED: Smarty Template Compilation Error on Router Notifier Page
+
+**`system/plugin/ui/router_status_notifier.tpl`**
+
+The redesigned template threw a Smarty syntax error on the server because CSS curly braces (`{` `}`) were being parsed as Smarty tags.
+
+- Wrapped the entire `<style>` block in `{literal}...{/literal}` so Smarty ignores the CSS.
+- Wrapped the bottom DataTables JavaScript in `{literal}...{/literal}` (same convention used by other templates in the project).
+- The page now renders correctly without server-side compilation errors.
+
+---
+
 ### ✨ REDESIGNED: Router Status Notifier UI
 
 **`system/plugin/ui/router_status_notifier.tpl`**
