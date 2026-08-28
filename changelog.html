@@ -62,6 +62,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
 ---
 
+### ✨ REDESIGNED: Live Traffic Monitor UI — Clean Light Theme
+
+**`system/plugin/ui/traffic_monitor.tpl`**
+
+The Live Traffic Monitor page (`/?_route=plugin/traffic_monitor_ui`) was redesigned into a **clean, modern, light theme** (replacing the earlier dark theme) that is fully responsive on all device types:
+
+- **Light gradient background** (soft slate → indigo → violet tint) with white cards, subtle borders and soft shadows.
+- **Ring gauges** for Download (RX) and Upload (TX) on light backgrounds with sky-blue / violet gradient rings.
+- **Clean pill router tabs** with an indigo→violet active gradient.
+- **Light-themed Chart.js** chart with soft grid lines, dark text and matching gradient fills.
+- **Fully responsive**: single-column on mobile (cards stack, gauges centered), two-column on tablet/desktop; interface dropdown and peak stat chips wrap cleanly; chart scales via a fixed-height wrapper (`maintainAspectRatio:false`).
+- All functionality preserved (1s polling, peak stats, samples, clear button, interface switching).
+
+---
+
 ### ✨ REDESIGNED: Live Traffic Monitor UI
 
 **`system/plugin/ui/traffic_monitor.tpl`**

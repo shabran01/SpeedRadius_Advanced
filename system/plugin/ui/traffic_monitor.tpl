@@ -7,16 +7,9 @@
     #tm-app {
         font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
         min-height: 100vh;
-        background: radial-gradient(1200px 600px at 15% -10%, rgba(99,102,241,.22), transparent 60%),
-                    radial-gradient(1000px 500px at 90% 0%, rgba(217,70,239,.16), transparent 55%),
-                    linear-gradient(160deg, #0b1020 0%, #0e1228 45%, #101736 100%);
-        color: #e2e8f0;
+        background: linear-gradient(160deg, #f8fafc 0%, #eef2ff 60%, #f5f3ff 100%);
+        color: #1e293b;
     }
-
-    /* ── Animated background glow blobs ── */
-    .tm-blob { position:fixed; border-radius:50%; filter:blur(90px); opacity:.16; pointer-events:none; z-index:0; }
-    .tm-blob-1 { width:420px; height:420px; background:#6366f1; top:-120px; left:-80px; }
-    .tm-blob-2 { width:380px; height:380px; background:#d946ef; bottom:-120px; right:-60px; }
 
     /* Pulse dot */
     @keyframes tm-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
@@ -26,197 +19,179 @@
     .tm-bar { height:100%; border-radius:9999px; transition: width .5s cubic-bezier(.4,0,.2,1); }
 
     /* Router pill tabs */
-    .tm-router-tab { transition: all .18s; backdrop-filter: blur(6px); }
+    .tm-router-tab { transition: all .18s; }
     .tm-router-tab.tm-active {
-        background: linear-gradient(135deg,#6366f1,#8b5cf6);
+        background: linear-gradient(135deg,#4f46e5,#7c3aed);
         color:#fff !important; border-color:transparent !important;
-        box-shadow: 0 8px 24px rgba(99,102,241,.45);
+        box-shadow: 0 6px 18px rgba(79,70,229,.35);
     }
 
-    /* Glass cards */
-    .tm-glass {
-        background: rgba(255,255,255,.045);
-        border: 1px solid rgba(255,255,255,.09);
-        backdrop-filter: blur(14px);
-        border-radius: 22px;
-        box-shadow: 0 20px 50px rgba(0,0,0,.35);
-    }
-
-    /* Speed gauge card */
-    .tm-gauge-card { position:relative; overflow:hidden; }
-    .tm-gauge-card::before {
-        content:''; position:absolute; inset:0;
-        background: radial-gradient(220px 220px at 50% -20%, var(--glow), transparent 70%);
-        opacity:.35; pointer-events:none;
+    /* Cards */
+    .tm-card {
+        background:#fff; border:1px solid #e2e8f0; border-radius:20px;
+        box-shadow: 0 4px 16px rgba(15,23,42,.06);
     }
 
     /* Interface select */
     .tm-select {
-        border: 1.5px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06);
-        border-radius: 12px; padding: 9px 16px; font-size:14px; font-weight:600; color:#e2e8f0;
-        outline:none; transition: border-color .2s, box-shadow .2s; backdrop-filter: blur(6px);
+        border:1.5px solid #e2e8f0; background:#fff; border-radius:12px;
+        padding:9px 16px; font-size:14px; font-weight:600; color:#334155;
+        outline:none; transition: border-color .2s, box-shadow .2s;
     }
-    .tm-select option { background:#11152e; color:#e2e8f0; }
-    .tm-select:focus { border-color:#818cf8; box-shadow: 0 0 0 3px rgba(99,102,241,.25); }
+    .tm-select:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.18); }
 
     /* Stats badge */
-    .tm-stat { background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:10px 18px; text-align:center; min-width:108px; }
+    .tm-stat { background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:10px 16px; text-align:center; min-width:96px; }
     .tm-stat-lbl { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:2px; }
-    .tm-stat-val { font-size:19px; font-weight:800; line-height:1; }
-
-    /* Gradient text */
-    .tm-grad-text { background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .tm-stat-val { font-size:18px; font-weight:800; line-height:1; }
 
     /* Ring gauges */
     .tm-ring { transform: rotate(-90deg); }
-    .tm-ring-track { fill:none; stroke:rgba(255,255,255,.08); stroke-width:10; }
-    .tm-ring-fill { fill:none; stroke-width:10; stroke-linecap:round; stroke-dasharray:326.7; stroke-dashoffset:326.7; transition: stroke-dashoffset .5s cubic-bezier(.4,0,.2,1); filter: drop-shadow(0 0 6px currentColor); }
+    .tm-ring-track { fill:none; stroke:#e2e8f0; stroke-width:11; }
+    .tm-ring-fill { fill:none; stroke-width:11; stroke-linecap:round; stroke-dasharray:326.7; stroke-dashoffset:326.7; transition: stroke-dashoffset .5s cubic-bezier(.4,0,.2,1); }
 
     /* Scrollbar */
     ::-webkit-scrollbar{width:5px;height:5px}
-    ::-webkit-scrollbar-track{background:rgba(255,255,255,.05)}
-    ::-webkit-scrollbar-thumb{background:#4f5b7a;border-radius:3px}
+    ::-webkit-scrollbar-track{background:#f1f5f9}
+    ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
 {/literal}
 </style>
 
-<div id="tm-app" class="relative p-4 md:p-7" style="z-index:1;">
-    <div class="tm-blob tm-blob-1"></div>
-    <div class="tm-blob tm-blob-2"></div>
+<div id="tm-app" class="p-3 sm:p-5 lg:p-7">
 
-    <div class="relative" style="z-index:2;">
+    <!-- Page Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <div>
+            <h1 class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-800">&#x1F4CA; Live Traffic Monitor</h1>
+            <p class="text-slate-400 text-xs sm:text-sm mt-1">Real-time bandwidth usage per interface</p>
+        </div>
+        <div class="inline-flex items-center justify-center gap-2.5 text-xs font-semibold rounded-full px-4 py-2 bg-white border border-emerald-200 text-emerald-600 w-fit">
+            <span class="relative flex h-2.5 w-2.5">
+                <span class="tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            LIVE &bull; 1s refresh
+        </div>
+    </div>
 
-        <!-- Page Header -->
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-7">
-            <div>
-                <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-white">&#x1F4CA; Live Traffic Monitor</h1>
-                <p class="text-slate-400 text-sm mt-1">Real-time bandwidth usage per interface &bull; router live view</p>
+    <!-- Router Tabs -->
+    <div class="flex flex-wrap gap-2 mb-5">
+        {foreach $routers as $r}
+        <a href="{$_url}plugin/traffic_monitor_ui/{$r['id']}"
+           class="tm-router-tab {if $r['id']==$router}tm-active{/if} px-4 sm:px-5 py-2 text-sm font-semibold rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-indigo-600 hover:border-indigo-300">
+            {$r['name']}
+        </a>
+        {/foreach}
+    </div>
+
+    <!-- Interface selector + peak stats -->
+    <div class="flex flex-wrap items-end gap-4 mb-6">
+        <div>
+            <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Interface</label>
+            <select id="iface-select" class="tm-select w-full sm:w-auto">
+                {foreach $interfaces as $iface}
+                <option value="{$iface}">{$iface}</option>
+                {/foreach}
+            </select>
+        </div>
+        <div class="flex flex-wrap gap-3">
+            <div class="tm-stat">
+                <div class="tm-stat-lbl" style="color:#0284c7">Peak RX</div>
+                <div class="tm-stat-val" id="peak-rx" style="color:#0369a1">&mdash;</div>
             </div>
-            <div class="flex items-center gap-2.5 text-xs font-semibold rounded-full px-4 py-2 tm-glass" style="color:#a5b4fc;">
-                <span class="relative flex h-2.5 w-2.5">
-                    <span class="tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </span>
-                LIVE &bull; 1s refresh
+            <div class="tm-stat">
+                <div class="tm-stat-lbl" style="color:#7c3aed">Peak TX</div>
+                <div class="tm-stat-val" id="peak-tx" style="color:#6d28d9">&mdash;</div>
+            </div>
+            <div class="tm-stat">
+                <div class="tm-stat-lbl" style="color:#64748b">Samples</div>
+                <div class="tm-stat-val" id="sample-count" style="color:#334155">0</div>
             </div>
         </div>
+    </div>
 
-        <!-- Router Tabs -->
-        <div class="flex flex-wrap gap-2 mb-6">
-            {foreach $routers as $r}
-            <a href="{$_url}plugin/traffic_monitor_ui/{$r['id']}"
-               class="tm-router-tab {if $r['id']==$router}tm-active{/if} px-5 py-2 text-sm font-semibold rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10">
-                {$r['name']}
-            </a>
-            {/foreach}
-        </div>
+    <!-- Speed Gauge Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-5 mb-6">
 
-        <!-- Interface selector + peak stats -->
-        <div class="flex flex-wrap items-end gap-4 mb-6">
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-widest mb-1.5" style="color:#818cf8;">Interface</label>
-                <select id="iface-select" class="tm-select">
-                    {foreach $interfaces as $iface}
-                    <option value="{$iface}">{$iface}</option>
-                    {/foreach}
-                </select>
-            </div>
-            <div class="flex gap-3">
-                <div class="tm-stat">
-                    <div class="tm-stat-lbl" style="color:#38bdf8">Peak RX</div>
-                    <div class="tm-stat-val" id="peak-rx" style="color:#7dd3fc">&mdash;</div>
-                </div>
-                <div class="tm-stat">
-                    <div class="tm-stat-lbl" style="color:#c084fc">Peak TX</div>
-                    <div class="tm-stat-val" id="peak-tx" style="color:#d8b4fe">&mdash;</div>
-                </div>
-                <div class="tm-stat">
-                    <div class="tm-stat-lbl" style="color:#94a3b8">Samples</div>
-                    <div class="tm-stat-val" id="sample-count" style="color:#cbd5e1">0</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Speed Gauge Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-
-            <!-- Download RX -->
-            <div class="tm-glass tm-gauge-card p-6" style="--glow:#0ea5e9;">
-                <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-2.5">
-                        <span class="relative flex h-2.5 w-2.5">
-                            <span class="tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-400"></span>
-                        </span>
-                        <span class="text-xs font-bold uppercase tracking-widest" style="color:#38bdf8;">Download &darr; (RX)</span>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-center gap-8 flex-wrap">
-                    <svg width="150" height="150" viewBox="0 0 120 120" class="tm-ring">
-                        <defs>
-                            <linearGradient id="rxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#38bdf8"/>
-                                <stop offset="100%" stop-color="#0ea5e9"/>
-                            </linearGradient>
-                        </defs>
-                        <circle class="tm-ring-track" cx="60" cy="60" r="52"></circle>
-                        <circle class="tm-ring-fill" id="rx-ring" cx="60" cy="60" r="52" stroke="url(#rxGrad)" style="color:#0ea5e9;"></circle>
-                    </svg>
-                    <div class="text-center">
-                        <div id="rx-speed" class="tm-grad-text text-5xl font-extrabold leading-none mb-3" style="background-image:linear-gradient(135deg,#7dd3fc,#0ea5e9);">0 bps</div>
-                        <div class="text-[11px] uppercase tracking-widest text-slate-500 mb-2">of peak</div>
-                        <div class="w-44 bg-white/10 rounded-full h-2 overflow-hidden">
-                            <div id="rx-bar" class="tm-bar" style="width:0%;background:linear-gradient(90deg,#0ea5e9,#38bdf8)"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Upload TX -->
-            <div class="tm-glass tm-gauge-card p-6" style="--glow:#8b5cf6;">
-                <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-2.5">
-                        <span class="relative flex h-2.5 w-2.5">
-                            <span class="tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-violet-400"></span>
-                        </span>
-                        <span class="text-xs font-bold uppercase tracking-widest" style="color:#c084fc;">Upload &uarr; (TX)</span>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-center gap-8 flex-wrap">
-                    <svg width="150" height="150" viewBox="0 0 120 120" class="tm-ring">
-                        <defs>
-                            <linearGradient id="txGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#a78bfa"/>
-                                <stop offset="100%" stop-color="#8b5cf6"/>
-                            </linearGradient>
-                        </defs>
-                        <circle class="tm-ring-track" cx="60" cy="60" r="52"></circle>
-                        <circle class="tm-ring-fill" id="tx-ring" cx="60" cy="60" r="52" stroke="url(#txGrad)" style="color:#8b5cf6;"></circle>
-                    </svg>
-                    <div class="text-center">
-                        <div id="tx-speed" class="tm-grad-text text-5xl font-extrabold leading-none mb-3" style="background-image:linear-gradient(135deg,#d8b4fe,#8b5cf6);">0 bps</div>
-                        <div class="text-[11px] uppercase tracking-widest text-slate-500 mb-2">of peak</div>
-                        <div class="w-44 bg-white/10 rounded-full h-2 overflow-hidden">
-                            <div id="tx-bar" class="tm-bar" style="width:0%;background:linear-gradient(90deg,#8b5cf6,#a78bfa)"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Chart -->
-        <div class="tm-glass p-6">
+        <!-- Download RX -->
+        <div class="tm-card p-5 sm:p-6">
             <div class="flex items-center justify-between mb-4">
-                <span class="text-xs font-bold uppercase tracking-widest" style="color:#94a3b8;">Bandwidth History</span>
-                <button id="btn-clear" class="text-xs font-semibold transition-colors px-3 py-1.5 rounded-lg hover:bg-white/10" style="color:#94a3b8;border:1px solid rgba(255,255,255,.12);">&#x21BA; Clear</button>
+                <div class="flex items-center gap-2.5">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-500"></span>
+                    </span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-sky-600">Download &darr; (RX)</span>
+                </div>
             </div>
-            <canvas id="trafficChart" style="max-height:320px"></canvas>
+
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8">
+                <svg width="140" height="140" viewBox="0 0 120 120" class="tm-ring shrink-0">
+                    <defs>
+                        <linearGradient id="rxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#38bdf8"/>
+                            <stop offset="100%" stop-color="#0284c7"/>
+                        </linearGradient>
+                    </defs>
+                    <circle class="tm-ring-track" cx="60" cy="60" r="52"></circle>
+                    <circle class="tm-ring-fill" id="rx-ring" cx="60" cy="60" r="52" stroke="url(#rxGrad)"></circle>
+                </svg>
+                <div class="text-center">
+                    <div id="rx-speed" class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-none mb-3 text-sky-600">0 bps</div>
+                    <div class="text-[11px] uppercase tracking-widest text-slate-400 mb-2">of peak</div>
+                    <div class="w-40 sm:w-44 mx-auto bg-slate-100 rounded-full h-2 overflow-hidden">
+                        <div id="rx-bar" class="tm-bar" style="width:0%;background:linear-gradient(90deg,#0284c7,#38bdf8)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload TX -->
+        <div class="tm-card p-5 sm:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2.5">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-violet-500"></span>
+                    </span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-violet-600">Upload &uarr; (TX)</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8">
+                <svg width="140" height="140" viewBox="0 0 120 120" class="tm-ring shrink-0">
+                    <defs>
+                        <linearGradient id="txGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#a78bfa"/>
+                            <stop offset="100%" stop-color="#7c3aed"/>
+                        </linearGradient>
+                    </defs>
+                    <circle class="tm-ring-track" cx="60" cy="60" r="52"></circle>
+                    <circle class="tm-ring-fill" id="tx-ring" cx="60" cy="60" r="52" stroke="url(#txGrad)"></circle>
+                </svg>
+                <div class="text-center">
+                    <div id="tx-speed" class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-none mb-3 text-violet-600">0 bps</div>
+                    <div class="text-[11px] uppercase tracking-widest text-slate-400 mb-2">of peak</div>
+                    <div class="w-40 sm:w-44 mx-auto bg-slate-100 rounded-full h-2 overflow-hidden">
+                        <div id="tx-bar" class="tm-bar" style="width:0%;background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
+
+    <!-- Chart -->
+    <div class="tm-card p-4 sm:p-6">
+        <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Bandwidth History</span>
+            <button id="btn-clear" class="text-xs font-semibold transition-colors px-3 py-1.5 rounded-lg text-slate-500 hover:text-indigo-600 border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50">&#x21BA; Clear</button>
+        </div>
+        <div style="height:280px;">
+            <canvas id="trafficChart"></canvas>
+        </div>
+    </div>
+
 </div><!-- /tm-app -->
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -241,16 +216,16 @@
                 {
                     label: 'Download (RX) \u2193',
                     data: rxData,
-                    borderColor: '#38bdf8',
-                    backgroundColor: 'rgba(56,189,248,0.14)',
+                    borderColor: '#0284c7',
+                    backgroundColor: 'rgba(2,132,199,0.10)',
                     borderWidth: 2.5, tension: 0.4, fill: 'start', pointRadius: 0,
                     borderCapStyle: 'round'
                 },
                 {
                     label: 'Upload (TX) \u2191',
                     data: txData,
-                    borderColor: '#a78bfa',
-                    backgroundColor: 'rgba(167,139,250,0.14)',
+                    borderColor: '#7c3aed',
+                    backgroundColor: 'rgba(124,58,237,0.10)',
                     borderWidth: 2.5, tension: 0.4, fill: 'start', pointRadius: 0,
                     borderCapStyle: 'round'
                 }
@@ -258,28 +233,27 @@
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             animation: { duration: 250 },
             interaction: { mode: 'index', intersect: false },
             scales: {
                 x: {
-                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    grid: { color: 'rgba(148,163,184,0.15)' },
                     title: { display: true, text: 'Time', font: { size: 11 }, color: '#94a3b8' },
                     ticks: { maxTicksLimit: 8, font: { size: 10 }, color: '#64748b' }
                 },
                 y: {
                     beginAtZero: true,
-                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    grid: { color: 'rgba(148,163,184,0.15)' },
                     title: { display: true, text: 'Speed', font: { size: 11 }, color: '#94a3b8' },
                     ticks: { callback: function(v) { return fmtSpeed(v); }, font: { size: 10 }, color: '#64748b' }
                 }
             },
             plugins: {
-                legend: { position: 'top', labels: { font: { size: 12 }, usePointStyle: true, color: '#cbd5e1' } },
+                legend: { position: 'top', labels: { font: { size: 12 }, usePointStyle: true, color: '#475569' } },
                 tooltip: {
-                    backgroundColor: 'rgba(17,21,46,0.92)',
-                    borderColor: 'rgba(255,255,255,0.12)',
-                    borderWidth: 1,
-                    titleColor: '#e2e8f0',
+                    backgroundColor: '#1e293b',
+                    titleColor: '#f1f5f9',
                     bodyColor: '#cbd5e1',
                     callbacks: {
                         label: function(c) { return c.dataset.label + ': ' + fmtSpeed(c.parsed.y); }
