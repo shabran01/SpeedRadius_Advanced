@@ -324,6 +324,37 @@ function ModemPay_get_status($trx, $user)
     $status = isset($intent['status']) ? $intent['status'] : '';
 
     if ($status === 'completed') {
+        // Webhook may not have arrived yet — complete the payment here as a fallback.
+        // Only process once (duplicate-safe via status=1 + gateway_trx_id check).
+        $alreadyPaid = ORM::for_table('tbl_payment_gateway')
+            ->where('id', $trx['id'])
+            ->where('status', 2)
+            ->find_one();
+        if (!$alreadyPaid) {
+            $txRef = isset($intent['transaction_reference']) ? $intent['transaction_reference']
+                   : (isset($result['transaction_reference']) ? $result['transaction_reference'] : '');
+            $now = date('Y-m-d H:i:s');
+
+            $cust = ORM::for_table('tbl_customers')->where('username', $trx['username'])->find_one();
+            if ($cust) {
+                $rechargeOk = Package::rechargeUser($cust->id, $trx['routers'], $trx['plan_id'], $trx['gateway'], $txRef);
+                // Mark paid regardless (payment was received); note activation result
+                $trx->status           = 2;
+                $trx->paid_date        = $now;
+                $trx->gateway_trx_id   = $txRef ? $txRef : $trx->gateway_trx_id;
+                $trx->pg_paid_response = $rechargeOk
+                    ? 'Payment successful and package activated'
+                    : 'Payment successful but package activation failed - please contact support';
+                $trx->payment_method   = 'ModemPay';
+                $trx->payment_channel  = 'ModemPay';
+                $trx->save();
+            } else {
+                $trx->status = 2;
+                $trx->paid_date = $now;
+                $trx->pg_paid_response = 'Payment successful (customer not found for activation)';
+                $trx->save();
+            }
+        }
         r2(U . 'order/view/' . $trx['id'], 's', Lang::T("Transaction successful"));
     } elseif ($status === 'cancelled' || $status === 'expired') {
         r2(U . 'order/view/' . $trx['id'], 'd', Lang::T("Transaction was cancelled or expired"));
