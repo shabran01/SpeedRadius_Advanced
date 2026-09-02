@@ -58,6 +58,25 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.14] - 2026-09-02
+
+---
+
+### 🐛 FIXED: Customer View ON/OFF Toggle — Now Shows Real Router State
+
+**`system/controllers/customers.php` · `system/helpers/mikrotik_device_info.php` · `ui/ui/customers-view.tpl`**
+
+The ON/OFF toggle button was incorrectly showing the customer's database status, which doesn't reflect the actual MikroTik router enable/disable state.
+
+- **New helper** `get_customer_router_state()` queries the MikroTik router directly (`/ip hotspot user print` / `/ppp secret print`) to read the `disabled` property and returns `'on'`, `'off'`, or `'unknown'`.
+- The controller now calls this helper and assigns `$customer_router_state` to the template.
+- The template uses the **real router state**:
+  - **ON** (green) → customer is truly enabled on the router
+  - **OFF** (grey) → customer is truly disabled on the router
+  - **Unknown** → falls back to traditional Enable/Disable buttons (when router unreachable)
+
+---
+
 ## [2.2.13] - 2026-09-02
 
 ---

@@ -578,6 +578,9 @@ switch ($action) {
                     $pppoe_uname = !empty($customer['pppoe_username']) ? $customer['pppoe_username'] : $customer['username'];
                     $devices = get_customer_devices($router, $customer['username'], $pppoe_uname);
                     $ui->assign('devices', $devices);
+                    // Check the actual router enable/disable state
+                    $routerState = get_customer_router_state($router, $customer['username'], $customer['service_type']);
+                    $ui->assign('customer_router_state', $routerState);
                     // Capture live session bytes immediately on page view
                     foreach ($devices as $device) {
                         if ((int)$device['bytes_in'] > 0 || (int)$device['bytes_out'] > 0) {
@@ -593,9 +596,11 @@ switch ($action) {
                 } catch (Exception $e) {
                     _log('Error getting device info: ' . $e->getMessage());
                     $ui->assign('devices', []);
+                    $ui->assign('customer_router_state', 'unknown');
                 }
             } else {
                 $ui->assign('devices', []);
+                $ui->assign('customer_router_state', 'unknown');
             }
             
             // Fetch the Customers Attributes values from the tbl_customer_custom_fields table

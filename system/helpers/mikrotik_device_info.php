@@ -1,6 +1,51 @@
 <?php
 
 /**
+ * Get the actual enable/disable state of a customer on the MikroTik router.
+ * Returns 'on' if the user is enabled, 'off' if disabled, 'unknown' if the
+ * router cannot be reached or the user is not found.
+ */
+function get_customer_router_state($router, $username, $service_type = 'Hotspot')
+{
+    if (empty($router) || empty($username)) {
+        return 'unknown';
+    }
+    try {
+        require_once 'system/autoload/Mikrotik.php';
+        $client = Mikrotik::getClient($router['ip_address'], $router['username'], $router['password']);
+        if (!$client) {
+            return 'unknown';
+        }
+
+        if ($service_type == 'PPPoE') {
+            $req = new PEAR2\Net\RouterOS\Request('/ppp secret print');
+            $req->setArgument('.proplist', '.id,disabled');
+            $req->setQuery(PEAR2\Net\RouterOS\Query::where('name', $username));
+            $result = $client->sendSync($req);
+            $disabled = $result->getProperty('disabled');
+            if ($disabled === null) {
+                return 'unknown'; // user not found on this router
+            }
+            // MikroTik returns 'true'/'false' strings
+            return ($disabled === 'false' || $disabled === 'no' || $disabled === '') ? 'on' : 'off';
+        }
+
+        // Hotspot
+        $req = new PEAR2\Net\RouterOS\Request('/ip hotspot user print');
+        $req->setArgument('.proplist', '.id,disabled');
+        $req->setQuery(PEAR2\Net\RouterOS\Query::where('name', $username));
+        $result = $client->sendSync($req);
+        $disabled = $result->getProperty('disabled');
+        if ($disabled === null) {
+            return 'unknown'; // user not found on this router
+        }
+        return ($disabled === 'false' || $disabled === 'no' || $disabled === '') ? 'on' : 'off';
+    } catch (Exception $e) {
+        return 'unknown';
+    }
+}
+
+/**
  * Get connected devices for a customer from Mikrotik router
  */
 function get_customer_devices($router, $username, $pppoe_username = null) {
