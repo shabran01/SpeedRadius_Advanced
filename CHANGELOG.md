@@ -2,6 +2,25 @@
 
  # CHANGELOG
 
+## [2.2.13] - 2026-09-02
+
+---
+
+### ✨ IMPROVED: Customer View — Single State-Indicating ON/OFF Toggle Button
+
+**`ui/ui/customers-view.tpl`**
+
+On the customer detail page (`customers/view/{id}`), the separate **Enable** / **Disable** buttons in the Connected Devices and Router Control headers were replaced with a **single toggle button** that always shows the customer's current state:
+
+- **Active customer** → green **"ON — Turn Off"** button (click to disable on MikroTik).
+- **Inactive customer** → grey **"OFF — Turn On"** button (click to enable on MikroTik).
+- The confirm dialog states the current state (e.g. *"Customer is currently ON. Click to turn it OFF?"*).
+- **Reconnect** remains a separate button.
+
+This removes the confusion of not knowing whether the last click enabled or disabled a customer.
+
+---
+
 ## [2.2.12] - 2026-08-28
 
 ---
