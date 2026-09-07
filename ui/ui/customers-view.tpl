@@ -618,14 +618,14 @@
                     {if $customer_enabled === true}
                         <a href="{$_url}customers/disable/{$d['id']}&token={$csrf_token}"
                            onclick="return ask(this, 'This will disable the customer on Mikrotik router and disconnect them. Continue?')"
-                           class="btn btn-3d btn-3d-danger btn-sm">
-                            <i class="fa fa-toggle-off"></i> {Lang::T('Disable')}
+                           class="btn btn-3d btn-3d-success btn-sm">
+                            <i class="fa fa-toggle-on"></i> ON — {Lang::T('Turn Off')}
                         </a>
                     {elseif $customer_enabled === false}
                         <a href="{$_url}customers/enable/{$d['id']}&token={$csrf_token}"
                            onclick="return ask(this, 'This will enable the customer on Mikrotik router. Continue?')"
-                           class="btn btn-3d btn-3d-success btn-sm">
-                            <i class="fa fa-toggle-on"></i> {Lang::T('Enable')}
+                           class="btn btn-3d btn-3d-danger btn-sm">
+                            <i class="fa fa-toggle-off"></i> OFF — {Lang::T('Turn On')}
                         </a>
                     {else}
                         <span class="label label-default" style="padding:8px 10px;"><i class="fa fa-question-circle"></i> {Lang::T('Status unavailable')}</span>
@@ -732,14 +732,14 @@
                     {if $customer_enabled === true}
                         <a href="{$_url}customers/disable/{$d['id']}&token={$csrf_token}"
                            onclick="return ask(this, 'This will disable the customer on Mikrotik router and disconnect them. Continue?')"
-                           class="btn btn-3d btn-3d-danger btn-sm">
-                            <i class="fa fa-toggle-off"></i> {Lang::T('Disable')}
+                           class="btn btn-3d btn-3d-success btn-sm">
+                            <i class="fa fa-toggle-on"></i> ON — {Lang::T('Turn Off')}
                         </a>
                     {elseif $customer_enabled === false}
                         <a href="{$_url}customers/enable/{$d['id']}&token={$csrf_token}"
                            onclick="return ask(this, 'This will enable the customer on Mikrotik router. Continue?')"
-                           class="btn btn-3d btn-3d-success btn-sm">
-                            <i class="fa fa-toggle-on"></i> {Lang::T('Enable')}
+                           class="btn btn-3d btn-3d-danger btn-sm">
+                            <i class="fa fa-toggle-off"></i> OFF — {Lang::T('Turn On')}
                         </a>
                     {else}
                         <span class="label label-default" style="padding:8px 10px;"><i class="fa fa-question-circle"></i> {Lang::T('Status unavailable')}</span>
