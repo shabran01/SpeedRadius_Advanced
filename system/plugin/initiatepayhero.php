@@ -109,14 +109,7 @@ function initiatepayhero()
     $mpesaResponse = json_decode($curl_response);
 
     if (!$mpesaResponse || !isset($mpesaResponse->success) || !$mpesaResponse->success) {
-        // Pay Hero returns the real reason in "error_message" (or "error"/"message") — surface it
-        $errorMsg = 'Unknown error from Pay Hero';
-        if (is_object($mpesaResponse) || is_array($mpesaResponse)) {
-            $r = (array)$mpesaResponse;
-            foreach (['error_message', 'message', 'error', 'error_description'] as $f) {
-                if (!empty($r[$f])) { $errorMsg = $r[$f]; break; }
-            }
-        }
+        $errorMsg = isset($mpesaResponse->error) ? $mpesaResponse->error : 'Unknown error from Pay Hero';
         error_log("PayHero initiatepayhero: STK Push failed — " . $errorMsg);
         echo json_encode([
             "status"  => "error",
@@ -145,17 +138,12 @@ function initiatepayhero()
             "phone"   => $phone,
         ]);
     } else {
-        // Web interface: live payment-progress page (auto-detect + auto-redirect)
-        if (file_exists(__DIR__ . '/lib_payment_progress.php')) {
-            require_once __DIR__ . '/lib_payment_progress.php';
-            payment_progress_render($PaymentGatewayRecord->id);
-        } else {
-            echo "<script>
-                alert('M-Pesa payment initiated successfully! Please check your phone and enter your M-Pesa PIN to complete the payment.');
-                setTimeout(function() {
-                    window.location.href = '" . U . "order/view/" . $PaymentGatewayRecord->id . "';
-                }, 3000);
-            </script>";
-        }
+        // Web redirect — show alert then redirect to order view
+        echo "<script>
+            alert('M-Pesa payment initiated successfully! Please check your phone and enter your M-Pesa PIN to complete the payment.');
+            setTimeout(function() {
+                window.location.href = '" . U . "order/view/" . $PaymentGatewayRecord->id . "';
+            }, 3000);
+        </script>";
     }
 }
