@@ -2,6 +2,27 @@
 
  # CHANGELOG
 
+## [Unreleased] - 2026-09-07
+
+---
+
+### FIXED: Customer Router ON/OFF Control
+
+**`system/helpers/mikrotik_device_info.php` + `system/controllers/customers.php` + `ui/ui/customers-view.tpl`**
+
+- Customer view now checks the live MikroTik PPPoE or Hotspot account state.
+- The control shows one green `ON - Turn Off` button when enabled.
+- The control shows one red `OFF - Turn On` button when disabled.
+- Router or account lookup failures show `Status unavailable` instead of guessing.
+
+### FIXED: VPS Memory Usage Display
+
+**`system/server_stats.php`**
+
+- Dashboard memory statistics now prioritize the VPS `free -m` output.
+- Used memory, available memory, total memory, and percentage are parsed correctly.
+- `/proc/meminfo` remains available as a fallback.
+
 ## [2.2.04] - 2026-08-26
 
 ---
