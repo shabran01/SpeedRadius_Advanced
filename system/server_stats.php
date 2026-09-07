@@ -77,11 +77,11 @@ function getServerStatistics() {
             if ($ok === false || empty($memRaw)) { $memRaw = false; }
         }
         
-        // Method 5: shell commands (cat is a built-in, always available)
-        $shellCmds = ['cat /proc/meminfo 2>/dev/null', 'free -m 2>/dev/null', 'free 2>/dev/null | head -3'];
+        // Method 5: command-line fallback for VPS environments
+        $shellCmds = ['free -m 2>/dev/null', 'cat /proc/meminfo 2>/dev/null', 'free 2>/dev/null | head -3'];
         $hasAnyExec = function_exists('exec') || function_exists('shell_exec') || function_exists('system');
         
-        if ($memRaw === false && $hasAnyExec) {
+        if ($hasAnyExec) {
             foreach ($shellCmds as $shCmd) {
                 $out = null;
                 if (function_exists('exec')) {
@@ -141,25 +141,25 @@ function getServerStatistics() {
                     $mem_info[$match[1]] = $match[2];
                 }
                 $total_mem = isset($mem_info['MemTotal']) ? (int)$mem_info['MemTotal'] : 0;
-                $free_mem  = isset($mem_info['MemFree'])  ? (int)$mem_info['MemFree']  : 0;
+                $free_mem  = isset($mem_info['MemAvailable']) ? (int)$mem_info['MemAvailable'] : (isset($mem_info['MemFree']) ? (int)$mem_info['MemFree'] : 0);
                 $buffers   = isset($mem_info['Buffers'])   ? (int)$mem_info['Buffers']   : 0;
                 $cached    = isset($mem_info['Cached'])    ? (int)$mem_info['Cached']    : 0;
                 
                 if ($total_mem > 0) {
-                    $used_mem = $total_mem - $free_mem - $buffers - $cached;
+                    $used_mem = max(0, $total_mem - $free_mem);
                     $stats['memory'] = array(
                         'total'      => round($total_mem / 1024, 2),
                         'used'       => round($used_mem / 1024, 2),
-                        'free'       => round(($free_mem + $buffers + $cached) / 1024, 2),
+                        'free'       => round($free_mem / 1024, 2),
                         'percentage' => $total_mem > 0 ? round(($used_mem / $total_mem) * 100, 2) : 0
                     );
                 }
             }
         }
 
-        // Some VPS environments expose /proc/meminfo but return incomplete
-        // data. Retry with free -m whenever the first parse produced no total.
-        if ($stats['memory']['total'] <= 0 && $hasAnyExec) {
+        // Some VPS environments expose incomplete command output. Retry with
+        // free -m whenever any displayed memory value is still unavailable.
+        if (($stats['memory']['total'] <= 0 || $stats['memory']['used'] <= 0 || $stats['memory']['free'] <= 0) && $hasAnyExec) {
             $freeOutput = null;
             if (function_exists('shell_exec')) {
                 $freeOutput = @shell_exec('free -m 2>/dev/null');
