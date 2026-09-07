@@ -156,6 +156,31 @@ function getServerStatistics() {
                 }
             }
         }
+
+        // Some VPS environments expose /proc/meminfo but return incomplete
+        // data. Retry with free -m whenever the first parse produced no total.
+        if ($stats['memory']['total'] <= 0 && $hasAnyExec) {
+            $freeOutput = null;
+            if (function_exists('shell_exec')) {
+                $freeOutput = @shell_exec('free -m 2>/dev/null');
+            } elseif (function_exists('exec')) {
+                $freeLines = [];
+                @exec('free -m 2>/dev/null', $freeLines);
+                $freeOutput = $freeLines ? implode("\n", $freeLines) : null;
+            }
+
+            if ($freeOutput && preg_match('/^\s*Mem:\s+(\d+)\s+(\d+)\s+(\d+)\s+\d+\s+\d+\s+(\d+)/m', $freeOutput, $freeMatch)) {
+                $total_mem = (int)$freeMatch[1];
+                $used_mem  = (int)$freeMatch[2];
+                $free_mem  = (int)$freeMatch[4];
+                $stats['memory'] = array(
+                    'total'      => round($total_mem, 2),
+                    'used'       => round($used_mem, 2),
+                    'free'       => round($free_mem, 2),
+                    'percentage' => $total_mem > 0 ? round(($used_mem / $total_mem) * 100, 2) : 0
+                );
+            }
+        }
     }
     
     // Windows fallback
