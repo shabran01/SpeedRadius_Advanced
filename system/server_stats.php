@@ -102,16 +102,29 @@ function getServerStatistics() {
         
         // Parse meminfo content (from any method)
         if ($memRaw !== false && !empty(trim($memRaw))) {
-            // Detect if it's 'free -m' output (starts with "total" header line)
-            if (preg_match('/^\s*total\s+used\s+free/m', $memRaw)) {
-                // 'free -m' output format
-                $lines = explode("\n", trim($memRaw));
-                if (isset($lines[1])) {
-                    $cols = preg_split('/\s+/', trim($lines[1]));
-                    if (count($cols) >= 4) {
-                        $total_mem = (int)$cols[1];
-                        $used_mem  = (int)$cols[2];
-                        $free_mem  = (int)$cols[3];
+            // Detect 'free -m' output. Newer versions include shared, buff/cache,
+            // and available columns between total, used, and free.
+            if (preg_match('/^\s*total\s+used\s+free(?:\s+shared)?(?:\s+buff\/cache)?(?:\s+available)?\s*$/m', $memRaw)) {
+                $lines = preg_split('/\r?\n/', trim($memRaw));
+                $headerIndex = false;
+                foreach ($lines as $index => $line) {
+                    if (preg_match('/^\s*total\s+used\s+free(?:\s+shared)?(?:\s+buff\/cache)?(?:\s+available)?\s*$/', $line)) {
+                        $headerIndex = $index;
+                        break;
+                    }
+                }
+
+                if ($headerIndex !== false && isset($lines[$headerIndex + 1])) {
+                    $headers = preg_split('/\s+/', trim($lines[$headerIndex]));
+                    $values = preg_split('/\s+/', trim($lines[$headerIndex + 1]));
+                    if (isset($values[0]) && !is_numeric($values[0])) {
+                        array_shift($values);
+                    }
+                    $columns = array_combine($headers, $values);
+                    if ($columns !== false && isset($columns['total'], $columns['used'], $columns['free'])) {
+                        $total_mem = (int)$columns['total'];
+                        $used_mem  = (int)$columns['used'];
+                        $free_mem  = isset($columns['available']) ? (int)$columns['available'] : (int)$columns['free'];
                         $stats['memory'] = array(
                             'total'      => round($total_mem, 2),
                             'used'       => round($used_mem, 2),
