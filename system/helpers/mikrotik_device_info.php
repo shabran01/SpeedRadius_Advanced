@@ -161,6 +161,46 @@ function get_customer_devices($router, $username, $pppoe_username = null) {
 }
 
 /**
+ * Return whether a customer's RouterOS account is enabled.
+ * Returns null when the router or account cannot be checked.
+ */
+function get_customer_enabled_status($router, $username, $pppoe_username = null) {
+    if (empty($router) || empty($username)) {
+        return null;
+    }
+
+    try {
+        $client = Mikrotik::getClient($router['ip_address'], $router['username'], $router['password']);
+        if (!$client) {
+            return null;
+        }
+
+        $pppoe_username = !empty($pppoe_username) ? $pppoe_username : $username;
+        $queries = [
+            ['/ppp/secret/print', 'name', $pppoe_username],
+            ['/ip/hotspot/user/print', 'name', $username],
+        ];
+
+        foreach ($queries as $queryData) {
+            $request = new PEAR2\Net\RouterOS\Request($queryData[0]);
+            $request->setQuery(PEAR2\Net\RouterOS\Query::where($queryData[1], $queryData[2]));
+            foreach ($client->sendSync($request) as $response) {
+                if ($response->getType() !== PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                    continue;
+                }
+
+                $disabled = strtolower((string)$response->getProperty('disabled', 'false'));
+                return !in_array($disabled, ['true', 'yes', '1'], true);
+            }
+        }
+    } catch (Exception $e) {
+        _log('Customer enabled status error: ' . $e->getMessage());
+    }
+
+    return null;
+}
+
+/**
  * Get hostname from DHCP leases or ARP table
  */
 function getHostnameFromDhcpOrArp($client, $ip, $mac = null) {
