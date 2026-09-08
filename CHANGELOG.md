@@ -2,6 +2,19 @@
 
  # CHANGELOG
 
+## [Unreleased] - 2026-09-08
+
+---
+
+### IMPROVED: Modern System Info Presentation
+
+**`system/plugin/ui/system_info.tpl`**
+
+- Replaced the raw table layout with a responsive operations view.
+- Added clear CPU, memory, and storage summary panels with usage indicators.
+- Grouped host details and service health into readable sections.
+- Preserved the FreeRADIUS reload action and result messaging.
+
 ## [Unreleased] - 2026-09-07
 
 ---
