@@ -2,48 +2,57 @@
 
 {literal}
 <style>
-.system-info-page { color: #26364a; }
-.system-info-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin: 8px 0 24px; }
-.system-info-hero h1 { margin: 0 0 6px; font-size: 26px; font-weight: 700; color: #172b4d; }
-.system-info-hero p { margin: 0; color: #718096; font-size: 13px; }
-.system-info-kicker { margin: 0 0 8px; color: #168aad; font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; }
-.system-info-panel { margin-bottom: 20px; border: 1px solid #e5eaf0; border-radius: 8px; background: #fff; box-shadow: 0 4px 16px rgba(30, 55, 90, .06); overflow: hidden; }
-.system-info-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #edf1f5; background: #fbfcfe; }
-.system-info-panel-head h2 { margin: 0; color: #20344f; font-size: 15px; font-weight: 700; }
-.system-info-panel-head p { margin: 3px 0 0; color: #8795a8; font-size: 12px; }
+.system-info-page { color: #1f2937; font-family: 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif; }
+.system-info-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin: 10px 0 26px; padding: 22px 24px; border: 1px solid #e6eaf2; border-radius: 14px; background: linear-gradient(120deg, #f8faff 0%, #eef2ff 100%); }
+.system-info-hero h1 { margin: 0 0 6px; font-size: 26px; font-weight: 700; letter-spacing: -.3px; color: #111827; }
+.system-info-hero p { margin: 0; color: #64748b; font-size: 13px; }
+.system-info-kicker { margin: 0 0 8px; color: #6366f1; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.system-info-panel { margin-bottom: 20px; border: 1px solid #e6eaf2; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(79, 70, 229, .05); overflow: hidden; }
+.system-info-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 20px; border-bottom: 1px solid #eef1f6; background: #fbfcff; }
+.system-info-panel-head h2 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.2px; color: #111827; }
+.system-info-panel-head p { margin: 3px 0 0; color: #94a3b8; font-size: 12px; }
 .system-info-panel-body { padding: 20px; }
-.system-info-metric { position: relative; min-height: 148px; padding: 20px; border: 1px solid #e6ebf1; border-radius: 8px; background: #fff; }
-.system-info-metric:before { position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #168aad; content: ''; }
-.system-info-metric.memory:before { background: #e09f3e; }
-.system-info-metric.storage:before { background: #3a86a8; }
-.system-info-metric-label { margin-bottom: 10px; color: #718096; font-size: 12px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; }
-.system-info-metric-value { margin: 0; color: #172b4d; font-size: 26px; font-weight: 700; line-height: 1.15; }
-.system-info-metric-detail { min-height: 18px; margin: 8px 0 16px; color: #8492a6; font-size: 12px; }
-.system-info-progress { height: 6px; margin: 0; border-radius: 4px; background: #edf1f5; box-shadow: none; }
-.system-info-progress .progress-bar { border-radius: 4px; background: #168aad; box-shadow: none; }
-.memory .system-info-progress .progress-bar { background: #e09f3e; }
-.storage .system-info-progress .progress-bar { background: #3a86a8; }
-.system-info-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid #edf1f5; }
-.system-info-detail { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 13px 20px; border-right: 1px solid #edf1f5; border-bottom: 1px solid #edf1f5; }
+.system-info-metric { position: relative; display: flex; flex-direction: column; min-height: 158px; padding: 18px 20px; border: 1px solid #e6eaf2; border-radius: 14px; background: #fff; box-shadow: 0 6px 18px rgba(79, 70, 229, .05); overflow: hidden; }
+.system-info-metric:before { position: absolute; top: 0; left: 0; width: 5px; height: 100%; content: ''; }
+.system-info-metric.cpu:before { background: linear-gradient(180deg, #6366f1, #8b5cf6); }
+.system-info-metric.memory:before { background: linear-gradient(180deg, #06b6d4, #3b82f6); }
+.system-info-metric.storage:before { background: linear-gradient(180deg, #10b981, #14b8a6); }
+.system-info-metric-icon { width: 34px; height: 34px; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; color: #fff; border-radius: 10px; }
+.system-info-metric.cpu .system-info-metric-icon { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+.system-info-metric.memory .system-info-metric-icon { background: linear-gradient(135deg, #06b6d4, #3b82f6); }
+.system-info-metric.storage .system-info-metric-icon { background: linear-gradient(135deg, #10b981, #14b8a6); }
+.system-info-metric-label { margin-bottom: 6px; color: #94a3b8; font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
+.system-info-metric-value { margin: 0; color: #111827; font-size: 27px; font-weight: 700; letter-spacing: -.4px; line-height: 1.15; }
+.system-info-metric-detail { min-height: 18px; margin: 8px 0 16px; color: #64748b; font-size: 12px; }
+.system-info-progress { height: 6px; margin: auto 0 0; border-radius: 999px; background: #eef1f6; box-shadow: none; }
+.system-info-progress .progress-bar { border-radius: 999px; box-shadow: none; }
+.system-info-metric.cpu .system-info-progress .progress-bar { background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+.system-info-metric.memory .system-info-progress .progress-bar { background: linear-gradient(90deg, #06b6d4, #3b82f6); }
+.system-info-metric.storage .system-info-progress .progress-bar { background: linear-gradient(90deg, #10b981, #14b8a6); }
+.system-info-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid #eef1f6; }
+.system-info-detail { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 13px 20px; border-right: 1px solid #eef1f6; border-bottom: 1px solid #eef1f6; }
+.system-info-detail:nth-child(odd) { background: #fbfcff; }
 .system-info-detail:nth-child(even) { border-right: 0; }
-.system-info-detail dt { color: #8795a8; font-size: 12px; font-weight: 600; }
-.system-info-detail dd { margin: 0; color: #34495e; font-size: 12px; font-weight: 600; text-align: right; word-break: break-word; }
+.system-info-detail dt { color: #94a3b8; font-size: 12px; font-weight: 600; }
+.system-info-detail dd { margin: 0; color: #334155; font-size: 12px; font-weight: 600; text-align: right; word-break: break-word; }
 .system-info-service-list { margin: 0; }
-.system-info-service { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 10px 0; border-bottom: 1px solid #edf1f5; }
+.system-info-service { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 10px 0; border-bottom: 1px solid #eef1f6; }
 .system-info-service:last-child { border-bottom: 0; padding-bottom: 0; }
 .system-info-service:first-child { padding-top: 0; }
-.system-info-service-name { color: #34495e; font-size: 13px; font-weight: 600; }
-.system-info-service-status small { display: inline-block; padding: 4px 9px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: capitalize; }
+.system-info-service-name { color: #334155; font-size: 13px; font-weight: 600; }
+.system-info-service-status small { display: inline-block; padding: 4px 11px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: capitalize; }
 .system-info-service-status .label { float: none; }
 .system-info-reload { white-space: nowrap; }
-.system-info-result { margin: 0 0 20px; padding: 14px 18px; border: 1px solid #b8dfc8; border-left: 4px solid #2a9d5b; border-radius: 6px; background: #f1fbf4; color: #24613b; font-size: 13px; }
-.system-info-result.failed { border-color: #f2c0c0; border-left-color: #d9534f; background: #fff5f5; color: #8b3030; }
+.system-info-reload .btn { border: 0; border-radius: 9px; background: linear-gradient(135deg, #6366f1, #8b5cf6); box-shadow: 0 6px 14px rgba(99, 102, 241, .35); }
+.system-info-result { margin: 0 0 20px; padding: 14px 18px; border: 1px solid #a7e3bd; border-left: 4px solid #10b981; border-radius: 10px; background: #f0fdf6; color: #0f766e; font-size: 13px; }
+.system-info-result.failed { border-color: #f9c1c1; border-left-color: #ef4444; background: #fef2f2; color: #b91c1c; }
 .system-info-result p { margin: 0; }
 @media (max-width: 767px) {
     .system-info-hero { display: block; }
     .system-info-hero .system-info-reload { margin-top: 16px; }
     .system-info-detail-grid { grid-template-columns: 1fr; }
     .system-info-detail { border-right: 0; }
+    .system-info-detail:nth-child(odd) { background: transparent; }
 }
 </style>
 {/literal}
@@ -67,16 +76,20 @@
 
     <div class="row">
         <div class="col-md-4">
-            <div class="system-info-metric">
-                <div class="system-info-metric-label"><span class="glyphicon glyphicon-dashboard"></span> CPU Load</div>
-                <p class="system-info-metric-value">{$systemInfo['CPU Usage']|default:'Unknown'}</p>
+            {assign var='cpuUsageValue' value=$systemInfo['CPU Usage']|default:'Unknown'}
+            {assign var='cpuUsageNumber' value=$cpuUsageValue|regex_replace:"/[^0-9.]+/":''}
+            <div class="system-info-metric cpu">
+                <span class="system-info-metric-icon"><span class="glyphicon glyphicon-dashboard"></span></span>
+                <div class="system-info-metric-label">CPU Load</div>
+                <p class="system-info-metric-value">{$cpuUsageValue}</p>
                 <p class="system-info-metric-detail">{$systemInfo['CPU Cores']|default:'Unknown'} logical cores available</p>
-                <div class="progress system-info-progress"><div class="progress-bar" role="progressbar" style="width: {$systemInfo['CPU Usage']|default:'0%'};"></div></div>
+                <div class="progress system-info-progress"><div class="progress-bar" role="progressbar" style="width: {if $cpuUsageNumber != ''}{$cpuUsageNumber}{else}0{/if}%;"></div></div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="system-info-metric memory">
-                <div class="system-info-metric-label"><span class="glyphicon glyphicon-tasks"></span> Memory</div>
+                <span class="system-info-metric-icon"><span class="glyphicon glyphicon-tasks"></span></span>
+                <div class="system-info-metric-label">Memory</div>
                 <p class="system-info-metric-value">{$memory_usage.used|default:0} MB</p>
                 <p class="system-info-metric-detail">of {$memory_usage.total|default:0} MB used - {$memory_usage.free|default:0} MB available</p>
                 <div class="progress system-info-progress"><div class="progress-bar" role="progressbar" style="width: {$memory_usage.used_percentage|default:0}%;"></div></div>
@@ -84,7 +97,8 @@
         </div>
         <div class="col-md-4">
             <div class="system-info-metric storage">
-                <div class="system-info-metric-label"><span class="glyphicon glyphicon-hdd"></span> Storage</div>
+                <span class="system-info-metric-icon"><span class="glyphicon glyphicon-hdd"></span></span>
+                <div class="system-info-metric-label">Storage</div>
                 <p class="system-info-metric-value">{$disk_usage['used_percentage']|default:'0%'}</p>
                 <p class="system-info-metric-detail">{$disk_usage['used']|default:'0 B'} used - {$disk_usage['free']|default:'0 B'} free</p>
                 <div class="progress system-info-progress"><div class="progress-bar" role="progressbar" style="width: {$disk_usage['used_percentage']|default:'0%'};"></div></div>

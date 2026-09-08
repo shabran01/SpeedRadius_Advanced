@@ -6,6 +6,18 @@
 
 ---
 
+### IMPROVED: System Info Cool Color Refinement
+
+**`system/plugin/ui/system_info.tpl`**
+
+- Refined the System Info page with a cooler slate and indigo palette.
+- Added gradient accent cards, icon chips, and softer rounded surfaces.
+- Improved progress bars, spacing, and mobile alignment.
+
+## [Unreleased] - 2026-09-08
+
+---
+
 ### IMPROVED: Modern System Info Presentation
 
 **`system/plugin/ui/system_info.tpl`**
