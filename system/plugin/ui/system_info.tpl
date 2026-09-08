@@ -114,11 +114,13 @@
     <script>
         function refreshRemoteGauges() {
             var endpoint = '{$_url}plugin/system_info&action=gauges&t=' + Date.now();
-            fetch(endpoint, {headers: {'Accept': 'application/json'}})
-                .then(function(response) { return response.json().then(function(data) { return {ok: response.ok, data: data}; }); })
-                .then(function(result) {
-                    var data = result.data;
-                    if (!result.ok || data.error) throw new Error(data.error || 'Unable to read remote gauges.');
+            fetch(endpoint)
+                .then(function(response) {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (data.error) throw new Error(data.error);
                     var memoryPercent = data.mem_total_mb > 0 ? (data.mem_used_mb / data.mem_total_mb) * 100 : 0;
                     var diskPercent = data.disk_total_mb > 0 ? (data.disk_used_mb / data.disk_total_mb) * 100 : 0;
                     document.getElementById('remote-gauge-host').textContent = data.host || 'Remote server';

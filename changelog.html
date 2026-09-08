@@ -62,6 +62,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 ---
 
+### FIXED: System Info Gauge Template Compilation
+
+**`system/plugin/ui/system_info.tpl`**
+
+- Removed JavaScript object literals that Smarty interpreted as template syntax.
+- The System Info page now compiles correctly while keeping remote gauge polling enabled.
+
+## [Unreleased] - 2026-09-08
+
+---
+
 ### ADDED: Remote Server Gauges to System Info
 
 **`system/plugin/system_info.php` + `system/plugin/ui/system_info.tpl` + `config.sample.php`**
