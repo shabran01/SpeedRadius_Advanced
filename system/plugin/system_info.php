@@ -412,11 +412,20 @@ function system_info_get_uptime() {
     }
 
     // 2) Direct /proc read — no shell needed
-    if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN' && is_readable('/proc/uptime')) {
+    if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
         $data = @file_get_contents('/proc/uptime');
-        if ($data !== false) {
+        if ($data !== false && trim($data) !== '') {
             $seconds = (int)explode(' ', trim($data))[0];
             if ($seconds > 0) return system_info_format_uptime($seconds);
+        }
+
+        // 2b) Boot time from /proc/stat (btime) — works when /proc/uptime
+        // is blocked for the web user but /proc/stat is still readable.
+        $statData = @file_get_contents('/proc/stat');
+        if ($statData !== false && preg_match('/^btime\s+(\d+)/m', $statData, $bootMatch)) {
+            $bootTime = (int)$bootMatch[1];
+            $seconds = time() - $bootTime;
+            if ($bootTime > 0 && $seconds > 0) return system_info_format_uptime($seconds);
         }
     }
 
