@@ -58,6 +58,19 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [Unreleased] - 2026-09-08
+
+---
+
+### ADDED: Remote Server Gauges to System Info
+
+**`system/plugin/system_info.php` + `system/plugin/ui/system_info.tpl` + `config.sample.php`**
+
+- Added admin-authenticated CPU, memory, swap, disk, uptime, load, and hostname gauges to `?_route=plugin/system_info`.
+- Gauges read the remote VPS over SSH and refresh every five seconds.
+- Added optional `SSH_HOST`, `SSH_PORT`, `SSH_USER`, and `SSH_PASS` configuration settings.
+- Missing SSH configuration is reported in the page without breaking the existing System Info page.
+
 ## [Unreleased] - 2026-09-07
 
 ---

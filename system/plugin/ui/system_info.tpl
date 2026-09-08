@@ -47,6 +47,22 @@
     </table>
 <hr>
 <br>
+<div class="panel panel-primary panel-hovered mb20" id="remote-gauges">
+    <div class="panel-heading">
+        <strong>Remote Server Gauges</strong>
+        <span class="pull-right"><span id="remote-gauge-host">Connecting...</span> &middot; <span id="remote-gauge-updated">Refreshing...</span></span>
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-sm-3"><strong>CPU</strong><p id="remote-gauge-cpu">--</p></div>
+            <div class="col-sm-3"><strong>Memory</strong><p id="remote-gauge-memory">--</p></div>
+            <div class="col-sm-3"><strong>Disk</strong><p id="remote-gauge-disk">--</p></div>
+            <div class="col-sm-3"><strong>Uptime</strong><p id="remote-gauge-uptime">--</p></div>
+        </div>
+        <p id="remote-gauge-error" class="text-danger" style="display:none;"></p>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-sm-12">
         <div class="panel panel-hovered mb20 panel-primary">
@@ -96,6 +112,32 @@
     </div> {/if}
 
     <script>
+        function refreshRemoteGauges() {
+            var endpoint = '{$_url}plugin/system_info&action=gauges&t=' + Date.now();
+            fetch(endpoint, {headers: {'Accept': 'application/json'}})
+                .then(function(response) { return response.json().then(function(data) { return {ok: response.ok, data: data}; }); })
+                .then(function(result) {
+                    var data = result.data;
+                    if (!result.ok || data.error) throw new Error(data.error || 'Unable to read remote gauges.');
+                    var memoryPercent = data.mem_total_mb > 0 ? (data.mem_used_mb / data.mem_total_mb) * 100 : 0;
+                    var diskPercent = data.disk_total_mb > 0 ? (data.disk_used_mb / data.disk_total_mb) * 100 : 0;
+                    document.getElementById('remote-gauge-host').textContent = data.host || 'Remote server';
+                    document.getElementById('remote-gauge-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+                    document.getElementById('remote-gauge-cpu').textContent = (data.cpu === null ? '--' : data.cpu.toFixed(2) + '%');
+                    document.getElementById('remote-gauge-memory').textContent = data.mem_used_mb + ' / ' + data.mem_total_mb + ' MB (' + memoryPercent.toFixed(2) + '%)';
+                    document.getElementById('remote-gauge-disk').textContent = data.disk_used_mb + ' / ' + data.disk_total_mb + ' MB (' + diskPercent.toFixed(2) + '%)';
+                    document.getElementById('remote-gauge-uptime').textContent = data.uptime || '--';
+                    document.getElementById('remote-gauge-error').style.display = 'none';
+                })
+                .catch(function(error) {
+                    var message = document.getElementById('remote-gauge-error');
+                    message.textContent = error.message;
+                    message.style.display = 'block';
+                });
+        }
+        refreshRemoteGauges();
+        window.setInterval(refreshRemoteGauges, 5000);
+
         window.addEventListener('DOMContentLoaded', function() {
             var portalLink = "https://github.com/focuslinkstech";
             $('#version').html('System Info Plugin by: <a href="' + portalLink + '">Focuslinks Tech</a>');
