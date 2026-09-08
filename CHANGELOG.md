@@ -6,6 +6,17 @@
 
 ---
 
+### IMPROVED: System Info Storage Card
+
+**`system/plugin/ui/system_info.tpl`**
+
+- Storage card now leads with the total capacity.
+- Shows used (with percentage) and free alongside the total.
+
+## [Unreleased] - 2026-09-08
+
+---
+
 ### FIXED: System Info Uptime on Restricted Hosts
 
 **`system/plugin/system_info.php`**

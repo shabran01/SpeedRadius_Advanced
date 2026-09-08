@@ -103,8 +103,8 @@
             <div class="system-info-metric storage">
                 <span class="system-info-metric-icon"><span class="glyphicon glyphicon-hdd"></span></span>
                 <div class="system-info-metric-label">Storage</div>
-                <p class="system-info-metric-value">{$disk_usage['used_percentage']|default:'0%'}</p>
-                <p class="system-info-metric-detail">{$disk_usage['used']|default:'0 B'} used - {$disk_usage['free']|default:'0 B'} free</p>
+                <p class="system-info-metric-value">{$disk_usage['total']|default:'0 B'}</p>
+                <p class="system-info-metric-detail">{$disk_usage['used']|default:'0 B'} used ({$disk_usage['used_percentage']|default:'0%'}) - {$disk_usage['free']|default:'0 B'} free</p>
                 <div class="progress system-info-progress"><div class="progress-bar" role="progressbar" style="width: {$disk_usage['used_percentage']|default:'0%'};"></div></div>
             </div>
         </div>
