@@ -5,12 +5,6 @@ function system_info()
 {
     global $ui;
     _admin();
-
-    if (_get('action') === 'gauges') {
-        system_info_output_remote_gauges();
-        exit;
-    }
-
     $ui->assign('_title', 'System Information');
     $ui->assign('_system_menu', 'settings');
     $admin = Admin::_info();
@@ -44,113 +38,6 @@ function system_info()
     }
     $ui->assign('output', is_array($output) ? implode("\n", $output) : $output);
     $ui->assign('returnCode', $retcode);
-}
-
-function system_info_output_remote_gauges()
-{
-    header('Content-Type: application/json');
-
-    if (!function_exists('ssh2_connect')) {
-        http_response_code(503);
-        echo json_encode(['error' => 'PHP SSH2 extension is not installed.']);
-        return;
-    }
-
-    foreach (['SSH_HOST', 'SSH_PORT', 'SSH_USER', 'SSH_PASS'] as $constant) {
-        if (!defined($constant) || constant($constant) === '') {
-            http_response_code(503);
-            echo json_encode(['error' => 'SSH settings are not configured.']);
-            return;
-        }
-    }
-
-    $command = 'printf "===cpu===\\n"; vmstat 1 2 | tail -1; '
-        . 'printf "===mem===\\n"; free -m; '
-        . 'printf "===disk===\\n"; df -BM /; '
-        . 'printf "===up===\\n"; uptime -p; '
-        . 'printf "===load===\\n"; cat /proc/loadavg; '
-        . 'printf "===host===\\n"; hostname';
-
-    try {
-        $connection = @ssh2_connect(SSH_HOST, SSH_PORT);
-        if (!$connection || !@ssh2_auth_password($connection, SSH_USER, SSH_PASS)) {
-            throw new RuntimeException('Remote SSH connection failed.');
-        }
-
-        $stream = @ssh2_exec($connection, $command . ' 2>/dev/null');
-        if (!$stream) {
-            throw new RuntimeException('Remote command execution failed.');
-        }
-        stream_set_blocking($stream, true);
-        $output = (string)stream_get_contents($stream);
-        fclose($stream);
-
-        echo json_encode(system_info_parse_remote_gauges($output));
-    } catch (Throwable $exception) {
-        http_response_code(502);
-        echo json_encode(['error' => $exception->getMessage()]);
-    }
-}
-
-function system_info_parse_remote_gauges($output)
-{
-    $sections = [];
-    $current = null;
-    foreach (preg_split('/\r?\n/', $output) as $line) {
-        if (preg_match('/^===(.+)===$/', trim($line), $match)) {
-            $current = $match[1];
-            $sections[$current] = [];
-        } elseif ($current !== null) {
-            $sections[$current][] = trim($line);
-        }
-    }
-
-    $cpu = null;
-    $cpuLines = $sections['cpu'] ?? [];
-    foreach ($cpuLines as $line) {
-        $columns = preg_split('/\s+/', trim($line));
-        if (count($columns) >= 15 && is_numeric($columns[14])) {
-            $cpu = round(100 - (float)$columns[14], 2);
-            break;
-        }
-    }
-
-    $memory = ['used' => 0, 'total' => 0];
-    $swap = ['used' => 0, 'total' => 0];
-    foreach ($sections['mem'] ?? [] as $line) {
-        $columns = preg_split('/\s+/', trim($line));
-        if (($columns[0] ?? '') === 'Mem:') {
-            $memory['total'] = (int)($columns[1] ?? 0);
-            $memory['used'] = (int)($columns[2] ?? 0);
-        } elseif (($columns[0] ?? '') === 'Swap:') {
-            $swap['total'] = (int)($columns[1] ?? 0);
-            $swap['used'] = (int)($columns[2] ?? 0);
-        }
-    }
-
-    $disk = ['used' => 0, 'total' => 0];
-    foreach ($sections['disk'] ?? [] as $line) {
-        $columns = preg_split('/\s+/', trim($line));
-        if (count($columns) >= 4 && preg_match('/^\d+M$/', $columns[1] ?? '')) {
-            $disk['total'] = (int)$columns[1];
-            $disk['used'] = (int)$columns[2];
-            break;
-        }
-    }
-
-    $load = trim(implode(' ', array_slice(preg_split('/\s+/', trim(($sections['load'][0] ?? ''))), 0, 3)));
-    return [
-        'host' => trim($sections['host'][0] ?? ''),
-        'uptime' => trim(preg_replace('/^up\s+/i', '', $sections['up'][0] ?? '')),
-        'load' => $load,
-        'cpu' => $cpu,
-        'mem_used_mb' => $memory['used'],
-        'mem_total_mb' => $memory['total'],
-        'swap_used_mb' => $swap['used'],
-        'swap_total_mb' => $swap['total'],
-        'disk_used_mb' => $disk['used'],
-        'disk_total_mb' => $disk['total'],
-    ];
 }
 
 function system_info_cache_dir()

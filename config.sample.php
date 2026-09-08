@@ -18,12 +18,6 @@ $db_user    = "root"; # Database Username
 $db_pass    = ""; # Database Password
 $db_name    = "phpnuxbill"; # Database Name
 
-// Optional remote server gauges used by ?_route=plugin/system_info&action=gauges
-define('SSH_HOST', ''); # Remote VPS hostname or IP
-define('SSH_PORT', 22);
-define('SSH_USER', '');
-define('SSH_PASS', '');
-
 
 
 
