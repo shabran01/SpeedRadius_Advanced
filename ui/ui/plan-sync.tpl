@@ -1,5 +1,7 @@
 {include file="sections/header.tpl"}
 
+<script src="ui/ui/scripts/jquery.min.js"></script>
+
 <div class="row">
     <div class="col-sm-12">
         <div class="panel panel-primary panel-hovered mb20 panel-stacked">
@@ -17,30 +19,15 @@
                         </div>
 
                         {if !$isViewer}
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="typeSelect"><strong>Service Type</strong></label>
-                                    <select id="typeSelect" class="form-control">
-                                        <option value=""{if $syncType eq ''} selected{/if}>All Types</option>
-                                        <option value="Hotspot"{if $syncType eq 'Hotspot'} selected{/if}>Hotspot only</option>
-                                        <option value="PPPOE"{if $syncType eq 'PPPOE'} selected{/if}>PPPoE only</option>
-                                    </select>
-                                    <p class="help-block">Limit the sync to one service type, or leave as <em>All Types</em>.</p>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="routerSelect"><strong>Router</strong></label>
-                                    <select id="routerSelect" class="form-control">
-                                        <option value=""{if $syncRouter eq ''} selected{/if}>All Routers</option>
-                                        {foreach $allRouters as $r}
-                                        <option value="{$r}"{if $syncRouter eq $r} selected{/if}>{$r}</option>
-                                        {/foreach}
-                                    </select>
-                                    <p class="help-block">Limit the sync to one router, or leave as <em>All Routers</em>.</p>
-                                </div>
-                            </div>
+                        <div class="form-group">
+                            <label for="routerSelect"><strong>Sync Scope</strong></label>
+                            <select id="routerSelect" class="form-control" style="max-width:400px;">
+                                <option value=""{if $syncRouter eq ''} selected{/if}>All Routers</option>
+                                {foreach $allRouters as $r}
+                                <option value="{$r}"{if $syncRouter eq $r} selected{/if}>{$r}</option>
+                                {/foreach}
+                            </select>
+                            <p class="help-block">Choose a specific router to sync only its customers, or leave as <em>All Routers</em>.</p>
                         </div>
                         {/if}
                         
@@ -51,20 +38,13 @@
                         {/if}
                         
                         <div id="syncProgress" style="display:none;">
-                            <div class="progress" style="height: 24px; margin-bottom: 6px;">
-                                <div class="progress-bar progress-bar-striped active" role="progressbar"
-                                     id="progressBar" style="width: 0%; transition: width .35s ease; line-height: 24px;">
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped active" role="progressbar" 
+                                     id="progressBar" style="width: 0%">
                                     <span id="progressText">0%</span>
                                 </div>
                             </div>
-                            <div class="text-muted small" style="margin-bottom: 15px;">
-                                <span id="progressRange">Waiting to start...</span>
-                                <span class="pull-right">
-                                    <i class="fa fa-clock-o"></i> Elapsed: <span id="elapsedTime">0s</span>
-                                    &middot; ETA: <span id="etaTime">--</span>
-                                </span>
-                            </div>
-
+                            
                             <div class="alert alert-info" id="statusMessage">
                                 <i class="fa fa-spinner fa-spin"></i> Initializing sync...
                             </div>
@@ -139,131 +119,64 @@ $(document).ready(function() {
     let totalUsers = {$totalUsers};
     let isSyncing = false;
     let selectedRouter = '{$syncRouter|escape:"javascript"}';
-    let selectedType = '{$syncType|escape:"javascript"}';
-    let syncStartTime = null;
-    let syncTimer = null;
-    const batchSize = 5;
-    const batchTimeoutMs = 180000;
-
-    function formatDuration(seconds) {
-        seconds = Math.max(0, Math.round(seconds));
-        if (seconds < 60) { return seconds + 's'; }
-        return Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
-    }
-
-    function updateTimers() {
-        if (!syncStartTime) { return; }
-        let elapsed = (Date.now() - syncStartTime) / 1000;
-        $('#elapsedTime').text(formatDuration(elapsed));
-        if (totalProcessed > 0 && totalUsers > 0) {
-            let rate = totalProcessed / elapsed;
-            let remaining = Math.max(0, totalUsers - totalProcessed);
-            $('#etaTime').text(rate > 0 ? formatDuration(remaining / rate) : '--');
-        } else {
-            $('#etaTime').text('--');
-        }
-    }
-
-    // Show per-type counts on the options and update the banner for the current selection
-    function refreshCounts() {
-        let params = { offset: 0, limit: 0, count_only: 1 };
-        if (selectedRouter) { params.router = selectedRouter; }
-        $.getJSON('{$_url}plan/sync-process', params)
+    
+    // Update banner count when router dropdown changes
+    $('#routerSelect').on('change', function() {
+        selectedRouter = $(this).val();
+        let router = selectedRouter;
+        $.getJSON('{$_url}plan/sync-process', { offset: 0, limit: 0, router: router, count_only: 1 })
             .done(function(data) {
-                if (!data || !data.stats) { return; }
-                let fallback = parseInt(data.stats.total, 10) || 0;
-                let allCount = parseInt(data.stats.all, 10);
-                let hotspotCount = parseInt(data.stats.hotspot, 10);
-                let pppoeCount = parseInt(data.stats.pppoe, 10);
-
-                // Older server responses only return "total"; fall back gracefully.
-                if (isNaN(allCount)) { allCount = fallback; }
-                if (isNaN(hotspotCount)) { hotspotCount = 0; }
-                if (isNaN(pppoeCount)) { pppoeCount = 0; }
-
-                $('#typeSelect option[value=""]').text('All Types (' + allCount + ')');
-                $('#typeSelect option[value="Hotspot"]').text('Hotspot only (' + hotspotCount + ')');
-                $('#typeSelect option[value="PPPOE"]').text('PPPoE only (' + pppoeCount + ')');
-
-                totalUsers = selectedType === 'Hotspot' ? hotspotCount
-                    : (selectedType === 'PPPOE' ? pppoeCount : allCount);
-                $('#totalUsersLabel').text(totalUsers);
-            })
-            .fail(function() {
-                // Keep the server-rendered count if the refresh fails.
+                if (data && data.stats) {
+                    totalUsers = data.stats.total;
+                    $('#totalUsersLabel').text(totalUsers);
+                }
             });
-    }
-
-    $('#routerSelect, #typeSelect').on('change', function() {
-        selectedRouter = $('#routerSelect').length ? $('#routerSelect').val() : selectedRouter;
-        selectedType = $('#typeSelect').length ? $('#typeSelect').val() : selectedType;
-        refreshCounts();
     });
 
-    // Populate counts on page load
-    refreshCounts();
-
+    // Test if jQuery is working
+    console.log('jQuery version:', $.fn.jquery);
+    console.log('Document ready, button found:', $('#startSyncBtn').length);
+    
     $('#startSyncBtn').click(function(e) {
         e.preventDefault();
-
+        alert('Button clicked!'); // Simple test
+        console.log('Sync button clicked');
+        
         if (isSyncing) {
+            console.log('Already syncing, returning');
             return;
         }
-
+        
         selectedRouter = $('#routerSelect').length ? $('#routerSelect').val() : selectedRouter;
-        selectedType = $('#typeSelect').length ? $('#typeSelect').val() : selectedType;
-        let routerLabel = selectedRouter ? 'router [' + selectedRouter + ']' : 'ALL routers';
-        let typeLabel = selectedType ? selectedType + ' users only' : 'all service types';
-        let confirmMsg = 'Sync ' + typeLabel + ' on ' + routerLabel + ' to Mikrotik? This may take several minutes.';
+        let confirmMsg = selectedRouter
+            ? 'Sync active users on router [' + selectedRouter + '] to Mikrotik?'
+            : 'Sync ALL active users across all routers to Mikrotik? This may take several minutes.';
         if (!confirm(confirmMsg)) {
+            console.log('User cancelled sync');
             return;
         }
-
-        // Reset state so the sync can run again without reloading the page
-        offset = 0;
-        totalProcessed = 0;
-        totalSuccess = 0;
-        totalErrors = 0;
-        $('#processedCount, #successCount, #errorCount').text('0');
-        $('#syncResults').empty();
-        $('#progressBar').css('width', '0%').addClass('active');
-        $('#progressText').text('0%');
-        $('#progressRange').text('Starting...');
-        $('#elapsedTime').text('0s');
-        $('#etaTime').text('--');
-        $('#syncComplete').hide();
-        $('#statusMessage').removeClass('alert-success alert-danger').addClass('alert-info');
-
-        // Lock the filters during sync
-        $('#routerSelect, #typeSelect').prop('disabled', true);
+        
+        // Lock the dropdown during sync
+        $('#routerSelect').prop('disabled', true);
+        console.log('Starting sync process, router filter:', selectedRouter || 'ALL');
         isSyncing = true;
-        syncStartTime = Date.now();
-        syncTimer = window.setInterval(updateTimers, 1000);
-        updateTimers();
         $('#syncControls').hide();
         $('#syncProgress').show();
-        $('#statusMessage').html('<i class="fa fa-spinner fa-spin"></i> Starting sync...');
         syncNextBatch();
     });
     
     function syncNextBatch() {
-        let batchEnd = Math.min(offset + batchSize, totalUsers);
-        $('#progressRange').text('Processing ' + (offset + 1) + '-' + batchEnd + ' of ' + totalUsers);
-        $('#statusMessage').html(
-            '<i class="fa fa-spinner fa-spin"></i> Syncing users ' +
-            (offset + 1) + '-' + batchEnd + ' of ' + totalUsers + '...'
-        );
-        updateTimers();
-        let ajaxData = { offset: offset, limit: batchSize };
+        console.log('Starting syncNextBatch, offset:', offset);
+        let ajaxData = { offset: offset };
         if (selectedRouter) { ajaxData.router = selectedRouter; }
-        if (selectedType) { ajaxData.type = selectedType; }
         $.ajax({
             url: '{$_url}plan/sync-process',
             method: 'GET',
             data: ajaxData,
             dataType: 'json',
-            timeout: batchTimeoutMs, // generous timeout per batch (slow routers)
+            timeout: 60000, // 60 seconds timeout per batch
             success: function(response) {
+                console.log('AJAX success:', response);
                 if (response.success) {
                     // Sync totalUsers from server (handles router filter applied after page load)
                     totalUsers = response.stats.total;
@@ -283,10 +196,6 @@ $(document).ready(function() {
                     $('#progressBar').css('width', percentage + '%');
                     $('#progressText').text(percentage + '%');
                     
-                    // Update live range and timing
-                    $('#progressRange').text('Processed ' + totalProcessed + ' of ' + totalUsers);
-                    updateTimers();
-
                     // Update status message
                     $('#statusMessage').html(
                         '<i class="fa fa-spinner fa-spin"></i> Processing: ' + 
@@ -317,16 +226,10 @@ $(document).ready(function() {
                     // Auto-scroll to bottom
                     $('#syncResults').scrollTop($('#syncResults')[0].scrollHeight);
                     
-                    // Guard against an infinite loop if a batch makes no progress
-                    if (response.stats.processed === 0 && response.stats.hasMore) {
-                        showError('No users were processed in the last batch. Sync stopped to avoid a loop.');
-                        return;
-                    }
-
                     // Check if more batches to process
                     if (response.stats.hasMore) {
                         offset += response.stats.processed;
-                        setTimeout(syncNextBatch, 150); // Small delay between batches
+                        setTimeout(syncNextBatch, 500); // Small delay between batches
                     } else {
                         // Sync complete
                         completeSyncProcess();
@@ -336,6 +239,8 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr, status, error) {
+                console.log('AJAX error:', xhr, status, error);
+                console.log('Response text:', xhr.responseText);
                 let errorMsg = 'Connection error: ';
                 if (status === 'timeout') {
                     errorMsg += 'Request timeout. Will retry...';
@@ -351,14 +256,7 @@ $(document).ready(function() {
     
     function completeSyncProcess() {
         isSyncing = false;
-        if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
-        updateTimers();
-        $('#routerSelect, #typeSelect').prop('disabled', false);
-        // Allow running again without a page reload
-        $('#startSyncBtn').html('<i class="fa fa-refresh"></i> Sync Again');
-        $('#syncControls').show();
-        $('#progressRange').text('Completed ' + totalProcessed + ' of ' + totalUsers);
-        $('#etaTime').text('0s');
+        $('#routerSelect').prop('disabled', false);
         $('#progressBar').removeClass('active');
         $('#statusMessage').html(
             '<i class="fa fa-check-circle"></i> Sync completed successfully!'
@@ -376,8 +274,7 @@ $(document).ready(function() {
     
     function showError(message) {
         isSyncing = false;
-        if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
-        $('#routerSelect, #typeSelect').prop('disabled', false);
+        $('#routerSelect').prop('disabled', false);
         $('#statusMessage').html(
             '<i class="fa fa-exclamation-triangle"></i> ' + message
         ).removeClass('alert-info').addClass('alert-danger');

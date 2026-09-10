@@ -62,6 +62,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 ---
 
+### REVERTED: Plan Sync Restored to Original State
+
+**`ui/ui/plan-sync.tpl` + `system/controllers/plan.php` + `system/devices/MikrotikHotspot.php` + `system/devices/MikrotikPppoe.php`**
+
+- All Plan Sync changes were rolled back to their original committed state because the Start Sync button stopped working.
+- Removed: the service type filter, live filter counts, the real-time progress display, and the batch/timeout tuning.
+- Removed: the shared RouterOS connection and router-info caching added for sync speed.
+- The sync page and both device drivers are now byte-identical to their original versions.
+
+## [Unreleased] - 2026-09-10
+
+---
+
 ### FIXED: Start Sync Button Appearing to Do Nothing
 
 **`ui/ui/plan-sync.tpl` + `system/controllers/plan.php`**

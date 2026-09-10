@@ -316,11 +316,7 @@ class MikrotikHotspot
 
     function info($name)
     {
-        static $infoCache = [];
-        if (!array_key_exists($name, $infoCache)) {
-            $infoCache[$name] = ORM::for_table('tbl_routers')->where('name', $name)->find_one();
-        }
-        return $infoCache[$name];
+        return ORM::for_table('tbl_routers')->where('name', $name)->find_one();
     }
 
     function getClient($ip, $user, $pass)
@@ -329,16 +325,7 @@ class MikrotikHotspot
         if ($_app_stage == 'Demo') {
             return null;
         }
-
-        // Reuse one connection per router within the same request.
-        // A sync batch touches many users on the same router; without this,
-        // every user opened a new RouterOS connection.
-        static $clientCache = [];
-        $cacheKey = $ip . '|' . $user;
-        if (isset($clientCache[$cacheKey])) {
-            return $clientCache[$cacheKey];
-        }
-
+        
         $maxRetries = 3;
         $retryDelay = 2; // seconds
         $attempt = 0;
@@ -365,7 +352,6 @@ class MikrotikHotspot
                 $pingRequest = new RouterOS\Request('/system/resource/print');
                 $client->sendSync($pingRequest);
                 
-                $clientCache[$cacheKey] = $client;
                 return $client;
             } catch (\Exception $e) {
                 $attempt++;

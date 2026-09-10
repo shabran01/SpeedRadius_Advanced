@@ -38,18 +38,11 @@ switch ($action) {
         }
         
         $syncRouter = isset($_GET['router']) ? trim($_GET['router']) : '';
-        $syncType = isset($_GET['type']) ? trim($_GET['type']) : '';
-        if (!in_array($syncType, ['Hotspot', 'PPPOE'], true)) {
-            $syncType = '';
-        }
 
         // Display sync interface with progress
         $syncQuery = ORM::for_table('tbl_user_recharges')->where('status', 'on');
         if ($syncRouter !== '') {
             $syncQuery->where('routers', $syncRouter);
-        }
-        if ($syncType !== '') {
-            $syncQuery->where('type', $syncType);
         }
         $totalUsers = $syncQuery->count();
 
@@ -63,7 +56,6 @@ switch ($action) {
         $ui->assign('isViewer', $admin['user_type'] == 'Viewer');
         $ui->assign('allRouters', $allRouters);
         $ui->assign('syncRouter', $syncRouter);
-        $ui->assign('syncType', $syncType);
         $ui->display('plan-sync.tpl');
         break;
         
@@ -73,56 +65,23 @@ switch ($action) {
         }
 
         $filterRouter = isset($_GET['router']) ? trim($_GET['router']) : '';
-        $filterType = isset($_GET['type']) ? trim($_GET['type']) : '';
-        if (!in_array($filterType, ['Hotspot', 'PPPOE'], true)) {
-            $filterType = '';
-        }
 
-        // count_only: return totals per service type for the selected router
-        // (used by the filter change events and to label the dropdown options).
+        // count_only: just return the total for that router (used by dropdown change event)
         if (!empty($_GET['count_only'])) {
-            $countFor = function ($type) use ($filterRouter) {
-                $q = ORM::for_table('tbl_user_recharges')->where('status', 'on');
-                if ($filterRouter !== '') { $q->where('routers', $filterRouter); }
-                if ($type !== '') { $q->where('type', $type); }
-                return $q->count();
-            };
-            $allCount = $countFor('');
-            $hotspotCount = $countFor('Hotspot');
-            $pppoeCount = $countFor('PPPOE');
-            $selectedCount = $filterType === 'Hotspot' ? $hotspotCount : ($filterType === 'PPPOE' ? $pppoeCount : $allCount);
-
+            $cq = ORM::for_table('tbl_user_recharges')->where('status', 'on');
+            if ($filterRouter !== '') { $cq->where('routers', $filterRouter); }
             header('Content-Type: application/json');
-            die(json_encode([
-                'success' => true,
-                'stats' => [
-                    'total' => $selectedCount,
-                    'all' => $allCount,
-                    'hotspot' => $hotspotCount,
-                    'pppoe' => $pppoeCount,
-                ]
-            ]));
+            die(json_encode(['success' => true, 'stats' => ['total' => $cq->count()]]));
         }
 
-        set_time_limit(300);
+        set_time_limit(120);
         $offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
-        // Batch size can be hinted by the client (kept small so each request
-        // finishes well inside the browser timeout), clamped to a safe range.
-        $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 10;
-        if ($limit < 1) {
-            $limit = 1;
-        }
-        if ($limit > 20) {
-            $limit = 20;
-        }
+        $limit = 10;
 
         $tursQuery = ORM::for_table('tbl_user_recharges')
             ->where('status', 'on');
         if ($filterRouter !== '') {
             $tursQuery->where('routers', $filterRouter);
-        }
-        if ($filterType !== '') {
-            $tursQuery->where('type', $filterType);
         }
         $turs = $tursQuery->limit($limit)->offset($offset)->find_many();
 
@@ -130,35 +89,15 @@ switch ($action) {
         $success = 0;
         $errors = 0;
 
-        // Preload plans and customers for this batch in two queries (avoids N+1 per row).
-        $planIds = [];
-        $customerIds = [];
-        foreach ($turs as $tur) {
-            if (!empty($tur['plan_id'])) { $planIds[] = (int)$tur['plan_id']; }
-            if (!empty($tur['customer_id'])) { $customerIds[] = (int)$tur['customer_id']; }
-        }
-        $plansById = [];
-        if (!empty($planIds)) {
-            foreach (ORM::for_table('tbl_plans')->where_in('id', array_values(array_unique($planIds)))->find_many() as $row) {
-                $plansById[$row['id']] = $row;
-            }
-        }
-        $customersById = [];
-        if (!empty($customerIds)) {
-            foreach (ORM::for_table('tbl_customers')->where_in('id', array_values(array_unique($customerIds)))->find_many() as $row) {
-                $customersById[$row['id']] = $row;
-            }
-        }
-
         foreach ($turs as $tur) {
             try {
-                $p = isset($plansById[$tur['plan_id']]) ? $plansById[$tur['plan_id']] : null;
+                $p = ORM::for_table('tbl_plans')->find_one($tur['plan_id']);
                 if (!$p) {
                     $results[] = ['username' => $tur['username'], 'status' => 'error', 'message' => 'Plan not found'];
                     $errors++; continue;
                 }
 
-                $c = isset($customersById[$tur['customer_id']]) ? $customersById[$tur['customer_id']] : null;
+                $c = ORM::for_table('tbl_customers')->find_one($tur['customer_id']);
                 if (!$c) {
                     $results[] = ['username' => $tur['username'], 'status' => 'error', 'message' => 'Customer not found'];
                     $errors++; continue;
@@ -170,14 +109,9 @@ switch ($action) {
                         require_once $dvc;
                         $device = new $p['device'];
                         if (method_exists($device, 'add_customer')) {
-                            $syncResult = $device->add_customer($c, $p);
-                            if ($syncResult === false) {
-                                $results[] = ['username' => $tur['username'], 'status' => 'error', 'message' => 'Router rejected the update', 'plan' => $tur['namebp'], 'router' => $tur['routers']];
-                                $errors++;
-                            } else {
-                                $results[] = ['username' => $tur['username'], 'status' => 'success', 'message' => 'Synced', 'plan' => $tur['namebp'], 'router' => $tur['routers']];
-                                $success++;
-                            }
+                            $device->add_customer($c, $p);
+                            $results[] = ['username' => $tur['username'], 'status' => 'success', 'message' => 'Synced', 'plan' => $tur['namebp'], 'router' => $tur['routers']];
+                            $success++;
                         } else {
                             $results[] = ['username' => $tur['username'], 'status' => 'error', 'message' => 'Method missing'];
                             $errors++;
@@ -199,9 +133,6 @@ switch ($action) {
         $totalCountQuery = ORM::for_table('tbl_user_recharges')->where('status', 'on');
         if ($filterRouter !== '') {
             $totalCountQuery->where('routers', $filterRouter);
-        }
-        if ($filterType !== '') {
-            $totalCountQuery->where('type', $filterType);
         }
         $totalUsers = $totalCountQuery->count();
         $hasMore = ($offset + $limit) < $totalUsers;
