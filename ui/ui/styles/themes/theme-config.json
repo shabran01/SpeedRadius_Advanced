@@ -1,0 +1,53 @@
+{
+    "available_themes": [
+        {
+            "id": "default",
+            "name": "Default Theme",
+            "css": "modern-AdminLTE.min.css",
+            "description": "Default AdminLTE theme",
+            "customizable": false
+        },
+        {
+            "id": "modern-light",
+            "name": "Modern Light",
+            "css": "modern-light.css",
+            "description": "A clean, modern light theme",
+            "customizable": true,
+            "colors": {
+                "primary": "#2196F3",
+                "secondary": "#607D8B",
+                "success": "#4CAF50",
+                "info": "#00BCD4",
+                "warning": "#FFC107",
+                "danger": "#F44336"
+            }
+        },
+        {
+            "id": "modern-dark",
+            "name": "Modern Dark",
+            "css": "modern-dark.css",
+            "description": "A sleek dark theme",
+            "customizable": true,
+            "colors": {
+                "primary": "#2196F3",
+                "secondary": "#607D8B",
+                "success": "#4CAF50",
+                "info": "#00BCD4",
+                "warning": "#FFC107",
+                "danger": "#F44336"
+            }
+        }
+    ],
+    "default_theme": "default",
+    "font_options": [
+        "Roboto",
+        "Open Sans",
+        "Nunito",
+        "Poppins"
+    ],
+    "size_options": {
+        "compact": "0.9rem",
+        "normal": "1rem",
+        "comfortable": "1.1rem"
+    }
+}

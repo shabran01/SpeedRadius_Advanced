@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpeedCom WhatsApp API Installation Guide</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f6f8;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #4CAF50;
+      color: white;
+      padding: 20px 0;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    main {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+
+    h2 {
+      color: #4CAF50;
+      margin-top: 30px;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 5px;
+    }
+
+    ol {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    li {
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    code {
+      background-color: #eee;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    pre {
+      background-color: #eee;
+      padding: 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+
+    footer {
+      text-align: center;
+      margin: 50px 0 20px 0;
+      color: #777;
+    }
+
+    .note {
+      background-color: #fff9c4;
+      border-left: 4px solid #ffeb3b;
+      padding: 10px 15px;
+      margin-top: 10px;
+      border-radius: 4px;
+    }
+
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>SpeedCom WhatsApp API Installation Guide</h1>
+</header>
+
+<main>
+  <h2>Step 1: Prepare the Folder</h2>
+  <ol>
+    <li>Create a folder for WhatsApp API: <br>
+      <pre><code>mkdir -p /opt/whatsapp
+cd /opt/whatsapp</code></pre>
+    </li>
+
+    <li>Create the <code>docker-compose.yml</code> file: <br>
+      <pre><code>nano docker-compose.yml</code></pre>
+      Paste the following content:
+      <pre><code>version: "3.9"
+
+services:
+  postgres:
+    image: postgres:14
+    container_name: whatsapp_postgres
+    environment:
+      POSTGRES_USER: whatsapp
+      POSTGRES_PASSWORD: strongpassword123
+      POSTGRES_DB: whatsappdb
+    volumes:
+      - whatsapp_postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  whatsapp:
+    image: dimaskiddo/go-whatsapp-multidevice-rest:latest
+    container_name: whatsapp_api
+    depends_on:
+      - postgres
+    environment:
+      HTTP_LISTEN_ADDRESS: "0.0.0.0"
+      HTTP_LISTEN_PORT: "3000"
+      DATABASE_DRIVER: "postgres"
+      DATABASE_CONNECTION: "postgres://whatsapp:strongpassword123@postgres:5432/whatsappdb?sslmode=disable"
+      WHATSAPP_SESSION_DIR: "/app/sessions"
+      WHATSAPP_SESSION_AUTO_SAVE: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - whatsapp_sessions:/app/sessions
+    restart: always
+
+volumes:
+  whatsapp_postgres_data:
+  whatsapp_sessions:</code></pre>
+    </li>
+
+    <li>Create a <code>.env</code> file (optional but recommended): <br>
+      <pre><code>nano .env</code></pre>
+      Paste:
+      <pre><code>HTTP_LISTEN_ADDRESS=0.0.0.0
+HTTP_LISTEN_PORT=3000
+DATABASE_DRIVER=postgres
+DATABASE_CONNECTION=postgres://whatsapp:strongpassword123@postgres:5432/whatsappdb?sslmode=disable
+WHATSAPP_SESSION_DIR=/app/sessions
+WHATSAPP_SESSION_AUTO_SAVE=true</code></pre>
+    </li>
+
+    <li>Start the containers: <br>
+      <pre><code>docker compose up -d</code></pre>
+    </li>
+
+    <li>Check if the API is running: <br>
+      <pre><code>docker ps
+docker logs -f whatsapp_api</code></pre>
+    </li>
+
+    <li>Access WhatsApp API and QR login: <br>
+      <pre><code>http://YOUR_VPS_IP:3000/api/v1/whatsapp/docs/</code></pre>
+      Scan the QR code with your WhatsApp account to start.
+    </li>
+  </ol>
+
+  <div class="note">
+    💡 <strong>Note:</strong> This setup uses <strong>PostgreSQL</strong> for database storage. It prevents errors like <code>SQLITE_BUSY</code> and allows multiple WhatsApp accounts to run smoothly.
+  </div>
+</main>
+
+<footer>
+  &copy; 2025 SpeedCom WiFi
+</footer>
+
+</body>
+</html>

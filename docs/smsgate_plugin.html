@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmSGate Plugin — SpeedRadius Documentation</title>
+    <style>
+        :root {
+            --primary: #1a1a2e;
+            --accent: #16213e;
+            --blue: #0f3460;
+            --teal: #00b4d8;
+            --green: #2ecc71;
+            --red: #e74c3c;
+            --yellow: #f39c12;
+            --text: #2d3436;
+            --muted: #636e72;
+            --bg: #f0f4f8;
+            --card: #ffffff;
+            --border: #dfe6e9;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        /* HERO */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--blue) 100%);
+            color: #fff;
+            padding: 50px 30px;
+            text-align: center;
+        }
+
+        .hero .badge {
+            display: inline-block;
+            background: var(--teal);
+            color: #fff;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+        }
+
+        .hero h1 { font-size: 2.6em; font-weight: 700; margin-bottom: 10px; }
+        .hero p  { font-size: 1.1em; opacity: 0.85; max-width: 600px; margin: 0 auto; }
+
+        /* CONTAINER */
+        .container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
+
+        /* SECTION */
+        .section {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 30px 35px;
+            margin-bottom: 28px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+        }
+
+        h2 {
+            font-size: 1.35em;
+            color: var(--blue);
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h3 { font-size: 1.05em; color: var(--primary); margin: 18px 0 8px; }
+
+        p { margin-bottom: 12px; }
+        ul, ol { padding-left: 22px; margin-bottom: 14px; }
+        li { margin-bottom: 6px; }
+
+        /* CODE */
+        code {
+            background: #f4f6f9;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.88em;
+            color: #c0392b;
+        }
+
+        pre {
+            background: #1e272e;
+            color: #dfe6e9;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.88em;
+            line-height: 1.6;
+            margin: 14px 0;
+        }
+
+        pre .comment { color: #7f8c8d; }
+        pre .key     { color: #00b4d8; }
+        pre .val     { color: #2ecc71; }
+        pre .str     { color: #f39c12; }
+
+        /* CALLOUTS */
+        .callout {
+            border-left: 4px solid;
+            padding: 14px 18px;
+            border-radius: 0 8px 8px 0;
+            margin: 16px 0;
+            font-size: 0.95em;
+        }
+        .callout.info    { border-color: var(--teal);   background: #e8f8fd; }
+        .callout.success { border-color: var(--green);  background: #eafaf1; }
+        .callout.warning { border-color: var(--yellow); background: #fef9e7; }
+        .callout.danger  { border-color: var(--red);    background: #fdf2f2; }
+        .callout strong  { display: block; margin-bottom: 4px; }
+
+        /* FLOW DIAGRAM */
+        .flow {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .flow-box {
+            background: var(--blue);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: 600;
+            text-align: center;
+            min-width: 140px;
+        }
+
+        .flow-box.green { background: #27ae60; }
+        .flow-box.teal  { background: #00b4d8; }
+        .flow-box.phone { background: #8e44ad; }
+
+        .flow-arrow {
+            font-size: 1.4em;
+            color: var(--muted);
+            padding: 0 8px;
+            font-weight: bold;
+        }
+
+        /* FILES TABLE */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+            font-size: 0.92em;
+        }
+
+        th {
+            background: var(--primary);
+            color: #fff;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 9px 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        tr:nth-child(even) td { background: #f8fafc; }
+
+        /* STATUS BADGES */
+        .tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.78em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .tag.new     { background: #d5f5e3; color: #1e8449; }
+        .tag.edited  { background: #d6eaf8; color: #154360; }
+        .tag.deleted { background: #fde8e8; color: #c0392b; }
+        .tag.fixed   { background: #fef9e7; color: #9a7d0a; }
+
+        /* STEP LIST */
+        .steps { counter-reset: s; list-style: none; padding: 0; }
+        .steps li {
+            counter-increment: s;
+            position: relative;
+            padding: 12px 12px 12px 56px;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .steps li::before {
+            content: counter(s);
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--teal);
+            color: #fff;
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+
+        /* PHONE NUMBER TABLE */
+        .phone-table td:first-child { font-family: 'Courier New', monospace; color: #c0392b; }
+        .phone-table td:last-child  { font-family: 'Courier New', monospace; color: #27ae60; font-weight: 600; }
+
+        footer {
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.85em;
+            padding: 30px 20px;
+            border-top: 1px solid var(--border);
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+    <div class="badge">SpeedRadius Plugin</div>
+    <h1>📱 SmSGate Gateway</h1>
+    <p>Send SMS messages through your own Android phone using the sms-gate.app Cloud API — no third-party SMS subscription required.</p>
+</div>
+
+<div class="container">
+
+    <!-- OVERVIEW -->
+    <div class="section">
+        <h2>📋 Overview</h2>
+        <p>
+            <strong>SmSGate</strong> is a custom SpeedRadius plugin that connects your billing system to an Android phone via
+            <a href="https://sms-gate.app" target="_blank">sms-gate.app</a> — a free, open-source Android SMS gateway app.
+            When SpeedRadius needs to send a notification (expired package, payment receipt, reminder), it calls the
+            sms-gate.app Cloud API which relays the message to your Android phone, and the phone sends it as a real SMS
+            using your SIM card.
+        </p>
+        <div class="callout success">
+            <strong>✅ Free to use</strong>
+            No monthly fees. Costs only your phone's airtime or SMS bundle. No registration or account needed on sms-gate.app.
+        </div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div class="section">
+        <h2>⚙️ How It Works</h2>
+
+        <h3>Message Flow — Cloud Mode</h3>
+        <div class="flow">
+            <div class="flow-box">SpeedRadius<br><small>billing event</small></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box teal">sms-gate.app<br><small>cloud relay</small></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box phone">Your Android<br><small>phone online</small></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box green">Customer<br><small>receives SMS</small></div>
+        </div>
+
+        <ol>
+            <li>SpeedRadius triggers a notification (e.g. customer's PPPoE package expired)</li>
+            <li>The SmSGate plugin fires and sends a <code>POST</code> request to <code>https://api.sms-gate.app/3rdparty/v1/message</code> with the phone number and message text, authenticated with your username and password</li>
+            <li>The sms-gate.app cloud server receives the request and queues it for your device</li>
+            <li>The app on your Android phone picks up the queued message (as long as it has internet)</li>
+            <li>The phone sends the SMS using your SIM card to the customer's number</li>
+            <li>Status (sent/failed) is logged in the <code>tbl_sms_logs</code> table and shown on the plugin dashboard</li>
+        </ol>
+
+        <h3>Duplicate Protection</h3>
+        <p>
+            The plugin uses the built-in <code>SMSLock</code> helper along with a <strong>5-minute database check</strong>
+            to prevent the same message being sent twice to the same number within a short period.
+            This protects against double-billing notifications during cron retries.
+        </p>
+
+        <h3>Phone Number Normalisation</h3>
+        <p>The plugin automatically converts any phone format to international <code>+254</code> format before sending:</p>
+        <table class="phone-table">
+            <thead><tr><th>Input format</th><th>Converted to</th></tr></thead>
+            <tbody>
+                <tr><td>+254712345678</td><td>+254712345678</td></tr>
+                <tr><td>254712345678</td><td>+254712345678</td></tr>
+                <tr><td>0712345678</td><td>+254712345678</td></tr>
+                <tr><td>0112345678</td><td>+254112345678</td></tr>
+                <tr><td>712345678</td><td>+254712345678</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- FILES CREATED/EDITED -->
+    <div class="section">
+        <h2>📁 Files Created &amp; Modified</h2>
+        <table>
+            <thead>
+                <tr><th>File</th><th>Status</th><th>What changed</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>system/plugin/SMSGateGateway.php</code></td>
+                    <td><span class="tag new">New</span></td>
+                    <td>Main plugin file — all gateway logic, phone formatter, logging, test endpoint, config save</td>
+                </tr>
+                <tr>
+                    <td><code>system/plugin/ui/smsGatewaySmSGate.tpl</code></td>
+                    <td><span class="tag new">New</span></td>
+                    <td>Admin UI template — Dashboard tab, Configuration tab, Send Test SMS, Last 10 SMS logs table</td>
+                </tr>
+                <tr>
+                    <td><code>system/plugin/SMS_Gateway_Manager.php</code></td>
+                    <td><span class="tag edited">Edited</span></td>
+                    <td>Added <code>smsgate</code> routing block and <strong>SmSGate</strong> option in the gateway dropdown</td>
+                </tr>
+                <tr>
+                    <td><code>ui/ui/app-settings.tpl</code></td>
+                    <td><span class="tag edited">Edited</span></td>
+                    <td>Added <strong>SmSGate</strong> option to SMS Gateway selection dropdown in App Settings</td>
+                </tr>
+                <tr>
+                    <td><code>system/plugin/ZettatelGateway.php</code></td>
+                    <td><span class="tag deleted">Deleted</span></td>
+                    <td>Removed — Zettatel SMS gateway plugin no longer needed</td>
+                </tr>
+                <tr>
+                    <td><code>system/plugin/ui/smsGatewayZettatel.tpl</code></td>
+                    <td><span class="tag deleted">Deleted</span></td>
+                    <td>Removed — Zettatel admin template no longer needed</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- DATABASE -->
+    <div class="section">
+        <h2>🗄️ Database</h2>
+        <p>No new tables are created. The plugin uses two existing tables:</p>
+        <table>
+            <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td><code>tbl_appconfig</code></td>
+                    <td>Stores plugin credentials: <code>smsgate_username</code>, <code>smsgate_password</code>, <code>smsgate_device_id</code></td>
+                </tr>
+                <tr>
+                    <td><code>tbl_sms_logs</code></td>
+                    <td>Records every SMS attempt — phone, message, status (sent/failed), message ID from sms-gate.app, timestamp</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- CONFIGURATION -->
+    <div class="section">
+        <h2>🛠️ Setup &amp; Configuration</h2>
+        <ol class="steps">
+            <li>
+                <strong>Install the app on your Android phone</strong><br>
+                Download from <a href="https://sms-gate.app" target="_blank">sms-gate.app</a> or directly from GitHub releases.
+                Enable <strong>Cloud server</strong> toggle. Enable <strong>Start on boot</strong>. Confirm app shows <strong>ONLINE</strong>.
+            </li>
+            <li>
+                <strong>Select SmSGate as the active gateway</strong><br>
+                Admin Panel → <em>Settings → App Settings</em> → SMS Gateway dropdown → select <strong>SmSGate</strong> → Save.
+            </li>
+            <li>
+                <strong>Enter your credentials</strong><br>
+                Admin Panel → <em>SmSGate Gateway</em> (in left menu) → <strong>Configuration tab</strong><br>
+                <ul>
+                    <li><strong>Username</strong> — shown on the app's Home screen (e.g. <code>HSHN-U</code>)</li>
+                    <li><strong>Password</strong> — shown on the app's Home screen</li>
+                    <li><strong>Device ID</strong> — shown on the app's Home screen (optional, but recommended if you have one device)</li>
+                </ul>
+            </li>
+            <li>
+                <strong>Send a test SMS</strong><br>
+                Go to <em>SmSGate Gateway → Dashboard</em> → enter a phone number → click <strong>Send Test</strong>. 
+                If successful, the result shows <em>"✓ Sent successfully!"</em> and the SMS arrives on the target phone.
+            </li>
+        </ol>
+
+        <div class="callout warning">
+            <strong>⚠️ Phone must stay online</strong>
+            Keep the Android phone connected to WiFi and plugged in to charge at all times.
+            Cloud mode requires the phone to have an internet connection to receive and send messages.
+            If the phone is offline temporarily, the cloud server queues the message and delivers it when the phone reconnects.
+        </div>
+    </div>
+
+    <!-- API REFERENCE -->
+    <div class="section">
+        <h2>🔌 API Reference</h2>
+        <h3>Endpoint Used</h3>
+        <pre><span class="key">POST</span> <span class="val">https://api.sms-gate.app/3rdparty/v1/message</span>
+<span class="comment">Authorization: Basic (username:password)</span>
+<span class="comment">Content-Type: application/json</span></pre>
+
+        <h3>Request Body</h3>
+        <pre>{
+  <span class="key">"message"</span>:      <span class="str">"Hello customer, your package has expired."</span>,
+  <span class="key">"phoneNumbers"</span>: [<span class="str">"+254712345678"</span>],
+  <span class="key">"deviceId"</span>:     <span class="str">"tN6WX8KrpxzY5gkPuXWP-"</span>  <span class="comment">// optional</span>
+}</pre>
+
+        <h3>Response</h3>
+        <pre><span class="comment">// Success — HTTP 202 Accepted</span>
+{ <span class="key">"id"</span>: <span class="str">"msg_abc123"</span>, <span class="key">"state"</span>: <span class="str">"Pending"</span> }
+
+<span class="comment">// Failure — HTTP 4xx / 5xx</span>
+{ <span class="key">"message"</span>: <span class="str">"Unauthorized"</span> }</pre>
+    </div>
+
+    <!-- FUNCTIONS -->
+    <div class="section">
+        <h2>🔧 Plugin Functions</h2>
+        <table>
+            <thead><tr><th>Function</th><th>Purpose</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td><code>smsGatewaySmSGate()</code></td>
+                    <td>Renders the Dashboard tab — shows status boxes and last 10 SMS logs</td>
+                </tr>
+                <tr>
+                    <td><code>smsGatewaySmSGate_config()</code></td>
+                    <td>Renders and handles the Configuration tab — saves username/password/device ID to <code>tbl_appconfig</code></td>
+                </tr>
+                <tr>
+                    <td><code>smsGatewaySmSGate_test()</code></td>
+                    <td>AJAX endpoint — accepts phone + message via POST, calls the send hook, returns JSON result</td>
+                </tr>
+                <tr>
+                    <td><code>smsGatewaySmSGate_hook_send_sms()</code></td>
+                    <td>Core send function — validates, deduplicates, formats phone, sends to API, logs result</td>
+                </tr>
+                <tr>
+                    <td><code>smsGatewaySmSGate_phoneFormat()</code></td>
+                    <td>Normalises any Kenyan phone number format to international <code>+254XXXXXXXXX</code></td>
+                </tr>
+                <tr>
+                    <td><code>smsGatewaySmSGate_log()</code></td>
+                    <td>Writes a record to <code>tbl_sms_logs</code> with phone, message, status, and message ID</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- NOTIFICATIONS THAT USE THIS PLUGIN -->
+    <div class="section">
+        <h2>📨 Notifications Sent Through SmSGate</h2>
+        <p>Once configured as the active SMS gateway, SmSGate handles all of these notification types:</p>
+        <table>
+            <thead><tr><th>Event</th><th>PPPoE</th><th>Hotspot</th><th>Channel</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td>Package expired</td>
+                    <td>✅ Sent</td>
+                    <td>❌ Blocked (by setting)</td>
+                    <td>SMS + WhatsApp (<code>both</code>)</td>
+                </tr>
+                <tr>
+                    <td>Payment / recharge received</td>
+                    <td>✅ Sent</td>
+                    <td>✅ Sent</td>
+                    <td>SMS + WhatsApp (<code>both</code>)</td>
+                </tr>
+                <tr>
+                    <td>Expiry reminder (7, 3, 1 day)</td>
+                    <td>✅ Sent</td>
+                    <td>❌ Blocked (by setting)</td>
+                    <td>SMS + WhatsApp (<code>both</code>)</td>
+                </tr>
+                <tr>
+                    <td>Welcome message (on add customer)</td>
+                    <td>✅ If enabled</td>
+                    <td>✅ If enabled</td>
+                    <td>SMS / WA / Email (admin choice)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="callout info">
+            <strong>ℹ️ WhatsApp notifications</strong>
+            SmSGate handles the <strong>SMS</strong> channel only. WhatsApp notifications are handled separately
+            by the WhatsApp gateway configured in Admin → Settings → WhatsApp.
+        </div>
+    </div>
+
+    <!-- TROUBLESHOOTING -->
+    <div class="section">
+        <h2>🔍 Troubleshooting</h2>
+        <table>
+            <thead><tr><th>Problem</th><th>Likely Cause</th><th>Fix</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td>"Request error. Check server logs."</td>
+                    <td>Wrong AJAX URL or PHP error</td>
+                    <td>Check PHP error logs on the server. Ensure <code>smsGatewaySmSGate_test</code> is registered</td>
+                </tr>
+                <tr>
+                    <td>"Failed to send SMS"</td>
+                    <td>Wrong credentials or phone offline</td>
+                    <td>Verify username/password match the app's Home screen. Check phone is ONLINE</td>
+                </tr>
+                <tr>
+                    <td>SMS not arriving but status says "sent"</td>
+                    <td>Phone has internet but SIM has no SMS credit</td>
+                    <td>Top up airtime or SMS bundle on the phone's SIM</td>
+                </tr>
+                <tr>
+                    <td>Redirect loop on config page</td>
+                    <td>POST detection bug (fixed)</td>
+                    <td>Already fixed — use <code>!empty()</code> check instead of <code>!== null</code></td>
+                </tr>
+                <tr>
+                    <td>Messages queued but not sent</td>
+                    <td>Phone is offline</td>
+                    <td>Reconnect phone to WiFi/mobile data — queued messages will deliver automatically</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<footer>
+    SpeedRadius ISP Management System — SmSGate Plugin Documentation<br>
+    Plugin built: April 2, 2026 &nbsp;|&nbsp; sms-gate.app (open-source, Apache 2.0 license)
+</footer>
+
+</body>
+</html>

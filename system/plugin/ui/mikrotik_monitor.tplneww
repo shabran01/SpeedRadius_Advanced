@@ -1,0 +1,523 @@
+﻿{include file="sections/header.tpl"}
+<!-- Tailwind CDN - preflight disabled to avoid Bootstrap conflicts -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = {literal}{ corePlugins: { preflight: false } }{/literal};</script>
+<style>
+{literal}
+    #mm-app { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; }
+
+    /* Pulse dot animation */
+    @keyframes mm-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .mm-pulse-dot { animation: mm-pulse 2s cubic-bezier(.4,0,.6,1) infinite; }
+
+    /* Smooth bar fill */
+    .mm-bar-fill { height:100%; border-radius:9999px; transition: width .7s cubic-bezier(.4,0,.2,1), background .4s; }
+
+    /* Tab active state */
+    .mm-tab-btn.mm-active { color:#6366f1 !important; border-bottom-color:#6366f1 !important; background:#fff !important; }
+
+    /* DataTables overrides */
+    #mm-app table thead th {
+        background: #1e293b !important;
+        color: #fff !important;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        padding: 10px 14px;
+        white-space: nowrap;
+        border: none !important;
+    }
+    #mm-app table tbody td {
+        font-size: 13px;
+        padding: 9px 14px;
+        border-bottom: 1px solid #f1f5f9 !important;
+        vertical-align: middle;
+        color: #334155;
+    }
+    #mm-app table tbody tr:hover td { background: #f8fafc !important; }
+    #mm-app .dataTables_wrapper { font-size: 13px; padding: 8px 0; }
+    #mm-app .dataTables_filter input { border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px 10px; outline: none; }
+    #mm-app .dataTables_filter input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+    #mm-app .dataTables_length select { border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px 8px; }
+    #mm-app .dataTables_paginate .paginate_button { border-radius: 6px !important; font-size: 12px !important; }
+    #mm-app .dataTables_paginate .paginate_button.current { background: #6366f1 !important; color: #fff !important; border-color: #6366f1 !important; }
+
+    /* Log badges */
+    .mm-badge { padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; letter-spacing:.04em; text-transform:uppercase; margin-right: 4px; display:inline-block; }
+
+    /* Resource cards (AJAX loaded HTML from PHP) */
+    .column-card-container { display:flex; flex-wrap:wrap; gap:16px; margin:0 0 16px 0; }
+    .column-card { flex: 1 1 calc(33.333% - 16px); min-width: 220px; background:#fff; border-radius:14px; box-shadow: 0 2px 12px rgba(0,0,0,.07); overflow:hidden; }
+    .column-card-header { background:#009879; color:#fff; padding:10px 16px; font-size:13px; font-weight:700; }
+    .column-card-content { padding:14px; }
+    .column-card-content table { width:100%; border-collapse:collapse; }
+    .column-card-content th { text-align:left; background:#f8fafc; padding:7px 10px; font-size:12px; color:#475569; border-bottom:1px solid #f1f5f9; width:55%; }
+    .column-card-content td { text-align:right; padding:7px 10px; font-size:13px; font-weight:600; color:#1e293b; border-bottom:1px solid #f1f5f9; }
+
+    /* Traffic monitor TX/RX display */
+    .mm-stat-box { background:#f8fafc; border-radius:12px; padding:12px 20px; text-align:center; min-width:90px; }
+    .mm-stat-label { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:4px; }
+    .mm-stat-value { font-size:20px; font-weight:800; line-height:1; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-track{background:#f1f5f9}
+    ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+
+    body { background-color: #f1f5f9; }
+{/literal}
+</style>
+
+<div id="mm-app" class="p-4 md:p-6">
+
+    <!-- Page Header -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">MikroTik Router Monitor</h1>
+            <p class="text-slate-400 text-sm mt-0.5">Real-time router health &amp; traffic dashboard</p>
+        </div>
+        <div id="version" class="text-xs text-slate-400 font-medium"></div>
+    </div>
+
+    <!-- Router Tabs -->
+    <div class="flex flex-wrap gap-2 mb-6 border-b border-slate-200">
+        {foreach $routers as $r}
+        <a href="{$_url}plugin/mikrotik_monitor_ui/{$r['id']}"
+           class="px-5 py-2 text-sm font-semibold rounded-t-xl border border-b-0 transition-all duration-150
+                  {if $r['id']==$router}bg-indigo-600 text-white border-indigo-600 shadow-md{else}bg-white text-slate-500 border-slate-200 hover:text-indigo-600 hover:bg-indigo-50{/if}">
+            {$r['name']}
+        </a>
+        {/foreach}
+    </div>
+
+    <!-- Resource Info Cards (AJAX loaded) -->
+    <div class="mb-6 table-responsive" api-get-text="{$_url}plugin/mikrotik_monitor_get_resources/{$router}">
+        <div class="flex items-center justify-center gap-3 py-10 text-slate-400">
+            <svg class="animate-spin h-5 w-5 text-indigo-400" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+            <span class="text-sm font-medium">Loading router info...</span>
+        </div>
+    </div>
+
+    <!-- Health Metric Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+        <!-- CPU Load -->
+        <div id="cpu-load-bar" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style="background:linear-gradient(90deg,#11998e,#38ef7d)"></div>
+            <div class="flex items-center gap-2 mb-2">
+                <span class="relative flex h-2.5 w-2.5">
+                    <span class="mm-pulse-dot animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span class="text-xs font-bold uppercase tracking-widest text-emerald-600">CPU Load</span>
+            </div>
+            <div id="cpu-load-val" class="text-4xl font-extrabold text-emerald-600 mb-3 leading-none">â€”</div>
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div id="cpu-load-fill" class="mm-bar-fill" style="width:0%;background:linear-gradient(90deg,#11998e,#38ef7d)"></div>
+            </div>
+        </div>
+
+        <!-- Temperature -->
+        <div id="temperature-bar" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style="background:linear-gradient(90deg,#f7971e,#ffd200)"></div>
+            <div class="flex items-center gap-2 mb-2">
+                <span class="relative flex h-2.5 w-2.5">
+                    <span class="mm-pulse-dot animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                </span>
+                <span class="text-xs font-bold uppercase tracking-widest text-amber-500">Temperature</span>
+            </div>
+            <div id="temperature-val" class="text-4xl font-extrabold text-amber-500 mb-3 leading-none">â€”</div>
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div id="temperature-fill" class="mm-bar-fill" style="width:0%;background:linear-gradient(90deg,#f7971e,#ffd200)"></div>
+            </div>
+        </div>
+
+        <!-- Voltage -->
+        <div id="voltage-bar" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style="background:linear-gradient(90deg,#4776e6,#8e54e9)"></div>
+            <div class="flex items-center gap-2 mb-2">
+                <span class="relative flex h-2.5 w-2.5">
+                    <span class="mm-pulse-dot animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-violet-500"></span>
+                </span>
+                <span class="text-xs font-bold uppercase tracking-widest text-violet-500">Voltage</span>
+            </div>
+            <div id="voltage-val" class="text-4xl font-extrabold text-violet-500 mb-3 leading-none">â€”</div>
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div id="voltage-fill" class="mm-bar-fill" style="width:0%;background:linear-gradient(90deg,#4776e6,#8e54e9)"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Data Tabs Panel -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+
+        <!-- Tab Nav -->
+        <div class="flex flex-wrap gap-1 px-4 pt-3 pb-0 border-b border-slate-200 bg-slate-50 overflow-x-auto" id="mm-tab-nav">
+            <button onclick="mmTab('tab_4',this)" class="mm-tab-btn mm-active whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-lg border-b-2 transition-all duration-150">
+                ðŸ“¶ {Lang::T('Wireless')}
+            </button>
+            <button onclick="mmTab('tab_1',this)" class="mm-tab-btn whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-indigo-600 bg-transparent transition-all duration-150">
+                ðŸ”Œ {Lang::T('Interfaces')}
+            </button>
+            <button onclick="mmTab('tab_2',this)" class="mm-tab-btn whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-indigo-600 bg-transparent transition-all duration-150">
+                ðŸŒ {Lang::T('Hotspot Users')}
+            </button>
+            <button onclick="mmTab('tab_3',this)" class="mm-tab-btn whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-indigo-600 bg-transparent transition-all duration-150">
+                ðŸ”— {Lang::T('PPPoE Users')}
+            </button>
+            <button onclick="mmTab('tab_5',this)" class="mm-tab-btn whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-indigo-600 bg-transparent transition-all duration-150">
+                ðŸ“Š {Lang::T('Traffic Monitor')}
+            </button>
+            <button onclick="mmTab('tab_6',this)" class="mm-tab-btn whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-indigo-600 bg-transparent transition-all duration-150">
+                ðŸ“‹ {Lang::T('Logs')}
+            </button>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="p-4">
+
+            <!-- Wireless -->
+            <div id="tab_4" class="mm-pane">
+                <div class="overflow-x-auto">
+                    <table class="table table-bordered table-striped w-full" id="signal-table">
+                        <thead><tr>
+                            <th>{Lang::T('Interface')}</th>
+                            <th>{Lang::T('Mac Address')}</th>
+                            <th>{Lang::T('Uptime')}</th>
+                            <th>{Lang::T('Last IP')}</th>
+                            <th>{Lang::T('Last Activity')}</th>
+                            <th>{Lang::T('Signal Strength')}</th>
+                            <th>{Lang::T('Tx / Rx CCQ')}</th>
+                            <th>{Lang::T('Rx Rate')}</th>
+                            <th>{Lang::T('Tx Rate')}</th>
+                        </tr></thead>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Interfaces -->
+            <div id="tab_1" class="mm-pane" style="display:none">
+                <div class="overflow-x-auto">
+                    <table id="traffic-table" class="table table-bordered table-striped w-full">
+                        <thead><tr>
+                            <th>{Lang::T('Interface Name')}</th>
+                            <th>{Lang::T('Tx (bytes Out)')}</th>
+                            <th>{Lang::T('Rx (bytes In)')}</th>
+                            <th>{Lang::T('Total Usage')}</th>
+                            <th>{Lang::T('Status')}</th>
+                        </tr></thead>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Hotspot -->
+            <div id="tab_2" class="mm-pane" style="display:none">
+                <div class="overflow-x-auto">
+                    <table class="table table-bordered table-striped w-full" id="hotspot-table">
+                        <thead><tr>
+                            <th>{Lang::T('Username')}</th>
+                            <th>{Lang::T('IP Address')}</th>
+                            <th>{Lang::T('Uptime')}</th>
+                            <th>{Lang::T('Server')}</th>
+                            <th>{Lang::T('Mac Address')}</th>
+                            <th>{Lang::T('Session Time Left')}</th>
+                            <th>{Lang::T('Download (TX)')}</th>
+                            <th>{Lang::T('Upload (RX)')}</th>
+                            <th>{Lang::T('Total Usage')}</th>
+                        </tr></thead>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PPPoE -->
+            <div id="tab_3" class="mm-pane" style="display:none">
+                <div class="overflow-x-auto">
+                    <table class="table table-bordered table-striped w-full" id="ppp-table">
+                        <thead><tr>
+                            <th>{Lang::T('Username')}</th>
+                            <th>{Lang::T('IP Address')}</th>
+                            <th>{Lang::T('Uptime')}</th>
+                            <th>{Lang::T('Service')}</th>
+                            <th>{Lang::T('Caller ID')}</th>
+                            <th>{Lang::T('Download')}</th>
+                            <th>{Lang::T('Upload')}</th>
+                            <th>{Lang::T('Total Usage')}</th>
+                        </tr></thead>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Traffic Monitor -->
+            <div id="tab_5" class="mm-pane" style="display:none">
+                <div class="flex flex-wrap items-end gap-5 mb-5">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Interface</label>
+                        <select name="interface" id="interface"
+                            class="border border-slate-200 bg-white rounded-xl px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            {foreach from=$interfaces item=interface}
+                            <option value="{$interface}">{$interface}</option>
+                            {/foreach}
+                        </select>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="mm-stat-box" style="background:#eff6ff;border-radius:14px;padding:12px 22px;text-align:center">
+                            <div class="mm-stat-label" style="color:#3b82f6;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">TX â†‘</div>
+                            <div id="tabletx" class="mm-stat-value" style="font-size:22px;font-weight:800;color:#1d4ed8">â€”</div>
+                        </div>
+                        <div class="mm-stat-box" style="background:#fff1f2;border-radius:14px;padding:12px 22px;text-align:center">
+                            <div class="mm-stat-label" style="color:#f43f5e;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">RX â†“</div>
+                            <div id="tablerx" class="mm-stat-value" style="font-size:22px;font-weight:800;color:#be123c">â€”</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-slate-50 rounded-2xl p-4" style="position:relative">
+                    <canvas id="chart" style="max-height:280px"></canvas>
+                </div>
+            </div>
+
+            <!-- Logs -->
+            <div id="tab_6" class="mm-pane" style="display:none">
+                <div class="overflow-x-auto">
+                    <table id="logTable" class="table table-bordered table-striped w-full">
+                        <thead><tr>
+                            <th>{Lang::T('Date/Time')}</th>
+                            <th>{Lang::T('Topic')}</th>
+                            <th>{Lang::T('Message')}</th>
+                        </tr></thead>
+                        <tbody id="logTableBody">
+                            {foreach from=$logs|array_reverse item=log name=logLoop}
+                            <tr class="log-entry">
+                                <td style="white-space:nowrap;font-size:12px;color:#64748b">{$log.time}</td>
+                                <td style="font-size:12px;font-weight:600;color:#475569">{$log.topics}</td>
+                                <td class="log-message" style="font-size:13px">
+                                    {if $log.message|lower|strpos:'failed' !== false}
+                                        <span class="mm-badge" style="background:#fee2e2;color:#b91c1c">{Lang::T('Error')}</span>
+                                    {elseif $log.message|lower|strpos:'trying' !== false}
+                                        <span class="mm-badge" style="background:#fef9c3;color:#92400e">{Lang::T('Warning')}</span>
+                                    {elseif $log.message|lower|strpos:'logged in' !== false}
+                                        <span class="mm-badge" style="background:#dcfce7;color:#166534">{Lang::T('Success')}</span>
+                                    {elseif $log.message|lower|strpos:'login failed' !== false}
+                                        <span class="mm-badge" style="background:#e0f2fe;color:#0369a1">{Lang::T('Login Info')}</span>
+                                    {else}
+                                        <span class="mm-badge" style="background:#f1f5f9;color:#475569">{Lang::T('Info')}</span>
+                                    {/if}
+                                    {$log.message}
+                                </td>
+                            </tr>
+                            {/foreach}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- /tab content -->
+    </div><!-- /panel -->
+</div><!-- /mm-app -->
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    var mmBaseUrl = '{$_url}';
+    var mmRouter  = '{$router}';
+</script>
+<script>
+{literal}
+    var $j = jQuery.noConflict();
+
+    /* ---- Tab switching ---- */
+    function mmTab(id, btn) {
+        document.querySelectorAll('.mm-pane').forEach(function(el) { el.style.display = 'none'; });
+        document.getElementById(id).style.display = 'block';
+        document.querySelectorAll('.mm-tab-btn').forEach(function(b) {
+            b.classList.remove('mm-active','text-indigo-600','border-indigo-600','bg-white');
+            b.classList.add('text-slate-500','border-transparent','bg-transparent');
+        });
+        btn.classList.add('mm-active');
+        btn.classList.remove('text-slate-500','border-transparent','bg-transparent');
+    }
+
+    /* ---- DataTables init ---- */
+    $j(document).ready(function () {
+        $j('#logTable').DataTable({ pagingType: 'full_numbers', order: [[0,'desc']] });
+    });
+
+    /* ---- Health bars ---- */
+    function fetchData() {
+        return $j.ajax({
+            url: mmBaseUrl + 'plugin/mikrotik_monitor_get_resources_json/' + mmRouter,
+            method: 'GET', dataType: 'json',
+            success: function (data) {
+                var cpu = parseFloat(data.cpu_load);
+                document.getElementById('cpu-load-val').textContent = isNaN(cpu) ? 'N/A' : cpu + '%';
+                var cpuFill = document.getElementById('cpu-load-fill');
+                cpuFill.style.width = (isNaN(cpu) ? 100 : cpu) + '%';
+                cpuFill.style.background = isNaN(cpu) ? '#cbd5e1'
+                    : cpu >= 80 ? 'linear-gradient(90deg,#e74c3c,#ff6b6b)'
+                    : cpu >= 60 ? 'linear-gradient(90deg,#f7971e,#ffd200)'
+                    : 'linear-gradient(90deg,#11998e,#38ef7d)';
+
+                var temp = parseFloat(data.temperature);
+                document.getElementById('temperature-val').textContent = (data.temperature === 'N/A' || isNaN(temp)) ? 'N/A' : temp + '\u00B0C';
+                var tempFill = document.getElementById('temperature-fill');
+                tempFill.style.width = (isNaN(temp) ? 100 : Math.min(temp, 100)) + '%';
+                tempFill.style.background = isNaN(temp) || data.temperature === 'N/A' ? '#cbd5e1'
+                    : temp >= 70 ? 'linear-gradient(90deg,#e74c3c,#ff6b6b)'
+                    : 'linear-gradient(90deg,#f7971e,#ffd200)';
+
+                var volt = parseFloat(data.voltage);
+                document.getElementById('voltage-val').textContent = (data.voltage === 'N/A' || isNaN(volt)) ? 'N/A' : volt + ' V';
+                var voltFill = document.getElementById('voltage-fill');
+                voltFill.style.width = (isNaN(volt) ? 100 : Math.min((volt / 30) * 100, 100)) + '%';
+                voltFill.style.background = isNaN(volt) || data.voltage === 'N/A' ? '#cbd5e1'
+                    : 'linear-gradient(90deg,#4776e6,#8e54e9)';
+            },
+            error: function (xhr, s, e) { console.error('Health AJAX error:', e); }
+        });
+    }
+
+    /* ---- Traffic table ---- */
+    function fetchTrafficData() {
+        return $j.ajax({
+            url: mmBaseUrl + 'plugin/mikrotik_monitor_get_traffic/' + mmRouter, method: 'GET',
+            success: function (r) { $j('#traffic-table').DataTable().clear().rows.add(r).draw(); },
+            error: function (xhr, e) { console.log('AJAX error:', e); }
+        });
+    }
+
+    /* ---- PPPoE ---- */
+    function fetchUserListData() {
+        var t = $j('#ppp-table').DataTable({ columns: [
+            {data:'username'},{data:'address'},{data:'uptime'},
+            {data:'service'},{data:'caller_id'},{data:'tx'},{data:'rx'},{data:'total'}
+        ]});
+        return $j.ajax({
+            url: mmBaseUrl + 'plugin/mikrotik_monitor_get_ppp_online_users/' + mmRouter, method: 'GET',
+            success: function (r) { t.clear().rows.add(r).draw(); },
+            error: function (xhr, e) { console.log('AJAX error:', e); }
+        });
+    }
+
+    /* ---- Hotspot ---- */
+    function fetchHotspotListData() {
+        var t = $j('#hotspot-table').DataTable({ columns: [
+            {data:'username'},{data:'address'},{data:'uptime'},{data:'server'},
+            {data:'mac'},{data:'session_time'},{data:'tx_bytes'},{data:'rx_bytes'},{data:'total'}
+        ]});
+        return $j.ajax({
+            url: mmBaseUrl + 'plugin/mikrotik_monitor_get_hotspot_online_users/' + mmRouter, method: 'GET',
+            success: function (r) { t.clear().rows.add(r).draw(); },
+            error: function (xhr, e) { console.log('AJAX error:', e); }
+        });
+    }
+
+    /* ---- Wireless ---- */
+    function fetchSignalListData() {
+        var t = $j('#signal-table').DataTable({ columns: [
+            {data:'interface'},{data:'mac_address'},{data:'uptime'},{data:'last_ip'},
+            {data:'last_activity'},{data:'signal_strength'},{data:'tx_ccq'},{data:'rx_rate'},{data:'tx_rate'}
+        ]});
+        return $j.ajax({
+            url: mmBaseUrl + 'plugin/mikrotik_monitor_get_wlan/' + mmRouter, method: 'GET',
+            success: function (r) { t.clear().rows.add(r).draw(); },
+            error: function (xhr, e) { console.log('AJAX error:', e); }
+        });
+    }
+
+    /* ---- Live Traffic Chart ---- */
+    var chart;
+    var chartData = { labels: [], txData: [], rxData: [] };
+
+    function createChart() {
+        var ctx = document.getElementById('chart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [
+                    { label:'TX \u2191', data: chartData.txData,
+                      backgroundColor:'rgba(71,118,230,0.15)', borderColor:'#4776e6',
+                      borderWidth:2, tension:0.4, fill:'start', pointRadius:0 },
+                    { label:'RX \u2193', data: chartData.rxData,
+                      backgroundColor:'rgba(231,76,60,0.15)', borderColor:'#e74c3c',
+                      borderWidth:2, tension:0.4, fill:'start', pointRadius:0 }
+                ]
+            },
+            options: {
+                responsive: true,
+                animation: { duration: 300 },
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { grid: { color:'rgba(0,0,0,0.04)' }, title: { display:true, text:'Time', font:{size:11} } },
+                    y: { grid: { color:'rgba(0,0,0,0.04)' }, title: { display:true, text:'Speed', font:{size:11} },
+                         ticks: { callback: function(v) { return formatBytes(v)+'ps'; } } }
+                },
+                plugins: {
+                    legend: { position:'top', labels:{ font:{size:12}, usePointStyle:true } },
+                    tooltip: { callbacks: {
+                        label: function(ctx) { return ctx.dataset.label+': '+formatBytes(ctx.parsed.y)+'ps'; }
+                    }}
+                }
+            }
+        });
+    }
+
+    function formatBytes(b) {
+        if (!b) return '0 B';
+        var k=1024, s=['B','KB','MB','GB','TB'], i=Math.floor(Math.log(b)/Math.log(k));
+        return parseFloat((b/Math.pow(k,i)).toFixed(2))+' '+s[i];
+    }
+
+    function updateTrafficValues() {
+        var iface = $j('#interface').val();
+        $j.ajax({
+            url: mmBaseUrl + 'plugin/mikrotik_monitor_traffic_update/' + mmRouter,
+            dataType: 'json', data: { interface: iface },
+            success: function (data) {
+                var tx = data.rows.tx, rx = data.rows.rx;
+                if (tx.length > 0 && rx.length > 0) {
+                    var TX = parseInt(tx[0]), RX = parseInt(rx[0]);
+                    chartData.labels.push(data.labels[0]);
+                    chartData.txData.push(TX); chartData.rxData.push(RX);
+                    if (chartData.labels.length > 20) {
+                        chartData.labels.shift(); chartData.txData.shift(); chartData.rxData.shift();
+                    }
+                    chart.update();
+                    document.getElementById('tabletx').textContent = formatBytes(TX);
+                    document.getElementById('tablerx').textContent = formatBytes(RX);
+                }
+            },
+            error: function (xhr, s, e) { console.error('Traffic error:', e); }
+        });
+    }
+
+    /* ---- Boot ---- */
+    $j(document).ready(function () {
+        $j('#traffic-table').DataTable({ columns: [
+            {data:'name'},{data:'tx'},{data:'rx'},{data:'total'},{data:'status'}
+        ]});
+        fetchData()
+            .then(fetchTrafficData)
+            .then(fetchUserListData)
+            .then(fetchHotspotListData)
+            .then(fetchSignalListData)
+            .then(function () {
+                createChart();
+                setInterval(updateTrafficValues, 2000);
+                $j('#interface').on('change input', function () { updateTrafficValues(); });
+            });
+    });
+
+    window.addEventListener('DOMContentLoaded', function () {
+        $j('#version').html('MikroTik Monitor v3.0 &bull; <a href="https://github.com/focuslinkstech" style="color:#818cf8">Focuslinks Tech</a>');
+    });
+{/literal}
+</script>
+{include file="sections/footer.tpl"}

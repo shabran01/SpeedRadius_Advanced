@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Monthly Data Usage Tracking — Developer Documentation</title>
+  <style>
+    :root {
+      --primary: #2c3e50;
+      --accent:  #2980b9;
+      --green:   #27ae60;
+      --orange:  #e67e22;
+      --red:     #e74c3c;
+      --bg:      #f5f7fa;
+      --card:    #ffffff;
+      --border:  #dde1e7;
+      --text:    #2d3436;
+      --muted:   #636e72;
+      --code-bg: #1e272e;
+      --code-fg: #dfe6e9;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* ── Layout ── */
+    .wrapper { display: flex; min-height: 100vh; }
+    nav {
+      width: 260px; min-width: 260px;
+      background: var(--primary);
+      color: #ecf0f1;
+      padding: 32px 0;
+      position: sticky; top: 0; height: 100vh;
+      overflow-y: auto;
+    }
+    nav .logo {
+      font-size: 1rem; font-weight: 700;
+      padding: 0 24px 24px;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      margin-bottom: 16px;
+      line-height: 1.4;
+    }
+    nav .logo span { color: #74b9ff; display: block; font-size:.75rem; font-weight:400; }
+    nav a {
+      display: block;
+      padding: 8px 24px;
+      color: #b2bec3;
+      text-decoration: none;
+      font-size: .875rem;
+      transition: all .15s;
+    }
+    nav a:hover, nav a.active { color: #fff; background: rgba(255,255,255,.08); }
+    nav .section-label {
+      font-size: .68rem; text-transform: uppercase; letter-spacing: .08em;
+      color: #636e72; padding: 16px 24px 4px; font-weight: 600;
+    }
+    main { flex: 1; padding: 48px 56px; max-width: 960px; }
+
+    /* ── Typography ── */
+    h1 { font-size: 2rem; color: var(--primary); margin-bottom: 8px; }
+    h2 { font-size: 1.35rem; color: var(--primary); margin: 40px 0 12px;
+         padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+    h3 { font-size: 1.05rem; color: var(--primary); margin: 24px 0 8px; }
+    p  { margin-bottom: 14px; }
+    ul, ol { margin: 0 0 14px 20px; }
+    li { margin-bottom: 6px; }
+    a  { color: var(--accent); }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .badge-new    { background: #d5f5e3; color: #1e8449; }
+    .badge-fix    { background: #fde8d8; color: #a04000; }
+    .badge-mod    { background: #d6eaf8; color: #1a5276; }
+    .badge-warn   { background: #fef9e7; color: #7d6608; border: 1px solid #f0e68c; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+    }
+    .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    @media(max-width:720px){ .card-grid { grid-template-columns: 1fr; } }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      border-left: 4px solid var(--accent);
+    }
+    .stat-card.green { border-left-color: var(--green); }
+    .stat-card.orange { border-left-color: var(--orange); }
+    .stat-card h4 { font-size: .8rem; text-transform: uppercase; color: var(--muted); letter-spacing:.05em; margin-bottom:4px; }
+    .stat-card p  { font-size: 1rem; font-weight: 600; margin: 0; color: var(--text); }
+
+    /* ── Code ── */
+    pre {
+      background: var(--code-bg);
+      color: var(--code-fg);
+      border-radius: 8px;
+      padding: 18px 20px;
+      overflow-x: auto;
+      font-size: .82rem;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    code {
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    }
+    p code, li code, td code {
+      background: #eef2f7;
+      color: #c0392b;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: .85em;
+    }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: .875rem; }
+    th { background: var(--primary); color: #fff; padding: 10px 14px; text-align: left; font-weight: 600; }
+    td { padding: 9px 14px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #f0f4f8; }
+
+    /* ── Flow diagram ── */
+    .flow {
+      display: flex; flex-direction: column; gap: 0;
+      margin-bottom: 20px;
+    }
+    .flow-step {
+      display: flex; align-items: flex-start; gap: 16px;
+    }
+    .flow-line {
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .flow-dot {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--accent); flex-shrink: 0; margin-top: 3px;
+    }
+    .flow-dot.green { background: var(--green); }
+    .flow-dot.orange { background: var(--orange); }
+    .flow-connector {
+      width: 2px; background: var(--border); flex: 1; min-height: 24px;
+    }
+    .flow-content { padding-bottom: 20px; flex: 1; }
+    .flow-content strong { display: block; margin-bottom: 2px; }
+    .flow-content small { color: var(--muted); font-size: .82rem; }
+
+    /* ── Alert boxes ── */
+    .alert {
+      border-left: 4px solid var(--accent);
+      background: #eaf4fd;
+      border-radius: 4px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: .875rem;
+    }
+    .alert.green  { border-left-color: var(--green);  background: #eafaf1; }
+    .alert.orange { border-left-color: var(--orange); background: #fef5ec; }
+    .alert.red    { border-left-color: var(--red);    background: #fdf2f2; }
+
+    /* ── Divider ── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+    .subtitle { color: var(--muted); font-size: .95rem; margin-bottom: 32px; }
+    .tag-row { margin-bottom: 24px; display: flex; gap: 8px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- ── Sidebar ── -->
+  <nav>
+    <div class="logo">
+      Monthly Data Usage<br>
+      <span>SpeedcomWifi ISP System</span>
+    </div>
+
+    <div class="section-label">Overview</div>
+    <a href="#overview">Introduction</a>
+    <a href="#architecture">Architecture</a>
+
+    <div class="section-label">Database</div>
+    <a href="#tables">Tables Created</a>
+    <a href="#schema">Schema Reference</a>
+
+    <div class="section-label">Core Logic</div>
+    <a href="#helper">Helper Functions</a>
+    <a href="#delta">Delta / Snapshot Algorithm</a>
+    <a href="#reconnect">Offline & Reconnect Handling</a>
+    <a href="#reset">Monthly Reset</a>
+
+    <div class="section-label">Integration</div>
+    <a href="#cron">Cron Job</a>
+    <a href="#hotspot">Hotspot Tracking</a>
+    <a href="#pppoe">PPPoE Tracking</a>
+    <a href="#controller">Controller</a>
+    <a href="#ui">Customer Page UI</a>
+
+    <div class="section-label">Bugs Fixed</div>
+    <a href="#bugs">All Issues Resolved</a>
+
+    <div class="section-label">Files</div>
+    <a href="#files">File Inventory</a>
+  </nav>
+
+  <!-- ── Main ── -->
+  <main>
+
+    <h1>Monthly Data Usage Tracking</h1>
+    <p class="subtitle">Complete developer documentation — SpeedcomWifi ISP Management System</p>
+
+    <div class="tag-row">
+      <span class="badge badge-new">New Feature</span>
+      <span class="badge badge-fix">Bug Fixes</span>
+      <span class="badge badge-mod">Modified Files</span>
+      <span style="font-size:.8rem;color:var(--muted);">Version 2.1.42 &nbsp;·&nbsp; March 12, 2026</span>
+    </div>
+
+    <!-- ── Overview ── -->
+    <h2 id="overview">Introduction</h2>
+    <p>
+      This feature tracks how much data each customer downloads and uploads each month.
+      Totals are accumulated continuously via the cron job and also captured live when a customer's
+      account page is viewed. Usage is stored per <code>YYYY-MM</code> period and automatically
+      begins a new counter on the 1st of each month with no manual reset required.
+    </p>
+    <div class="card-grid">
+      <div class="stat-card"><h4>Connection Types</h4><p>Hotspot &amp; PPPoE</p></div>
+      <div class="stat-card green"><h4>Reset Cycle</h4><p>1st of every month</p></div>
+      <div class="stat-card orange"><h4>History Stored</h4><p>Up to 12 months</p></div>
+      <div class="stat-card"><h4>Tracking Method</h4><p>Delta snapshots via cron</p></div>
+    </div>
+
+    <!-- ── Architecture ── -->
+    <h2 id="architecture">Architecture Overview</h2>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <strong>MikroTik Router</strong>
+          <small>Exposes active session byte counters via RouterOS API</small>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <strong>cron.php — every cron tick</strong>
+          <small>Queries all enabled routers, reads Hotspot + PPPoE bytes for every active session</small>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <strong>monthly_usage_process_session()</strong>
+          <small>Loads last snapshot from DB, computes delta = current − last, handles reconnects</small>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <strong>monthly_usage_accumulate()</strong>
+          <small>Adds delta to the current YYYY-MM row in tbl_customer_monthly_usage (upsert)</small>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-line"><div class="flow-dot green"></div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <strong>Customer Page (Controller + Smarty)</strong>
+          <small>Also captures bytes live on page load; displays history table and current-month stat cards</small>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-line"><div class="flow-dot orange"></div></div>
+        <div class="flow-content">
+          <strong>New Month → New Row</strong>
+          <small>No reset script needed — the YYYY-MM key naturally starts a fresh row on the 1st</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tables ── -->
+    <h2 id="tables">Database Tables Created</h2>
+    <p>Both tables are created automatically by <code>monthly_usage_ensure_tables()</code> on the first cron run. No manual SQL is required.</p>
+
+    <h3 id="schema">tbl_customer_monthly_usage</h3>
+    <p>Stores the cumulative monthly totals per customer.</p>
+    <table>
+      <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>INT UNSIGNED AUTO_INCREMENT</td><td>Primary key</td></tr>
+        <tr><td><code>customer_id</code></td><td>INT UNSIGNED</td><td>FK to tbl_customers</td></tr>
+        <tr><td><code>username</code></td><td>VARCHAR(64)</td><td>Customer username (denormalized for fast lookup)</td></tr>
+        <tr><td><code>month</code></td><td>CHAR(7)</td><td>Period in <code>YYYY-MM</code> format (e.g. <code>2026-03</code>)</td></tr>
+        <tr><td><code>download_bytes</code></td><td>BIGINT UNSIGNED</td><td>Cumulative download bytes this month</td></tr>
+        <tr><td><code>upload_bytes</code></td><td>BIGINT UNSIGNED</td><td>Cumulative upload bytes this month</td></tr>
+        <tr><td><code>last_updated</code></td><td>TIMESTAMP</td><td>Auto-updated on every write</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Unique key:</strong> <code>(customer_id, month)</code> — enforces one row per customer per month.</p>
+
+    <h3>tbl_customer_session_snapshot</h3>
+    <p>Stores the last-seen byte counter per active session. Used to compute deltas between cron ticks.</p>
+    <table>
+      <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>INT UNSIGNED AUTO_INCREMENT</td><td>Primary key</td></tr>
+        <tr><td><code>username</code></td><td>VARCHAR(64)</td><td>Customer username</td></tr>
+        <tr><td><code>router_id</code></td><td>INT UNSIGNED</td><td>Router the session is active on</td></tr>
+        <tr><td><code>last_bytes_in</code></td><td>BIGINT UNSIGNED</td><td>Download byte count at last snapshot</td></tr>
+        <tr><td><code>last_bytes_out</code></td><td>BIGINT UNSIGNED</td><td>Upload byte count at last snapshot</td></tr>
+        <tr><td><code>last_checked</code></td><td>TIMESTAMP</td><td>Auto-updated on every write</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Unique key:</strong> <code>(username, router_id)</code> — one snapshot row per user per router.</p>
+
+    <!-- ── Helper ── -->
+    <h2 id="helper">Helper File — system/helpers/monthly_usage.php</h2>
+    <p>All tracking logic lives in this single helper. It is included by both the cron job and the customer controller.</p>
+
+    <table>
+      <thead><tr><th>Function</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>monthly_usage_ensure_tables()</code></td>
+          <td>Creates both DB tables if they don't exist. Safe to call on every request.</td>
+        </tr>
+        <tr>
+          <td><code>monthly_usage_process_session($customer_id, $username, $router_id, $bytes_in, $bytes_out)</code></td>
+          <td>Main entry point. Loads snapshot, computes delta, handles reconnects, saves updated snapshot, calls accumulate.</td>
+        </tr>
+        <tr>
+          <td><code>monthly_usage_accumulate($customer_id, $username, $delta_in, $delta_out)</code></td>
+          <td>Upserts the delta into the current month's row. No-ops if both deltas are zero.</td>
+        </tr>
+        <tr>
+          <td><code>monthly_usage_clear_session($username, $router_id)</code></td>
+          <td>Deletes the snapshot row when a session ends cleanly.</td>
+        </tr>
+        <tr>
+          <td><code>monthly_usage_get($customer_id, $limit = 12)</code></td>
+          <td>Returns up to 12 monthly rows newest-first for display.</td>
+        </tr>
+        <tr>
+          <td><code>monthly_usage_current($customer_id)</code></td>
+          <td>Returns only the current month's row.</td>
+        </tr>
+        <tr>
+          <td><code>monthly_usage_format_bytes($bytes)</code></td>
+          <td>Converts raw bytes to human-readable string (B / KB / MB / GB).</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ── Delta Algorithm ── -->
+    <h2 id="delta">Delta / Snapshot Algorithm</h2>
+    <p>
+      MikroTik session counters are <em>cumulative</em> — they count total bytes since the session started.
+      If the cron simply saved the raw value each time, the totals would be hugely inflated.
+      Instead, a <strong>delta approach</strong> is used:
+    </p>
+    <pre><code>delta = current_bytes - last_snapshot_bytes
+monthly_total += delta
+snapshot = current_bytes   // update for next tick</code></pre>
+
+    <p>This means only the bytes transferred <em>since the last cron tick</em> are added each time.</p>
+
+    <!-- ── Reconnect ── -->
+    <h2 id="reconnect">Offline &amp; Reconnect Handling</h2>
+    <div class="alert orange">
+      <strong>Scenario:</strong> A customer's router goes offline (power cut, reboot) then comes back online.
+      When it reconnects, MikroTik creates a brand-new session — the byte counter resets to 0.
+    </div>
+    <p>
+      Without special handling, the delta would be <code>0 − 500MB = −500MB</code>, wiping the monthly total.
+      The code detects this automatically:
+    </p>
+    <pre><code>if ($current_bytes_in >= $snap->last_bytes_in) {
+    // Same session still running — accumulate difference only
+    $delta_in = $current_bytes_in - $snap->last_bytes_in;
+} else {
+    // Counter went backwards → new session after reconnect
+    // Treat the current counter value as a fresh delta (no subtraction)
+    $delta_in = $current_bytes_in;
+}</code></pre>
+    <p>
+      <strong>Result:</strong> All bytes from the old session are already saved in the monthly total.
+      The new session starts accumulating from its own 0 baseline. No data is lost, no negative values possible.
+    </p>
+    <div class="card">
+      <h3>Timeline Example</h3>
+      <table>
+        <thead><tr><th>Event</th><th>Router Counter</th><th>Snapshot</th><th>Delta Added</th><th>Monthly Total</th></tr></thead>
+        <tbody>
+          <tr><td>Cron tick 1</td><td>200 MB</td><td>0 → 200 MB</td><td>+200 MB</td><td>200 MB</td></tr>
+          <tr><td>Cron tick 2</td><td>350 MB</td><td>200 → 350 MB</td><td>+150 MB</td><td>350 MB</td></tr>
+          <tr><td>Device goes offline</td><td>—</td><td>stays 350 MB</td><td>0</td><td>350 MB</td></tr>
+          <tr><td>Device reconnects</td><td>0 MB (new session)</td><td>350 → 0 MB ← detected!</td><td>+0 MB</td><td>350 MB</td></tr>
+          <tr><td>Cron tick 3</td><td>80 MB</td><td>0 → 80 MB</td><td>+80 MB</td><td>430 MB</td></tr>
+          <tr><td>Cron tick 4</td><td>210 MB</td><td>80 → 210 MB</td><td>+130 MB</td><td>560 MB</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Monthly Reset ── -->
+    <h2 id="reset">Monthly Reset</h2>
+    <p>
+      There is <strong>no explicit reset script</strong>. The monthly total rows are keyed by <code>YYYY-MM</code>.
+      When the 1st of a new month arrives, the first cron run simply finds no existing row for that month
+      and creates a new one starting at 0. The previous months' data remains in the database permanently.
+    </p>
+    <div class="alert green">
+      Up to 12 months of history are shown on the customer page. Older rows stay in the database but are not displayed.
+    </div>
+
+    <!-- ── Cron ── -->
+    <h2 id="cron">Cron Job Integration — system/cron.php</h2>
+    <p>The data-usage tracking block runs at the end of every cron tick, after all other cron tasks.</p>
+
+    <h3 id="hotspot">Hotspot Tracking</h3>
+    <p>
+      Active hotspot sessions are fetched from <code>/ip hotspot active print</code>.
+      The response includes <code>bytes-in</code> and <code>bytes-out</code> directly.
+    </p>
+    <pre><code>$req = new PEAR2\Net\RouterOS\Request('/ip hotspot active print');
+$responses = $client->sendSync($req);
+
+foreach ($responses as $resp) {
+    $hs_username = $resp->getProperty('user');
+    $bytes_in    = (int)($resp->getProperty('bytes-in')  ?: 0);
+    $bytes_out   = (int)($resp->getProperty('bytes-out') ?: 0);
+
+    $customer = ORM::for_table('tbl_customers')
+        ->where('username', $hs_username)->find_one();
+
+    monthly_usage_process_session(
+        $customer['id'], $hs_username, $router_id, $bytes_in, $bytes_out
+    );
+}</code></pre>
+
+    <h3 id="pppoe">PPPoE Tracking</h3>
+    <div class="alert orange">
+      <strong>Important:</strong> <code>/ppp/active/print</code> does <em>not</em> return byte counters unless
+      RADIUS accounting is configured. The correct approach is to read the virtual interface stats instead.
+    </div>
+    <p>
+      When a PPPoE client connects, MikroTik creates a virtual interface named <code>&lt;pppoe-username&gt;</code>
+      (with literal angle-bracket characters). This interface appears in <code>/interface/print</code> and
+      carries <code>rx-byte</code> / <code>tx-byte</code> stats. This is the same method used by the
+      system's built-in <strong>pppoe_monitor</strong> plugin.
+    </p>
+    <pre><code>// Step 1: Build a map of all interface stats
+$ifaceMap = [];
+$ifaceReq = new PEAR2\Net\RouterOS\Request('/interface/print');
+$ifaceResponses = $client->sendSync($ifaceReq);
+foreach ($ifaceResponses as $ir) {
+    if ($ir->getType() !== Response::TYPE_DATA) continue;
+    $ifName = (string)$ir->getProperty('name');
+    $ifaceMap[$ifName] = [
+        'rx' => (int)($ir->getProperty('rx-byte') ?: 0),
+        'tx' => (int)($ir->getProperty('tx-byte') ?: 0),
+    ];
+}
+
+// Step 2: Iterate active PPP sessions and look up bytes by virtual interface name
+$pppReq = new PEAR2\Net\RouterOS\Request('/ppp/active/print');
+foreach ($client->sendSync($pppReq) as $resp) {
+    $ppp_username = $resp->getProperty('name');
+    $ifaceName    = "&lt;pppoe-{$ppp_username}&gt;";   // e.g. "&lt;pppoe-012620&gt;"
+    $bytes_in     = $ifaceMap[$ifaceName]['rx'] ?? 0;
+    $bytes_out    = $ifaceMap[$ifaceName]['tx'] ?? 0;
+
+    // Look up customer by pppoe_username first, then username
+    $customer = ORM::for_table('tbl_customers')
+        ->where('pppoe_username', $ppp_username)->find_one();
+    if (!$customer)
+        $customer = ORM::for_table('tbl_customers')
+            ->where('username', $ppp_username)->find_one();
+
+    monthly_usage_process_session(
+        $customer['id'], $customer['username'], $router_id, $bytes_in, $bytes_out
+    );
+}</code></pre>
+
+    <!-- ── Controller ── -->
+    <h2 id="controller">Controller — system/controllers/customers.php</h2>
+    <p>Inside the <code>case 'view':</code> / <code>case 'viewu':</code> block, the following was added:</p>
+    <ol>
+      <li>Requires <code>monthly_usage.php</code> helper and calls <code>monthly_usage_ensure_tables()</code></li>
+      <li>Calls <code>get_customer_devices()</code> passing <strong>both</strong> the regular username and the <code>pppoe_username</code></li>
+      <li>Loops over active devices and calls <code>monthly_usage_process_session()</code> for any with non-zero bytes — this gives a <strong>live capture on page view</strong>, not just at cron time</li>
+      <li>Fetches history with <code>monthly_usage_get()</code> and <strong>pre-formats all values</strong> into display strings before passing to Smarty (see Smarty limitation below)</li>
+    </ol>
+    <pre><code>$raw_history = monthly_usage_get($customer['id'], 12);
+foreach ($raw_history as $mu) {
+    $usage_history_display[] = [
+        'month_label'  => date('F Y', strtotime($mu['month'] . '-01')),
+        'is_current'   => ($mu['month'] === date('Y-m')),
+        'download_fmt' => monthly_usage_format_bytes($mu['download_bytes']),
+        'upload_fmt'   => monthly_usage_format_bytes($mu['upload_bytes']),
+        'total_fmt'    => monthly_usage_format_bytes(
+                            $mu['download_bytes'] + $mu['upload_bytes']),
+        'last_updated' => $mu['last_updated'],
+    ];
+}
+$ui->assign('monthly_usage_history', $usage_history_display);
+$ui->assign('monthly_usage_current', $usage_current_display);</code></pre>
+
+    <!-- ── UI ── -->
+    <h2 id="ui">Customer Page UI — ui/ui/customers-view.tpl</h2>
+    <p>A "Monthly Data Usage" section was added just before the footer include. Design principles:</p>
+    <ul>
+      <li>Dark <code>#2c3e50</code> header bar with section title</li>
+      <li>3 compact stat cards — Download / Upload / Total — with colour-coded left-border accents</li>
+      <li>Minimal hover table showing up to 12 months with a <code>NOW</code> pill badge on the current month</li>
+      <li>Fully responsive Bootstrap grid; no external icon libraries beyond what the system already loads</li>
+      <li>All values are pre-formatted strings (e.g. <code>1.24 GB</code>) — no PHP function calls inside Smarty</li>
+    </ul>
+
+    <!-- ── Bugs ── -->
+    <h2 id="bugs">All Bugs Found &amp; Fixed</h2>
+
+    <div class="card">
+      <span class="badge badge-fix">Fix 1</span>&nbsp;
+      <strong>Smarty Syntax Error — line 937</strong>
+      <p style="margin-top:8px;">
+        <strong>Problem:</strong> Used PHP string concatenation <code>.</code> inside a Smarty tag:<br>
+        <code>{date('F Y', strtotime($mu['month'] . '-01'))}</code> — not valid in Smarty.
+      </p>
+      <p>
+        <strong>Fix:</strong> Replaced with Smarty modifiers:<br>
+        <code>{($mu['month']|cat:'-01')|date_format:"%B %Y"}</code>
+      </p>
+      <p>
+        <strong>Final Resolution:</strong> Moved all formatting to the controller and passed pre-formatted strings to the template, removing all PHP logic from Smarty entirely.
+      </p>
+    </div>
+
+    <div class="card">
+      <span class="badge badge-fix">Fix 2</span>&nbsp;
+      <strong>PHP Function Calls in Smarty Template</strong>
+      <p style="margin-top:8px;">
+        <strong>Problem:</strong> <code>{monthly_usage_format_bytes($mu['download_bytes'])}</code> is not a registered Smarty function and would throw an error.
+      </p>
+      <p><strong>Fix:</strong> Pre-format all values in the controller (<code>download_fmt</code>, <code>upload_fmt</code>, <code>total_fmt</code>, <code>month_label</code>) and assign them to Smarty as plain strings.</p>
+    </div>
+
+    <div class="card">
+      <span class="badge badge-fix">Fix 3</span>&nbsp;
+      <strong>cron.php — Failed Opening Required File</strong>
+      <p style="margin-top:8px;">
+        <strong>Problem:</strong> <code>require_once 'system/helpers/monthly_usage.php'</code> failed because cron runs from the <code>system/</code> directory, making the path resolve incorrectly.
+      </p>
+      <p><strong>Fix:</strong> Changed to <code>require_once __DIR__ . '/helpers/monthly_usage.php'</code> so the path is always relative to the file's own directory.</p>
+    </div>
+
+    <div class="card">
+      <span class="badge badge-fix">Fix 4</span>&nbsp;
+      <strong>PPPoE — Wrong Username Field Used</strong>
+      <p style="margin-top:8px;">
+        <strong>Problem:</strong> <code>get_customer_devices()</code> was looking up PPPoE sessions by <code>username</code>, but PPPoE sessions are stored under <code>pppoe_username</code> in the database.
+      </p>
+      <p><strong>Fix:</strong> Function signature updated to <code>get_customer_devices($router, $username, $pppoe_username = null)</code>. Falls back to <code>$username</code> if <code>pppoe_username</code> is not set. Controller now passes <code>$customer['pppoe_username']</code>.</p>
+    </div>
+
+    <div class="card">
+      <span class="badge badge-fix">Fix 5</span>&nbsp;
+      <strong>PPPoE — ORM OR Condition Unreliable</strong>
+      <p style="margin-top:8px;">
+        <strong>Problem:</strong> <code>ORM::where_any_is()</code> produced unreliable results for OR-style lookups across two different columns.
+      </p>
+      <p><strong>Fix:</strong> Replaced with two sequential <code>find_one()</code> calls — first try <code>pppoe_username</code>, then fall back to <code>username</code>.</p>
+    </div>
+
+    <div class="card">
+      <span class="badge badge-fix">Fix 6 — Root Cause</span>&nbsp;
+      <strong>PPPoE — Bytes Always 0 (RouterOS API Limitation)</strong>
+      <p style="margin-top:8px;">
+        <strong>Problem:</strong> <code>/ppp/active/print</code> does <em>not</em> return <code>bytes-in</code> / <code>bytes-out</code> fields unless RADIUS accounting is enabled on the router. All PPPoE users showed <code>in=0 out=0</code>.
+      </p>
+      <p>
+        <strong>Discovery:</strong> The existing <code>pppoe_monitor</code> plugin at <code>system/plugin/pppoe_monitor.php</code> successfully reads PPPoE traffic using a completely different approach: it fetches <code>/interface/print</code> and reads <code>rx-byte</code> / <code>tx-byte</code> from the <strong>virtual interface</strong> named <code>&lt;pppoe-username&gt;</code> (with literal angle brackets).
+      </p>
+      <p><strong>Fix:</strong> Applied identical approach to both <code>system/cron.php</code> and <code>system/helpers/mikrotik_device_info.php</code>. PPPoE bytes now report correctly.</p>
+    </div>
+
+    <!-- ── Files ── -->
+    <h2 id="files">File Inventory</h2>
+
+    <h3>Files Created</h3>
+    <table>
+      <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>system/helpers/monthly_usage.php</code></td>
+          <td>Core helper — table creation, delta processing, accumulation, history retrieval, formatting</td>
+        </tr>
+        <tr>
+          <td><code>setup_monthly_usage.php</code></td>
+          <td>One-time setup script. Creates DB tables when visited via browser or CLI. Can be deleted after first run.</td>
+        </tr>
+        <tr>
+          <td><code>docs/monthly_data_usage.html</code></td>
+          <td>This documentation file</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Files Modified</h3>
+    <table>
+      <thead><tr><th>File</th><th>Change Summary</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>system/cron.php</code></td>
+          <td>
+            Added full Hotspot + PPPoE data-usage tracking block at end of cron.
+            Uses <code>__DIR__</code> for correct path resolution.
+            PPPoE uses <code>/interface/print</code> → <code>&lt;pppoe-username&gt;</code> map.
+          </td>
+        </tr>
+        <tr>
+          <td><code>system/controllers/customers.php</code></td>
+          <td>
+            Loads monthly usage helper, captures live bytes on page view,
+            pre-formats all display values before assigning to Smarty.
+          </td>
+        </tr>
+        <tr>
+          <td><code>ui/ui/customers-view.tpl</code></td>
+          <td>
+            Added Monthly Data Usage section: 3 stat cards for current month + history table with 12-month view.
+            Modern, compact, responsive design. Uses only pre-formatted string variables.
+          </td>
+        </tr>
+        <tr>
+          <td><code>system/helpers/mikrotik_device_info.php</code></td>
+          <td>
+            <code>get_customer_devices()</code> accepts new <code>$pppoe_username</code> parameter.
+            PPPoE byte lookup updated to use <code>/interface/print</code> interface map.
+          </td>
+        </tr>
+        <tr>
+          <td><code>CHANGELOG.md</code></td>
+          <td>Added v2.1.42 entry documenting all changes.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+    <p style="font-size:.8rem;color:var(--muted);text-align:center;">
+      SpeedcomWifi ISP System &nbsp;·&nbsp; Monthly Data Usage Documentation &nbsp;·&nbsp; v2.1.42 &nbsp;·&nbsp; March 12, 2026
+    </p>
+
+  </main>
+</div>
+</body>
+</html>

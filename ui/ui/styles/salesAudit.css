@@ -1,0 +1,196 @@
+/* Sales Audit Plugin - Enhanced Styling */
+
+/* Comparison Cards */
+.sales-audit-card {
+    transition: transform 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.sales-audit-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Percentage Change Labels */
+.percentage-change {
+    font-size: 1.2em;
+    font-weight: bold;
+    padding: 8px 12px;
+    border-radius: 20px;
+}
+
+.percentage-change.positive {
+    background: linear-gradient(45deg, #28a745, #34ce57);
+    color: white;
+}
+
+.percentage-change.negative {
+    background: linear-gradient(45deg, #dc3545, #e74c3c);
+    color: white;
+}
+
+/* Chart Containers */
+.chart-container {
+    position: relative;
+    margin: 20px 0;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+/* Performance Bars */
+.performance-bar {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 5px 0;
+}
+
+.performance-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #20c997);
+    transition: width 0.5s ease-in-out;
+}
+
+/* Statistics Cards */
+.stat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 10px 0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.stat-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 2.5em;
+    font-weight: bold;
+}
+
+.stat-card p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+/* Table Enhancements */
+.sales-audit-table {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.sales-audit-table th {
+    background: linear-gradient(135deg, #4e73df, #224abe);
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 15px 10px;
+}
+
+.sales-audit-table tbody tr:hover {
+    background-color: #f8f9fa;
+    transform: scale(1.01);
+    transition: all 0.2s ease;
+}
+
+/* Trend Indicators */
+.trend-up {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.trend-down {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.trend-neutral {
+    color: #6c757d;
+}
+
+/* Loading Animations */
+.sales-audit-loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0,0,0,.1);
+    border-radius: 50%;
+    border-top-color: #007bff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .sales-audit-card {
+        margin-bottom: 15px;
+    }
+    
+    .stat-card h3 {
+        font-size: 2em;
+    }
+    
+    .chart-container {
+        padding: 10px;
+    }
+}
+
+/* Period Selection Styling */
+.period-selector {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.period-selector .form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    padding: 10px 15px;
+    transition: border-color 0.2s ease;
+}
+
+.period-selector .form-control:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+/* Success/Warning/Danger Panel Variants */
+.panel-success-gradient {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.panel-warning-gradient {
+    background: linear-gradient(135deg, #ffc107, #fd7e14);
+    color: white;
+}
+
+.panel-danger-gradient {
+    background: linear-gradient(135deg, #dc3545, #e83e8c);
+    color: white;
+}
+
+/* Custom Button Styles */
+.btn-sales-audit {
+    background: linear-gradient(135deg, #4e73df, #224abe);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-sales-audit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    color: white;
+}
