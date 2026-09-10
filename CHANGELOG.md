@@ -6,6 +6,19 @@
 
 ---
 
+### ADDED: Clickable Usernames on Online Hotspot Users
+
+**`system/controllers/onlineusers.php` + `ui/ui/hotspot_users.tpl`**
+
+- The Username column on `?_route=onlineusers/hotspot` is now a link that opens the customer's account page (`customers/view/<id>`).
+- Both the username and the customer's full name under it are clickable, with a hover colour and subtle underline so it is obvious they are links.
+- Customer records are now resolved by **username or phone number**, so sessions that log in with a phone number also get a working account link (previously only the name lookup gained the phone fallback).
+- The row payload carries a new `customer_id` field; users flagged **Not in DB** have no id and stay as plain text, so there are never dead links.
+
+## [Unreleased] - 2026-09-10
+
+---
+
 ### ADDED: Service Type Filter on Plan Sync
 
 **`system/controllers/plan.php` + `ui/ui/plan-sync.tpl`**

@@ -149,16 +149,27 @@ function mikrotik_add_customer_names($users) {
     
     $placeholders = implode(',', array_fill(0, count($usernames), '?'));
     $db = ORM::getDb();
-    $stmt = $db->prepare("SELECT username, fullname FROM tbl_customers WHERE username IN ($placeholders)");
-    $stmt->execute(array_values($usernames));
+    // A router session username may be the customer's username OR their phone
+    // number, so match on both and keep the customer id for account links.
+    $stmt = $db->prepare("SELECT id, username, phonenumber, fullname FROM tbl_customers WHERE username IN ($placeholders) OR phonenumber IN ($placeholders)");
+    $stmt->execute(array_merge(array_values($usernames), array_values($usernames)));
     $names = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $names[$row['username']] = $row['fullname'] ?: $row['username'];
+        $label = $row['fullname'] ?: $row['username'];
+        if (!empty($row['username'])) {
+            $names[$row['username']] = ['id' => $row['id'], 'fullname' => $label];
+        }
+        if (!empty($row['phonenumber'])) {
+            $names[$row['phonenumber']] = ['id' => $row['id'], 'fullname' => $label];
+        }
     }
     
     foreach ($users as &$user) {
-        $user['fullname'] = $names[$user['username']] ?? '';
+        $match = isset($names[$user['username']]) ? $names[$user['username']] : null;
+        $user['fullname'] = $match ? $match['fullname'] : '';
+        $user['customer_id'] = $match ? $match['id'] : '';
     }
+    unset($user);
     return $users;
 }
 

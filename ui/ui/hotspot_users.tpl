@@ -163,6 +163,10 @@ body { background: #f1f5f9; }
 .dataTables_wrapper .dataTables_paginate .paginate_button { border-radius:8px !important; border:1px solid #e2e8f0 !important; background:#fff !important; color:#475569 !important; font-size:.8rem; }
 .dataTables_wrapper .dataTables_paginate .paginate_button.current { background:#4f46e5 !important; color:#fff !important; border-color:#4f46e5 !important; }
 .dataTables_wrapper .dataTables_paginate .paginate_button:hover { background:#eef2ff !important; border-color:#c7d2fe !important; color:#4f46e5 !important; }
+.hs-user-link { font-weight:600; color:#1e293b; text-decoration:none; border-bottom:1px solid transparent; }
+.hs-user-link:hover { color:#4f46e5; border-bottom-color:#c7d2fe; }
+.hs-user-sub { font-size:0.75rem; color:#94a3b8; text-decoration:none; }
+.hs-user-sub:hover { color:#4f46e5; }
 .btn-disconnect { display:inline-flex; align-items:center; gap:.3rem; padding:.32rem .65rem; border:none; border-radius:8px; font-size:.72rem; font-weight:600; color:#dc2626; background:#fee2e2; cursor:pointer; transition:all .15s; }
 .btn-disconnect:hover { background:#dc2626; color:#fff; }
 .btn-primary-hs { display:inline-flex; align-items:center; gap:.4rem; padding:.55rem .95rem; border:none; border-radius:10px; font-size:.8rem; font-weight:600; color:#fff; background:#4f46e5; cursor:pointer; transition:all .15s; box-shadow:0 1px 2px rgba(79,70,229,.3); }
@@ -436,10 +440,19 @@ body { background: #f1f5f9; }
             var nm = row.fullname || d || '?';
             var initials = (nm.match(/\b\w/g) || []).slice(0, 2).join('').toUpperCase() || (d || '?').slice(0, 2).toUpperCase();
             var orphanBadge = row.not_in_db ? '<div style="margin-top:0.2rem;"><span class="hs-badge orphan">Not in DB</span></div>' : '';
+            var accountUrl = row.customer_id ? (_baseUrl + 'customers/view/' + row.customer_id) : '';
+            var nameHtml = accountUrl
+              ? '<a href="' + accountUrl + '" class="hs-user-link" title="Open customer account">' + (d || '') + '</a>'
+              : '<span style="font-weight:600;color:#1e293b;">' + (d || '') + '</span>';
+            var fullnameHtml = row.fullname
+              ? (accountUrl
+                  ? '<a href="' + accountUrl + '" class="hs-user-sub" title="Open customer account">' + row.fullname + '</a>'
+                  : '<span style="font-size:0.75rem;color:#94a3b8;">' + row.fullname + '</span>')
+              : '';
             return '<div style="display:flex;align-items:center;gap:0.65rem;">' +
               '<div class="hs-avatar">' + initials + '</div>' +
-              '<div style="min-width:0;"><div style="font-weight:600;color:#1e293b;">' + (d || '') + '</div>' +
-              (row.fullname ? '<div style="font-size:0.75rem;color:#94a3b8;">' + row.fullname + '</div>' : '') + orphanBadge + '</div></div>';
+              '<div style="min-width:0;"><div>' + nameHtml + '</div>' +
+              fullnameHtml + orphanBadge + '</div></div>';
         }},
         { "data": "router_name", "render": function(d) { return d ? '<span style="padding:0.25rem 0.5rem;background:#f3f4f6;color:#374151;border-radius:0.375rem;font-size:0.75rem;font-weight:500;">' + d + '</span>' : '<span style="color:#9ca3af;">-</span>'; }},
         { "data": "address", "render": function(d) { return '<span style="color:#374151;">' + (d||'') + '</span>'; }},
