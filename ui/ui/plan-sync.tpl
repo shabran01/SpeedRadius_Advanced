@@ -142,7 +142,7 @@ $(document).ready(function() {
     let selectedType = '{$syncType|escape:"javascript"}';
     let syncStartTime = null;
     let syncTimer = null;
-    const batchSize = 3;
+    const batchSize = 10;
 
     function formatDuration(seconds) {
         seconds = Math.max(0, Math.round(seconds));
@@ -305,7 +305,7 @@ $(document).ready(function() {
                     // Check if more batches to process
                     if (response.stats.hasMore) {
                         offset += response.stats.processed;
-                        setTimeout(syncNextBatch, 500); // Small delay between batches
+                        setTimeout(syncNextBatch, 150); // Small delay between batches
                     } else {
                         // Sync complete
                         completeSyncProcess();

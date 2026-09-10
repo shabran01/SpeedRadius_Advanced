@@ -87,10 +87,11 @@ switch ($action) {
             die(json_encode(['success' => true, 'stats' => ['total' => $cq->count()]]));
         }
 
-        set_time_limit(120);
+        set_time_limit(300);
         $offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
-        // Small batches keep the progress bar updating in near real time.
-        $limit = 3;
+        // Batches stay small enough for live progress but large enough that the
+        // per-request connection cache is used for several users per router.
+        $limit = 10;
 
         $tursQuery = ORM::for_table('tbl_user_recharges')
             ->where('status', 'on');

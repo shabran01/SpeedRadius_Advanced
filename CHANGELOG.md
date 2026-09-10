@@ -6,6 +6,18 @@
 
 ---
 
+### IMPROVED: Much Faster Plan Sync
+
+**`system/devices/MikrotikHotspot.php` + `system/devices/MikrotikPppoe.php` + `system/controllers/plan.php` + `ui/ui/plan-sync.tpl`**
+
+- RouterOS connections are now reused per router within a request instead of reconnecting for every user.
+- Router lookup (`info`) is cached per request, removing a database query per user.
+- Sync batches increased from 3 to 10 users and the inter-batch delay cut from 500ms to 150ms.
+
+## [Unreleased] - 2026-09-10
+
+---
+
 ### FIXED: Plan Sync Reliability and Performance
 
 **`system/controllers/plan.php` + `ui/ui/plan-sync.tpl`**
