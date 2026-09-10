@@ -107,10 +107,19 @@ function MpesatillStk_create_transaction($trx, $user)
     $d = ORM::for_table('tbl_payment_gateway')
         ->where('username', $user['username'])
         ->where('status', 1)
+        ->order_by_desc('id')
         ->find_one();
+    // Fall back to the transaction that was just created for this user.
+    if (!$d && !empty($trx['id'])) {
+        $d = ORM::for_table('tbl_payment_gateway')->find_one($trx['id']);
+    }
+    if (!$d) {
+        r2(U . "order/package/", 'e', Lang::T("Failed to create Transaction.."));
+        die();
+    }
     $d->gateway_trx_id = '';
     $d->payment_method = 'Mpesa till STK';
-    $d->pg_url_payment = $url;
+    $d->pg_url_payment = $url . (strpos($url, '?') === false ? '?' : '&') . 'account=' . urlencode($user['username']) . '&trx=' . $d['id'];
     $d->pg_request = '';
     $d->expired_date = date('Y-m-d H:i:s', strtotime("+5 minutes"));
     $d->save();

@@ -21,8 +21,11 @@ function initiatepesapal()
 {
     // ── Find pending DB record ───────────────────────────────────────────────
     $posted_username = isset($_POST['username']) ? trim($_POST['username']) : null;
+    $posted_trx = isset($_GET['trx']) ? intval($_GET['trx']) : 0;
     $pgQuery = ORM::for_table('tbl_payment_gateway')->where('status', 1);
-    if (!empty($posted_username)) {
+    if ($posted_trx > 0) {
+        $pgQuery = $pgQuery->where('id', $posted_trx);
+    } elseif (!empty($posted_username)) {
         $pgQuery = $pgQuery->where('username', $posted_username);
     }
     $record = $pgQuery->order_by_desc('id')->find_one();
@@ -42,10 +45,7 @@ function initiatepesapal()
     }
 
     // Normalise to 254XXXXXXXXX
-    $phone = (substr($phone, 0, 1) == '+') ? str_replace('+', '', $phone)         : $phone;
-    $phone = (substr($phone, 0, 1) == '0') ? preg_replace('/^0/', '254', $phone)  : $phone;
-    $phone = (substr($phone, 0, 1) == '7') ? preg_replace('/^7/', '2547', $phone) : $phone;
-    $phone = (substr($phone, 0, 1) == '1') ? preg_replace('/^1/', '2541', $phone) : $phone;
+    $phone = Text::normalizePhone($phone);
 
     // ── Load PesaPal settings ────────────────────────────────────────────────
     $key_row     = ORM::for_table('tbl_appconfig')->where('setting', 'pesapal_consumer_key')->find_one();

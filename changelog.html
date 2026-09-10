@@ -62,6 +62,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
 ---
 
+### FIXED: Customer Records Deleted During M-Pesa Purchases
+
+**`system/plugin/initiatetillstk.php` + `initiatebankstk.php` + `initiatempesa.php` + `system/plugin/CreateHotspotUser.php` + `system/paymentgateway/MpesatillStk.php` + `system/autoload/Text.php`**
+
+- Removed the destructive `delete_many()` that ran on every till, bank and M-Pesa STK purchase and deleted **every other `tbl_customers` row sharing the same phone number**. Accounts created by the captive-portal purchase flow were being wiped while their MikroTik sessions stayed online, which is exactly why they showed as **Not in DB** on Online Users.
+- Payment gateway lookups in `initiatetillstk`, `initiatebankstk`, `initiatempesa`, `initiatepaystack`, `initiatepayhero` and `initiatepesapal` now target the transaction that triggered them (`$_POST['username']`, `?account=`, `?trx=`) instead of picking the newest unpaid row anywhere in the database. The old global lookup stays only as a fallback when no identity is supplied.
+- `InitiateStkpush()` now appends `account` and `trx` to the URL it stores in `pg_url_payment` and posts to the gateway, so the plugin knows exactly which transaction it belongs to.
+- `MpesatillStk_create_transaction()` now null-checks the pending transaction (falling back to the row it just created) instead of writing a property on null, which is a fatal error on PHP 8.
+- `CreateHostspotUser()` now `exit`s after a validation failure. It previously echoed an error and kept going, creating a customer and raising an STK push for a phone number that could never work.
+- Added `Text::normalizePhone()` and replaced the six-line copy-pasted phone normalisation in **seven** files (`CreateHotspotUser`, `download`, `initiatetillstk`, `initiatebankstk`, `initiatempesa`, `initiatepayhero`, `initiatepesapal`). The old chain had unreachable branches and rejected spaced formats such as `+254 712 345 678`; every accepted format now normalises to the same 12-digit `2547…` / `2541…` value.
+
+## [2.2.05] - 2026-09-10
+
+---
+
 ### RELEASED: Version 2.2.05
 
 **`version.json`**

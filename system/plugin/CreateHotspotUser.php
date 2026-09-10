@@ -329,20 +329,19 @@ function CreateHostspotUser()
         if (!isset( $postData['phone_number'], $postData['plan_id'], $postData['router_id'], $postData['account_id'])) {
             echo json_encode(['status' => 'error', 'code' => 400, 'message' => 'missing required fields' . $postData,  'phone' => $phone,  'planId' => $planId, 'routerId' => $routerId, 'accountId' => $accountId]);
         } else {
-            $phone = (substr($phone, 0, 1) == '+') ? str_replace('+', '', $phone) : $phone;
-            $phone = (substr($phone, 0, 1) == '0') ? preg_replace('/^0/', '254', $phone) : $phone;
-            $phone = (substr($phone, 0, 1) == '7') ? preg_replace('/^7/', '2547', $phone) : $phone; //cater for phone number prefix 2547XXXX
-            $phone = (substr($phone, 0, 1) == '1') ? preg_replace('/^1/', '2541', $phone) : $phone; //cater for phone number prefix 2541XXXX
-            $phone = (substr($phone, 0, 1) == '0') ? preg_replace('/^01/', '2541', $phone) : $phone;
-            $phone = (substr($phone, 0, 1) == '0') ? preg_replace('/^07/', '2547', $phone) : $phone;
+            // One shared normaliser: 0712..., 712..., +254712..., 254712... -> 254712...
+            $phone = Text::normalizePhone($phone);
+            // Stop immediately on invalid input. Continuing here used to create a
+            // customer and raise an STK push for a phone number that cannot work.
             if (strlen($phone) !== 12) {
                 echo json_encode(['status' => 'error', 'code' => 1, 'message' => 'Phone number ' . $phone . ' is invalid. Please confirm.']);
+                exit;
             }
-            if (strlen($phone) == 12 && !empty($planId) && !empty($routerId)) {
-                $PlanExist = ORM::for_table('tbl_plans')->where('id', $planId)->count() > 0;
-                $RouterExist = ORM::for_table('tbl_routers')->where('id', $routerId)->count() > 0;
-                if (!$PlanExist || !$RouterExist)
-                    echo json_encode(["status" => "error", "message" => "Unable to process your request, please refresh the page."]);
+            $PlanExist = ORM::for_table('tbl_plans')->where('id', $planId)->count() > 0;
+            $RouterExist = ORM::for_table('tbl_routers')->where('id', $routerId)->count() > 0;
+            if (!$PlanExist || !$RouterExist) {
+                echo json_encode(["status" => "error", "message" => "Unable to process your request, please refresh the page."]);
+                exit;
             }
             $Userexist = ORM::for_table('tbl_customers')->where('username', $accountId)->find_one();
             if ($Userexist) {
@@ -437,6 +436,13 @@ function InitiateStkpush($phone, $planId, $accountId, $routerId)
         $d->pg_url_payment = $url;
         $d->status = 1;
         $d->save();
+        // Carry the transaction identity so the gateway plugin targets THIS
+        // transaction instead of scanning for the newest unpaid row.
+        if (!empty($url)) {
+            $url .= (strpos($url, '?') === false ? '?' : '&') . 'account=' . urlencode($accountId) . '&trx=' . $d->id();
+            $d->pg_url_payment = $url;
+            $d->save();
+        }
     } catch (Exception $e) {
         error_log('Error saving payment gateway record: ' . $e->getMessage());
         throw $e;

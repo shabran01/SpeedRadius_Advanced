@@ -8,10 +8,18 @@
 
 function initiatepayhero()
 {
-    // Get the most recent active payment gateway record for this user
-    $posted_username = isset($_POST['username']) ? trim($_POST['username']) : null;
+    // Get the transaction for this user (account id from POST or query params)
+    $posted_username = null;
+    if (!empty($_POST['username'])) {
+        $posted_username = trim($_POST['username']);
+    } elseif (!empty($_GET['account'])) {
+        $posted_username = trim($_GET['account']);
+    }
+    $posted_trx = isset($_GET['trx']) ? intval($_GET['trx']) : 0;
     $pgQuery = ORM::for_table('tbl_payment_gateway')->where('status', 1);
-    if (!empty($posted_username)) {
+    if ($posted_trx > 0) {
+        $pgQuery = $pgQuery->where('id', $posted_trx);
+    } elseif (!empty($posted_username)) {
         $pgQuery = $pgQuery->where('username', $posted_username);
     }
     $PaymentGatewayRecord = $pgQuery->order_by_desc('id')->find_one();
@@ -44,10 +52,7 @@ function initiatepayhero()
     }
 
     // Normalise phone to 2547XXXXXXXX or 2541XXXXXXXX
-    $phone = (substr($phone, 0, 1) == '+')  ? str_replace('+', '', $phone)          : $phone;
-    $phone = (substr($phone, 0, 1) == '0')  ? preg_replace('/^0/', '254', $phone)   : $phone;
-    $phone = (substr($phone, 0, 1) == '7')  ? preg_replace('/^7/', '2547', $phone)  : $phone;
-    $phone = (substr($phone, 0, 1) == '1')  ? preg_replace('/^1/', '2541', $phone)  : $phone;
+    $phone = Text::normalizePhone($phone);
 
     // Load Pay Hero settings from tbl_appconfig
     $auth_token = ORM::for_table('tbl_appconfig')->where('setting', 'payhero_auth_token')->find_one();

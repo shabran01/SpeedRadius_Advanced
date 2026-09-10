@@ -25,6 +25,30 @@ class Text
         return preg_replace("/[^0-9]+/", "", $str);
     }
 
+    /**
+     * Normalise a Kenyan phone number to the 12 digit 2547XXXXXXXX / 2541XXXXXXXX form.
+     * Accepts 0712..., 712..., +254712..., 254712... and spaced/dashed variants.
+     * Anything it cannot recognise is returned as bare digits so callers can still
+     * validate the length.
+     */
+    public static function normalizePhone($phone)
+    {
+        $digits = preg_replace('/[^0-9]+/', '', (string) $phone);
+        if ($digits === '') {
+            return '';
+        }
+        if (strlen($digits) >= 12 && substr($digits, 0, 3) === '254') {
+            return substr($digits, 0, 12);
+        }
+        if (strlen($digits) === 10 && substr($digits, 0, 1) === '0') {
+            return '254' . substr($digits, 1);
+        }
+        if (strlen($digits) === 9 && (substr($digits, 0, 1) === '7' || substr($digits, 0, 1) === '1')) {
+            return '254' . $digits;
+        }
+        return $digits;
+    }
+
     public static function ucWords($text)
     {
         return ucwords(str_replace('_', ' ', $text));

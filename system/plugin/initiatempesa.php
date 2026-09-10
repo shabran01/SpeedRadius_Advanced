@@ -2,11 +2,24 @@
 
 function initiatempesa()
 {
-  // Get user data from the most recent active payment gateway record
-  $PaymentGatewayRecord = ORM::for_table('tbl_payment_gateway')
-     ->where('status', 1)
-     ->order_by_desc('id')
-     ->find_one();
+  // Identify the transaction this request belongs to (account id from POST or
+  // the account/trx query params) so a concurrent purchase is never billed.
+  $accountHint = '';
+  if (!empty($_POST['username'])) {
+      $accountHint = trim($_POST['username']);
+  } elseif (!empty($_GET['account'])) {
+      $accountHint = trim($_GET['account']);
+  }
+  $trxHint = isset($_GET['trx']) ? intval($_GET['trx']) : 0;
+
+  // Only fall back to the newest unpaid row when no identity was given.
+  $pgQuery = ORM::for_table('tbl_payment_gateway')->where('status', 1);
+  if ($trxHint > 0) {
+      $pgQuery->where('id', $trxHint);
+  } elseif ($accountHint !== '') {
+      $pgQuery->where('username', $accountHint);
+  }
+  $PaymentGatewayRecord = $pgQuery->order_by_desc('id')->find_one();
      
   if(!$PaymentGatewayRecord){
       echo json_encode([
@@ -35,26 +48,11 @@ function initiatempesa()
       ]);
       die();
   }
-  $phone = (substr($phone, 0, 1) == '+') ? str_replace('+', '', $phone) : $phone;
-  $phone = (substr($phone, 0, 1) == '0') ? preg_replace('/^0/', '254', $phone) : $phone;
-  $phone = (substr($phone, 0, 1) == '7') ? preg_replace('/^7/', '2547', $phone) : $phone; //cater for phone number prefix 2547XXXX
-  $phone = (substr($phone, 0, 1) == '1') ? preg_replace('/^1/', '2541', $phone) : $phone; //cater for phone number prefix 2541XXXX
-  $phone = (substr($phone, 0, 1) == '0') ? preg_replace('/^01/', '2541', $phone) : $phone;
-  $phone = (substr($phone, 0, 1) == '0') ? preg_replace('/^07/', '2547', $phone) : $phone;
-  $CheckId = ORM::for_table('tbl_customers')
-    ->where('username', $username)
-    ->order_by_desc('id')
-    ->find_one();
-  $CheckUser = ORM::for_table('tbl_customers')
-    ->where('phonenumber', $phone)
-    ->find_many();
-  $UserId = $CheckId->id;
-  if (!empty($CheckUser)) {
-    ORM::for_table('tbl_customers')
-      ->where('phonenumber', $phone)
-      ->where_not_equal('id', $UserId)
-      ->delete_many();
-  }
+  // One shared normaliser: 0712..., 712..., +254712..., 254712... -> 254712...
+  $phone = Text::normalizePhone($phone);
+  // NOTE: this flow used to DELETE every other customer row sharing this phone
+  // number, destroying live accounts (they showed as "Not in DB" on Online
+  // Users). Now removed - duplicates are left untouched.
   $CallBackURL = U . 'callback/mpesa';
   
   // Update customer phone number if needed

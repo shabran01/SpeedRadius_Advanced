@@ -182,10 +182,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         
         // Format to 254XXXXXXXXX
         $phone = $rawPhone;
-        $phone = (substr($phone, 0, 1) == '+') ? str_replace('+', '', $phone) : $phone;
-        $phone = (substr($phone, 0, 1) == '0') ? preg_replace('/^0/', '254', $phone) : $phone;
-        $phone = (substr($phone, 0, 1) == '7') ? '254' . $phone : $phone;
-        $phone = (substr($phone, 0, 1) == '1') ? '254' . $phone : $phone;
+        // One shared normaliser: 0712..., 712..., +254712..., 254712... -> 254712...
+        $phone = Text::normalizePhone($phone);
         
         if (strlen($phone) !== 12) {
             echo json_encode(['Resultcode' => '2', 'Message' => 'Invalid phone number. Please enter a valid M-Pesa number.']);

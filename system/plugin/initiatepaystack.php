@@ -2,11 +2,24 @@
 
 function initiatepaystack()
 {
-    // Get user data from the most recent active payment gateway record
-    $PaymentGatewayRecord = ORM::for_table('tbl_payment_gateway')
-        ->where('status', 1)
-        ->order_by_desc('id')
-        ->find_one();
+    // Identify the transaction this request belongs to (account id from POST or
+    // the account/trx query params) so a concurrent purchase is never billed.
+    $accountHint = '';
+    if (!empty($_POST['username'])) {
+        $accountHint = trim($_POST['username']);
+    } elseif (!empty($_GET['account'])) {
+        $accountHint = trim($_GET['account']);
+    }
+    $trxHint = isset($_GET['trx']) ? intval($_GET['trx']) : 0;
+
+    // Only fall back to the newest unpaid row when no identity was given.
+    $pgQuery = ORM::for_table('tbl_payment_gateway')->where('status', 1);
+    if ($trxHint > 0) {
+        $pgQuery->where('id', $trxHint);
+    } elseif ($accountHint !== '') {
+        $pgQuery->where('username', $accountHint);
+    }
+    $PaymentGatewayRecord = $pgQuery->order_by_desc('id')->find_one();
 
     if (!$PaymentGatewayRecord) {
         echo json_encode([
