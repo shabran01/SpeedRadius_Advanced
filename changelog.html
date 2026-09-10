@@ -58,6 +58,18 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [Unreleased] - 2026-09-10
+
+---
+
+### ADDED: Service Type Filter for Plan Sync
+
+**`system/controllers/plan.php` + `ui/ui/plan-sync.tpl`**
+
+- Added a Service Type filter to `?_route=plan/sync`: All Types, Hotspot only, or PPPoE only.
+- The existing Router filter (specific router or All Routers) works together with the type filter.
+- The header count refreshes when either filter changes, and both filters are applied to every sync batch.
+
 ## [Unreleased] - 2026-09-08
 
 ---

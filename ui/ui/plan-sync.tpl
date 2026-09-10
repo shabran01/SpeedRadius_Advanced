@@ -19,15 +19,30 @@
                         </div>
 
                         {if !$isViewer}
-                        <div class="form-group">
-                            <label for="routerSelect"><strong>Sync Scope</strong></label>
-                            <select id="routerSelect" class="form-control" style="max-width:400px;">
-                                <option value=""{if $syncRouter eq ''} selected{/if}>All Routers</option>
-                                {foreach $allRouters as $r}
-                                <option value="{$r}"{if $syncRouter eq $r} selected{/if}>{$r}</option>
-                                {/foreach}
-                            </select>
-                            <p class="help-block">Choose a specific router to sync only its customers, or leave as <em>All Routers</em>.</p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="typeSelect"><strong>Service Type</strong></label>
+                                    <select id="typeSelect" class="form-control">
+                                        <option value=""{if $syncType eq ''} selected{/if}>All Types</option>
+                                        <option value="Hotspot"{if $syncType eq 'Hotspot'} selected{/if}>Hotspot only</option>
+                                        <option value="PPPOE"{if $syncType eq 'PPPOE'} selected{/if}>PPPoE only</option>
+                                    </select>
+                                    <p class="help-block">Limit the sync to one service type, or leave as <em>All Types</em>.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="routerSelect"><strong>Router</strong></label>
+                                    <select id="routerSelect" class="form-control">
+                                        <option value=""{if $syncRouter eq ''} selected{/if}>All Routers</option>
+                                        {foreach $allRouters as $r}
+                                        <option value="{$r}"{if $syncRouter eq $r} selected{/if}>{$r}</option>
+                                        {/foreach}
+                                    </select>
+                                    <p class="help-block">Limit the sync to one router, or leave as <em>All Routers</em>.</p>
+                                </div>
+                            </div>
                         </div>
                         {/if}
                         
@@ -119,18 +134,26 @@ $(document).ready(function() {
     let totalUsers = {$totalUsers};
     let isSyncing = false;
     let selectedRouter = '{$syncRouter|escape:"javascript"}';
-    
-    // Update banner count when router dropdown changes
-    $('#routerSelect').on('change', function() {
-        selectedRouter = $(this).val();
-        let router = selectedRouter;
-        $.getJSON('{$_url}plan/sync-process', { offset: 0, limit: 0, router: router, count_only: 1 })
+    let selectedType = '{$syncType|escape:"javascript"}';
+
+    // Update banner count when either the service type or router filter changes
+    function refreshCounts() {
+        let params = { offset: 0, limit: 0, count_only: 1 };
+        if (selectedRouter) { params.router = selectedRouter; }
+        if (selectedType) { params.type = selectedType; }
+        $.getJSON('{$_url}plan/sync-process', params)
             .done(function(data) {
                 if (data && data.stats) {
                     totalUsers = data.stats.total;
                     $('#totalUsersLabel').text(totalUsers);
                 }
             });
+    }
+
+    $('#routerSelect, #typeSelect').on('change', function() {
+        selectedRouter = $('#routerSelect').length ? $('#routerSelect').val() : selectedRouter;
+        selectedType = $('#typeSelect').length ? $('#typeSelect').val() : selectedType;
+        refreshCounts();
     });
 
     // Test if jQuery is working
@@ -148,9 +171,10 @@ $(document).ready(function() {
         }
         
         selectedRouter = $('#routerSelect').length ? $('#routerSelect').val() : selectedRouter;
-        let confirmMsg = selectedRouter
-            ? 'Sync active users on router [' + selectedRouter + '] to Mikrotik?'
-            : 'Sync ALL active users across all routers to Mikrotik? This may take several minutes.';
+        selectedType = $('#typeSelect').length ? $('#typeSelect').val() : selectedType;
+        let routerLabel = selectedRouter ? 'router [' + selectedRouter + ']' : 'ALL routers';
+        let typeLabel = selectedType ? selectedType + ' users only' : 'all service types';
+        let confirmMsg = 'Sync ' + typeLabel + ' on ' + routerLabel + ' to Mikrotik? This may take several minutes.';
         if (!confirm(confirmMsg)) {
             console.log('User cancelled sync');
             return;
@@ -169,6 +193,7 @@ $(document).ready(function() {
         console.log('Starting syncNextBatch, offset:', offset);
         let ajaxData = { offset: offset };
         if (selectedRouter) { ajaxData.router = selectedRouter; }
+        if (selectedType) { ajaxData.type = selectedType; }
         $.ajax({
             url: '{$_url}plan/sync-process',
             method: 'GET',
