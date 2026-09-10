@@ -27,7 +27,7 @@
                                 <option value="{$r}"{if $syncRouter eq $r} selected{/if}>{$r}</option>
                                 {/foreach}
                             </select>
-                            <p class="help-block">Choose a specific router to sync only its customers, or leave as <em>All Routers</em>.</p>
+                            <p class="help-block">Lists every router that has active customers. Choose one to sync only its customers, or leave as <em>All Routers</em>.</p>
                         </div>
                         {/if}
                         
@@ -139,7 +139,6 @@ $(document).ready(function() {
     
     $('#startSyncBtn').click(function(e) {
         e.preventDefault();
-        alert('Button clicked!'); // Simple test
         console.log('Sync button clicked');
         
         if (isSyncing) {

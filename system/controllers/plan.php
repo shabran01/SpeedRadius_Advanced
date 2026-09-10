@@ -39,18 +39,37 @@ switch ($action) {
         
         $syncRouter = isset($_GET['router']) ? trim($_GET['router']) : '';
 
-        // Display sync interface with progress
+        // Display sync interface with progress (count is scoped to the selected router)
         $syncQuery = ORM::for_table('tbl_user_recharges')->where('status', 'on');
         if ($syncRouter !== '') {
             $syncQuery->where('routers', $syncRouter);
         }
         $totalUsers = $syncQuery->count();
 
-        // All available routers for the dropdown
-        $allRouters = array_column(
-            ORM::for_table('tbl_user_recharges')->distinct()->select('routers')->whereNotEqual('routers', '')->findArray(),
-            'routers'
-        );
+        // Sync Scope dropdown (2.1.80 spec): only routers that currently have
+        // ACTIVE customers are offered, anything else is filtered out.
+        $allRouters = [];
+        $routerRows = ORM::for_table('tbl_user_recharges')
+            ->distinct()
+            ->select('routers')
+            ->where('status', 'on')
+            ->where_not_equal('routers', '')
+            ->find_array();
+        foreach ($routerRows as $routerRow) {
+            $routerName = trim($routerRow['routers']);
+            if ($routerName !== '') {
+                $allRouters[] = $routerName;
+            }
+        }
+        $allRouters = array_values(array_unique($allRouters));
+        sort($allRouters);
+
+        // A router passed in the URL (from the plan/list Sync button) stays
+        // selectable even if it has no active customers right now, so the
+        // dropdown and the "Total users to sync" banner always agree.
+        if ($syncRouter !== '' && !in_array($syncRouter, $allRouters, true)) {
+            array_unshift($allRouters, $syncRouter);
+        }
 
         $ui->assign('totalUsers', $totalUsers);
         $ui->assign('isViewer', $admin['user_type'] == 'Viewer');

@@ -6,6 +6,20 @@
 
 ---
 
+### IMPLEMENTED: Plan Sync — Per-Router Scope Selection
+
+**`system/controllers/plan.php` + `ui/ui/plan-sync.tpl`**
+
+- The **Sync Scope** dropdown on `?_route=plan/sync` now matches the original specification: it lists every router that has **active** customers only. Previously it listed routers from every recharge row, including expired ones.
+- Router names are trimmed, deduplicated and sorted, so blank or duplicate entries can no longer appear in the dropdown.
+- A router passed in the URL (from the `plan/list` Sync button) always stays selectable, even when it currently has no active customers, so the dropdown and the **Total users to sync** banner never disagree.
+- Verified already in place and unchanged: the `plan/list` Sync button carries the active router filter into the sync page, the banner refreshes instantly through the `count_only=1` AJAX call, every batch (`plan/sync-process`) is filtered by the selected router, the progress bar calculates against the filtered count, and the dropdown is locked during a sync and unlocked on completion or error.
+- Removed the leftover debug test alert (`Button clicked!`) that popped up on every Start Sync click.
+
+## [Unreleased] - 2026-09-10
+
+---
+
 ### REVERTED: Plan Sync Restored to Original State
 
 **`ui/ui/plan-sync.tpl` + `system/controllers/plan.php` + `system/devices/MikrotikHotspot.php` + `system/devices/MikrotikPppoe.php`**
