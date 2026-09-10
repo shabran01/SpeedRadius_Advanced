@@ -142,7 +142,8 @@ $(document).ready(function() {
     let selectedType = '{$syncType|escape:"javascript"}';
     let syncStartTime = null;
     let syncTimer = null;
-    const batchSize = 10;
+    const batchSize = 5;
+    const batchTimeoutMs = 180000;
 
     function formatDuration(seconds) {
         seconds = Math.max(0, Math.round(seconds));
@@ -170,9 +171,15 @@ $(document).ready(function() {
         $.getJSON('{$_url}plan/sync-process', params)
             .done(function(data) {
                 if (!data || !data.stats) { return; }
-                let allCount = parseInt(data.stats.all, 10) || 0;
-                let hotspotCount = parseInt(data.stats.hotspot, 10) || 0;
-                let pppoeCount = parseInt(data.stats.pppoe, 10) || 0;
+                let fallback = parseInt(data.stats.total, 10) || 0;
+                let allCount = parseInt(data.stats.all, 10);
+                let hotspotCount = parseInt(data.stats.hotspot, 10);
+                let pppoeCount = parseInt(data.stats.pppoe, 10);
+
+                // Older server responses only return "total"; fall back gracefully.
+                if (isNaN(allCount)) { allCount = fallback; }
+                if (isNaN(hotspotCount)) { hotspotCount = 0; }
+                if (isNaN(pppoeCount)) { pppoeCount = 0; }
 
                 $('#typeSelect option[value=""]').text('All Types (' + allCount + ')');
                 $('#typeSelect option[value="Hotspot"]').text('Hotspot only (' + hotspotCount + ')');
@@ -181,6 +188,9 @@ $(document).ready(function() {
                 totalUsers = selectedType === 'Hotspot' ? hotspotCount
                     : (selectedType === 'PPPOE' ? pppoeCount : allCount);
                 $('#totalUsersLabel').text(totalUsers);
+            })
+            .fail(function() {
+                // Keep the server-rendered count if the refresh fails.
             });
     }
 
@@ -232,6 +242,7 @@ $(document).ready(function() {
         updateTimers();
         $('#syncControls').hide();
         $('#syncProgress').show();
+        $('#statusMessage').html('<i class="fa fa-spinner fa-spin"></i> Starting sync...');
         syncNextBatch();
     });
     
@@ -243,7 +254,7 @@ $(document).ready(function() {
             (offset + 1) + '-' + batchEnd + ' of ' + totalUsers + '...'
         );
         updateTimers();
-        let ajaxData = { offset: offset };
+        let ajaxData = { offset: offset, limit: batchSize };
         if (selectedRouter) { ajaxData.router = selectedRouter; }
         if (selectedType) { ajaxData.type = selectedType; }
         $.ajax({
@@ -251,7 +262,7 @@ $(document).ready(function() {
             method: 'GET',
             data: ajaxData,
             dataType: 'json',
-            timeout: 60000, // 60 seconds timeout per batch
+            timeout: batchTimeoutMs, // generous timeout per batch (slow routers)
             success: function(response) {
                 if (response.success) {
                     // Sync totalUsers from server (handles router filter applied after page load)

@@ -62,6 +62,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 ---
 
+### FIXED: Start Sync Button Appearing to Do Nothing
+
+**`ui/ui/plan-sync.tpl` + `system/controllers/plan.php`**
+
+- The sync request timeout was too short for a large batch on a slow router, so the first batch timed out and the page looked frozen. The per-batch timeout is now 180s.
+- The batch size is now actually controlled by the page (5 users) and honoured by the server, clamped to a safe 1-20 range, so each request returns quickly and progress moves.
+- Clicking Start Sync now shows an immediate "Starting sync..." message so it is obvious the sync has begun.
+- The filter count refresh now falls back to the server total if per-type counts are unavailable, and a failed refresh no longer leaves a wrong count on screen.
+
+## [Unreleased] - 2026-09-10
+
+---
+
 ### ADDED: Live User Counts on Plan Sync Filters
 
 **`system/controllers/plan.php` + `ui/ui/plan-sync.tpl`**

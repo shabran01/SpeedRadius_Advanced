@@ -106,9 +106,15 @@ switch ($action) {
 
         set_time_limit(300);
         $offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
-        // Batches stay small enough for live progress but large enough that the
-        // per-request connection cache is used for several users per router.
-        $limit = 10;
+        // Batch size can be hinted by the client (kept small so each request
+        // finishes well inside the browser timeout), clamped to a safe range.
+        $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 10;
+        if ($limit < 1) {
+            $limit = 1;
+        }
+        if ($limit > 20) {
+            $limit = 20;
+        }
 
         $tursQuery = ORM::for_table('tbl_user_recharges')
             ->where('status', 'on');
