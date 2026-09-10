@@ -106,15 +106,35 @@ switch ($action) {
         $success = 0;
         $errors = 0;
 
+        // Preload plans and customers for this batch in two queries (avoids N+1 per row).
+        $planIds = [];
+        $customerIds = [];
+        foreach ($turs as $tur) {
+            if (!empty($tur['plan_id'])) { $planIds[] = (int)$tur['plan_id']; }
+            if (!empty($tur['customer_id'])) { $customerIds[] = (int)$tur['customer_id']; }
+        }
+        $plansById = [];
+        if (!empty($planIds)) {
+            foreach (ORM::for_table('tbl_plans')->where_in('id', array_values(array_unique($planIds)))->find_many() as $row) {
+                $plansById[$row['id']] = $row;
+            }
+        }
+        $customersById = [];
+        if (!empty($customerIds)) {
+            foreach (ORM::for_table('tbl_customers')->where_in('id', array_values(array_unique($customerIds)))->find_many() as $row) {
+                $customersById[$row['id']] = $row;
+            }
+        }
+
         foreach ($turs as $tur) {
             try {
-                $p = ORM::for_table('tbl_plans')->find_one($tur['plan_id']);
+                $p = isset($plansById[$tur['plan_id']]) ? $plansById[$tur['plan_id']] : null;
                 if (!$p) {
                     $results[] = ['username' => $tur['username'], 'status' => 'error', 'message' => 'Plan not found'];
                     $errors++; continue;
                 }
 
-                $c = ORM::for_table('tbl_customers')->find_one($tur['customer_id']);
+                $c = isset($customersById[$tur['customer_id']]) ? $customersById[$tur['customer_id']] : null;
                 if (!$c) {
                     $results[] = ['username' => $tur['username'], 'status' => 'error', 'message' => 'Customer not found'];
                     $errors++; continue;
@@ -126,9 +146,14 @@ switch ($action) {
                         require_once $dvc;
                         $device = new $p['device'];
                         if (method_exists($device, 'add_customer')) {
-                            $device->add_customer($c, $p);
-                            $results[] = ['username' => $tur['username'], 'status' => 'success', 'message' => 'Synced', 'plan' => $tur['namebp'], 'router' => $tur['routers']];
-                            $success++;
+                            $syncResult = $device->add_customer($c, $p);
+                            if ($syncResult === false) {
+                                $results[] = ['username' => $tur['username'], 'status' => 'error', 'message' => 'Router rejected the update', 'plan' => $tur['namebp'], 'router' => $tur['routers']];
+                                $errors++;
+                            } else {
+                                $results[] = ['username' => $tur['username'], 'status' => 'success', 'message' => 'Synced', 'plan' => $tur['namebp'], 'router' => $tur['routers']];
+                                $success++;
+                            }
                         } else {
                             $results[] = ['username' => $tur['username'], 'status' => 'error', 'message' => 'Method missing'];
                             $errors++;

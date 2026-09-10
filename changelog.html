@@ -62,6 +62,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
 ---
 
+### FIXED: Plan Sync Reliability and Performance
+
+**`system/controllers/plan.php` + `ui/ui/plan-sync.tpl`**
+
+- Removed leftover debug code (a stray alert and console logs) from the sync page.
+- Fixed sync falsely reporting "Synced" when the router rejected the update.
+- Added a loop guard so a batch that makes no progress stops instead of looping forever.
+- Sync can now be re-run without reloading the page via a "Sync Again" button.
+- Removed the duplicate jQuery include.
+- Preload plans and customers per batch, removing N+1 queries.
+
+## [Unreleased] - 2026-09-10
+
+---
+
 ### IMPROVED: Real-Time Progress for Plan Sync
 
 **`system/controllers/plan.php` + `ui/ui/plan-sync.tpl`**

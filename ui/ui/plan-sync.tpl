@@ -1,7 +1,5 @@
 {include file="sections/header.tpl"}
 
-<script src="ui/ui/scripts/jquery.min.js"></script>
-
 <div class="row">
     <div class="col-sm-12">
         <div class="panel panel-primary panel-hovered mb20 panel-stacked">
@@ -185,30 +183,37 @@ $(document).ready(function() {
         refreshCounts();
     });
 
-    // Test if jQuery is working
-    console.log('jQuery version:', $.fn.jquery);
-    console.log('Document ready, button found:', $('#startSyncBtn').length);
-    
     $('#startSyncBtn').click(function(e) {
         e.preventDefault();
-        alert('Button clicked!'); // Simple test
-        console.log('Sync button clicked');
-        
+
         if (isSyncing) {
-            console.log('Already syncing, returning');
             return;
         }
-        
+
         selectedRouter = $('#routerSelect').length ? $('#routerSelect').val() : selectedRouter;
         selectedType = $('#typeSelect').length ? $('#typeSelect').val() : selectedType;
         let routerLabel = selectedRouter ? 'router [' + selectedRouter + ']' : 'ALL routers';
         let typeLabel = selectedType ? selectedType + ' users only' : 'all service types';
         let confirmMsg = 'Sync ' + typeLabel + ' on ' + routerLabel + ' to Mikrotik? This may take several minutes.';
         if (!confirm(confirmMsg)) {
-            console.log('User cancelled sync');
             return;
         }
-        
+
+        // Reset state so the sync can run again without reloading the page
+        offset = 0;
+        totalProcessed = 0;
+        totalSuccess = 0;
+        totalErrors = 0;
+        $('#processedCount, #successCount, #errorCount').text('0');
+        $('#syncResults').empty();
+        $('#progressBar').css('width', '0%').addClass('active');
+        $('#progressText').text('0%');
+        $('#progressRange').text('Starting...');
+        $('#elapsedTime').text('0s');
+        $('#etaTime').text('--');
+        $('#syncComplete').hide();
+        $('#statusMessage').removeClass('alert-success alert-danger').addClass('alert-info');
+
         // Lock the filters during sync
         $('#routerSelect, #typeSelect').prop('disabled', true);
         isSyncing = true;
@@ -238,7 +243,6 @@ $(document).ready(function() {
             dataType: 'json',
             timeout: 60000, // 60 seconds timeout per batch
             success: function(response) {
-                console.log('AJAX success:', response);
                 if (response.success) {
                     // Sync totalUsers from server (handles router filter applied after page load)
                     totalUsers = response.stats.total;
@@ -292,6 +296,12 @@ $(document).ready(function() {
                     // Auto-scroll to bottom
                     $('#syncResults').scrollTop($('#syncResults')[0].scrollHeight);
                     
+                    // Guard against an infinite loop if a batch makes no progress
+                    if (response.stats.processed === 0 && response.stats.hasMore) {
+                        showError('No users were processed in the last batch. Sync stopped to avoid a loop.');
+                        return;
+                    }
+
                     // Check if more batches to process
                     if (response.stats.hasMore) {
                         offset += response.stats.processed;
@@ -305,8 +315,6 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr, status, error) {
-                console.log('AJAX error:', xhr, status, error);
-                console.log('Response text:', xhr.responseText);
                 let errorMsg = 'Connection error: ';
                 if (status === 'timeout') {
                     errorMsg += 'Request timeout. Will retry...';
@@ -325,6 +333,9 @@ $(document).ready(function() {
         if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
         updateTimers();
         $('#routerSelect, #typeSelect').prop('disabled', false);
+        // Allow running again without a page reload
+        $('#startSyncBtn').html('<i class="fa fa-refresh"></i> Sync Again');
+        $('#syncControls').show();
         $('#progressRange').text('Completed ' + totalProcessed + ' of ' + totalUsers);
         $('#etaTime').text('0s');
         $('#progressBar').removeClass('active');
