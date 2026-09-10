@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
-## [Unreleased] - 2026-09-10
+## [2.2.05] - 2026-09-10
 
 ---
 
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - Customer records are now resolved by **username or phone number**, so sessions that log in with a phone number also get a working account link (previously only the name lookup gained the phone fallback).
 - The row payload carries a new `customer_id` field; users flagged **Not in DB** have no id and stay as plain text, so there are never dead links.
 
-## [Unreleased] - 2026-09-10
+## [2.2.05] - 2026-09-10
 
 ---
 
@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - Both dropdowns are locked during a sync and unlocked on completion or error.
 - Built on the original per-row query approach — no batched ORM lookups were reintroduced, which is what broke this page in previous releases.
 
-## [Unreleased] - 2026-09-10
+## [2.2.05] - 2026-09-10
 
 ---
 
@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - Verified already in place and unchanged: the `plan/list` Sync button carries the active router filter into the sync page, the banner refreshes instantly through the `count_only=1` AJAX call, every batch (`plan/sync-process`) is filtered by the selected router, the progress bar calculates against the filtered count, and the dropdown is locked during a sync and unlocked on completion or error.
 - Removed the leftover debug test alert (`Button clicked!`) that popped up on every Start Sync click.
 
-## [Unreleased] - 2026-09-10
+## [2.2.05] - 2026-09-10
 
 ---
 
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - Removed: the shared RouterOS connection and router-info caching added for sync speed.
 - The sync page and both device drivers are now byte-identical to their original versions.
 
-## [Unreleased] - 2026-09-10
+## [2.2.05] - 2026-09-10
 
 ---
 
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - Clicking Start Sync now shows an immediate "Starting sync..." message so it is obvious the sync has begun.
 - The filter count refresh now falls back to the server total if per-type counts are unavailable, and a failed refresh no longer leaves a wrong count on screen.
 
-## [Unreleased] - 2026-09-10
+## [2.2.05] - 2026-09-10
 
 ---
 
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - The Service Type dropdown now shows live counts: All Types, Hotspot only, and PPPoE only.
 - Counts respect the selected router, and the banner updates to the count for the selected type.
 
-## [Unreleased] - 2026-09-10
+## [2.2.05] - 2026-09-10
 
 ---
 
@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - Router lookup (`info`) is cached per request, removing a database query per user.
 - Sync batches increased from 3 to 10 users and the inter-batch delay cut from 500ms to 150ms.
 
-## [Unreleased] - 2026-09-10
+## [2.2.05] - 2026-09-10
 
 ---
 
@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - Removed the duplicate jQuery include.
 - Preload plans and customers per batch, removing N+1 queries.
 
-## [Unreleased] - 2026-09-10
+## [2.2.05] - 2026-09-10
 
 ---
 
@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - Sync batches now process 3 users at a time so the bar updates in near real time.
 - Added a smooth animated bar, a live "Processing X-Y of N" line, elapsed time, and ETA.
 
-## [Unreleased] - 2026-09-10
+## [2.2.05] - 2026-09-10
 
 ---
 
@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - The existing Router filter (specific router or All Routers) works together with the type filter.
 - The header count refreshes when either filter changes, and both filters are applied to every sync batch.
 
-## [Unreleased] - 2026-09-08
+## [2.2.05] - 2026-09-08
 
 ---
 
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - Storage card now leads with the total capacity.
 - Shows used (with percentage) and free alongside the total.
 
-## [Unreleased] - 2026-09-08
+## [2.2.05] - 2026-09-08
 
 ---
 
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - Added a shell-free fallback that reads boot time (`btime`) from `/proc/stat`.
 - Server uptime now shows on hosts where `shell_exec` is disabled and `/proc/uptime` is blocked for the web user.
 
-## [Unreleased] - 2026-09-08
+## [2.2.05] - 2026-09-08
 
 ---
 
@@ -221,7 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - Increased padding inside metric, details, and service rows.
 - Improved the vertical rhythm and grid gutter spacing.
 
-## [Unreleased] - 2026-09-08
+## [2.2.05] - 2026-09-08
 
 ---
 
@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - Added gradient accent cards, icon chips, and softer rounded surfaces.
 - Improved progress bars, spacing, and mobile alignment.
 
-## [Unreleased] - 2026-09-08
+## [2.2.05] - 2026-09-08
 
 ---
 
@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
 - Grouped host details and service health into readable sections.
 - Preserved the FreeRADIUS reload action and result messaging.
 
-## [Unreleased] - 2026-09-07
+## [2.2.05] - 2026-09-07
 
 ---
 
