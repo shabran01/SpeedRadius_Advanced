@@ -6,6 +6,21 @@
 
 ---
 
+### ADDED: Service Type Filter on Plan Sync
+
+**`system/controllers/plan.php` + `ui/ui/plan-sync.tpl`**
+
+- The sync page now has two filters side by side: **Sync Scope** (router) and **Service Type** (All Types / Hotspot Only / PPPoE Only).
+- Each AJAX batch (`plan/sync-process`) is filtered by both the selected router and the selected service type, so a PPPoE-only sync never touches Hotspot users.
+- The "Total users to sync" banner recalculates instantly when either filter changes via the `count_only=1` call, and the progress bar calculates against that filtered count.
+- `?router=` and `?type=` are both read from the URL and validated (`type` accepts only `Hotspot` or `PPPOE`), so a filter can be bookmarked or linked.
+- Both dropdowns are locked during a sync and unlocked on completion or error.
+- Built on the original per-row query approach — no batched ORM lookups were reintroduced, which is what broke this page in previous releases.
+
+## [Unreleased] - 2026-09-10
+
+---
+
 ### IMPLEMENTED: Plan Sync — Per-Router Scope Selection
 
 **`system/controllers/plan.php` + `ui/ui/plan-sync.tpl`**
