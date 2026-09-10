@@ -163,17 +163,24 @@ $(document).ready(function() {
         }
     }
 
-    // Update banner count when either the service type or router filter changes
+    // Show per-type counts on the options and update the banner for the current selection
     function refreshCounts() {
         let params = { offset: 0, limit: 0, count_only: 1 };
         if (selectedRouter) { params.router = selectedRouter; }
-        if (selectedType) { params.type = selectedType; }
         $.getJSON('{$_url}plan/sync-process', params)
             .done(function(data) {
-                if (data && data.stats) {
-                    totalUsers = data.stats.total;
-                    $('#totalUsersLabel').text(totalUsers);
-                }
+                if (!data || !data.stats) { return; }
+                let allCount = parseInt(data.stats.all, 10) || 0;
+                let hotspotCount = parseInt(data.stats.hotspot, 10) || 0;
+                let pppoeCount = parseInt(data.stats.pppoe, 10) || 0;
+
+                $('#typeSelect option[value=""]').text('All Types (' + allCount + ')');
+                $('#typeSelect option[value="Hotspot"]').text('Hotspot only (' + hotspotCount + ')');
+                $('#typeSelect option[value="PPPOE"]').text('PPPoE only (' + pppoeCount + ')');
+
+                totalUsers = selectedType === 'Hotspot' ? hotspotCount
+                    : (selectedType === 'PPPOE' ? pppoeCount : allCount);
+                $('#totalUsersLabel').text(totalUsers);
             });
     }
 
@@ -182,6 +189,9 @@ $(document).ready(function() {
         selectedType = $('#typeSelect').length ? $('#typeSelect').val() : selectedType;
         refreshCounts();
     });
+
+    // Populate counts on page load
+    refreshCounts();
 
     $('#startSyncBtn').click(function(e) {
         e.preventDefault();

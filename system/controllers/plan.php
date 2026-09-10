@@ -78,13 +78,30 @@ switch ($action) {
             $filterType = '';
         }
 
-        // count_only: just return the total for that router/type (used by filter change events)
+        // count_only: return totals per service type for the selected router
+        // (used by the filter change events and to label the dropdown options).
         if (!empty($_GET['count_only'])) {
-            $cq = ORM::for_table('tbl_user_recharges')->where('status', 'on');
-            if ($filterRouter !== '') { $cq->where('routers', $filterRouter); }
-            if ($filterType !== '') { $cq->where('type', $filterType); }
+            $countFor = function ($type) use ($filterRouter) {
+                $q = ORM::for_table('tbl_user_recharges')->where('status', 'on');
+                if ($filterRouter !== '') { $q->where('routers', $filterRouter); }
+                if ($type !== '') { $q->where('type', $type); }
+                return $q->count();
+            };
+            $allCount = $countFor('');
+            $hotspotCount = $countFor('Hotspot');
+            $pppoeCount = $countFor('PPPOE');
+            $selectedCount = $filterType === 'Hotspot' ? $hotspotCount : ($filterType === 'PPPOE' ? $pppoeCount : $allCount);
+
             header('Content-Type: application/json');
-            die(json_encode(['success' => true, 'stats' => ['total' => $cq->count()]]));
+            die(json_encode([
+                'success' => true,
+                'stats' => [
+                    'total' => $selectedCount,
+                    'all' => $allCount,
+                    'hotspot' => $hotspotCount,
+                    'pppoe' => $pppoeCount,
+                ]
+            ]));
         }
 
         set_time_limit(300);
