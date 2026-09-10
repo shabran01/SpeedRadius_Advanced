@@ -89,7 +89,8 @@ switch ($action) {
 
         set_time_limit(120);
         $offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
-        $limit = 10;
+        // Small batches keep the progress bar updating in near real time.
+        $limit = 3;
 
         $tursQuery = ORM::for_table('tbl_user_recharges')
             ->where('status', 'on');

@@ -6,6 +6,17 @@
 
 ---
 
+### IMPROVED: Real-Time Progress for Plan Sync
+
+**`system/controllers/plan.php` + `ui/ui/plan-sync.tpl`**
+
+- Sync batches now process 3 users at a time so the bar updates in near real time.
+- Added a smooth animated bar, a live "Processing X-Y of N" line, elapsed time, and ETA.
+
+## [Unreleased] - 2026-09-10
+
+---
+
 ### ADDED: Service Type Filter for Plan Sync
 
 **`system/controllers/plan.php` + `ui/ui/plan-sync.tpl`**

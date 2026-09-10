@@ -53,13 +53,20 @@
                         {/if}
                         
                         <div id="syncProgress" style="display:none;">
-                            <div class="progress">
-                                <div class="progress-bar progress-bar-striped active" role="progressbar" 
-                                     id="progressBar" style="width: 0%">
+                            <div class="progress" style="height: 24px; margin-bottom: 6px;">
+                                <div class="progress-bar progress-bar-striped active" role="progressbar"
+                                     id="progressBar" style="width: 0%; transition: width .35s ease; line-height: 24px;">
                                     <span id="progressText">0%</span>
                                 </div>
                             </div>
-                            
+                            <div class="text-muted small" style="margin-bottom: 15px;">
+                                <span id="progressRange">Waiting to start...</span>
+                                <span class="pull-right">
+                                    <i class="fa fa-clock-o"></i> Elapsed: <span id="elapsedTime">0s</span>
+                                    &middot; ETA: <span id="etaTime">--</span>
+                                </span>
+                            </div>
+
                             <div class="alert alert-info" id="statusMessage">
                                 <i class="fa fa-spinner fa-spin"></i> Initializing sync...
                             </div>
@@ -135,6 +142,28 @@ $(document).ready(function() {
     let isSyncing = false;
     let selectedRouter = '{$syncRouter|escape:"javascript"}';
     let selectedType = '{$syncType|escape:"javascript"}';
+    let syncStartTime = null;
+    let syncTimer = null;
+    const batchSize = 3;
+
+    function formatDuration(seconds) {
+        seconds = Math.max(0, Math.round(seconds));
+        if (seconds < 60) { return seconds + 's'; }
+        return Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
+    }
+
+    function updateTimers() {
+        if (!syncStartTime) { return; }
+        let elapsed = (Date.now() - syncStartTime) / 1000;
+        $('#elapsedTime').text(formatDuration(elapsed));
+        if (totalProcessed > 0 && totalUsers > 0) {
+            let rate = totalProcessed / elapsed;
+            let remaining = Math.max(0, totalUsers - totalProcessed);
+            $('#etaTime').text(rate > 0 ? formatDuration(remaining / rate) : '--');
+        } else {
+            $('#etaTime').text('--');
+        }
+    }
 
     // Update banner count when either the service type or router filter changes
     function refreshCounts() {
@@ -180,17 +209,25 @@ $(document).ready(function() {
             return;
         }
         
-        // Lock the dropdown during sync
-        $('#routerSelect').prop('disabled', true);
-        console.log('Starting sync process, router filter:', selectedRouter || 'ALL');
+        // Lock the filters during sync
+        $('#routerSelect, #typeSelect').prop('disabled', true);
         isSyncing = true;
+        syncStartTime = Date.now();
+        syncTimer = window.setInterval(updateTimers, 1000);
+        updateTimers();
         $('#syncControls').hide();
         $('#syncProgress').show();
         syncNextBatch();
     });
     
     function syncNextBatch() {
-        console.log('Starting syncNextBatch, offset:', offset);
+        let batchEnd = Math.min(offset + batchSize, totalUsers);
+        $('#progressRange').text('Processing ' + (offset + 1) + '-' + batchEnd + ' of ' + totalUsers);
+        $('#statusMessage').html(
+            '<i class="fa fa-spinner fa-spin"></i> Syncing users ' +
+            (offset + 1) + '-' + batchEnd + ' of ' + totalUsers + '...'
+        );
+        updateTimers();
         let ajaxData = { offset: offset };
         if (selectedRouter) { ajaxData.router = selectedRouter; }
         if (selectedType) { ajaxData.type = selectedType; }
@@ -221,6 +258,10 @@ $(document).ready(function() {
                     $('#progressBar').css('width', percentage + '%');
                     $('#progressText').text(percentage + '%');
                     
+                    // Update live range and timing
+                    $('#progressRange').text('Processed ' + totalProcessed + ' of ' + totalUsers);
+                    updateTimers();
+
                     // Update status message
                     $('#statusMessage').html(
                         '<i class="fa fa-spinner fa-spin"></i> Processing: ' + 
@@ -281,7 +322,11 @@ $(document).ready(function() {
     
     function completeSyncProcess() {
         isSyncing = false;
-        $('#routerSelect').prop('disabled', false);
+        if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
+        updateTimers();
+        $('#routerSelect, #typeSelect').prop('disabled', false);
+        $('#progressRange').text('Completed ' + totalProcessed + ' of ' + totalUsers);
+        $('#etaTime').text('0s');
         $('#progressBar').removeClass('active');
         $('#statusMessage').html(
             '<i class="fa fa-check-circle"></i> Sync completed successfully!'
@@ -299,7 +344,8 @@ $(document).ready(function() {
     
     function showError(message) {
         isSyncing = false;
-        $('#routerSelect').prop('disabled', false);
+        if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
+        $('#routerSelect, #typeSelect').prop('disabled', false);
         $('#statusMessage').html(
             '<i class="fa fa-exclamation-triangle"></i> ' + message
         ).removeClass('alert-info').addClass('alert-danger');
