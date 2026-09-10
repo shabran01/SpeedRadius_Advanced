@@ -62,6 +62,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
 ---
 
+### RELEASED: Version 2.2.05
+
+**`version.json`**
+
+- App version bumped from **2.2.04** to **2.2.05** (release date 2026-09-10) so the reported version matches the top of this changelog.
+- `?_route=community` derives the installed version from the newest `## [x.y.z]` heading in `CHANGELOG.md` and only falls back to `version.json`; the two are now in sync. The "latest version" on that page is fetched from this repository's `version.json` on GitHub.
+- No database migration is needed — `system/updates.json` has no `2.2.05` entry.
+
+#### Included in 2.2.05
+
+| Area | Change |
+|------|--------|
+| Online Users | Hotspot usernames link straight to the customer account |
+| Plan Sync | Service Type filter (All Types / Hotspot Only / PPPoE Only) beside Sync Scope |
+| Plan Sync | Sync Scope lists only routers that have active customers |
+| Changelog | Entries now carry version numbers instead of `[Unreleased]` |
+
+## [2.2.05] - 2026-09-10
+
+---
+
 ### ADDED: Clickable Usernames on Online Hotspot Users
 
 **`system/controllers/onlineusers.php` + `ui/ui/hotspot_users.tpl`**
