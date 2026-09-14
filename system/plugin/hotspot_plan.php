@@ -42,6 +42,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['routername'])) {
                 'plans_hotspot' => [],
             ];
 
+            // Which plan do customers on THIS router actually buy most?
+            // Looks back 30 days. A customer undecided between equal-looking
+            // cards tends to take the one everyone else took.
+            $popularPlanId = 0;
+            try {
+                $popularStmt = ORM::get_db()->prepare(
+                    "SELECT plan_id, COUNT(*) AS buys
+                     FROM tbl_user_recharges
+                     WHERE routers = ? AND recharged_on >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                     GROUP BY plan_id
+                     ORDER BY buys DESC
+                     LIMIT 1"
+                );
+                $popularStmt->execute([$router['name']]);
+                $popularRow = $popularStmt->fetch(PDO::FETCH_ASSOC);
+                if ($popularRow) {
+                    $popularPlanId = (int) $popularRow['plan_id'];
+                }
+            } catch (Exception $e) {
+                $popularPlanId = 0;
+            }
+
             // Filter and collect hotspot plans associated with the router
             foreach ($plans_hotspot as $plan) {
                 if ($router['name'] == $plan['routers']) {
@@ -66,7 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['routername'])) {
                         'paymentlink' => $paymentlink,
                         'planId' => $plan['id'],
                         'routerName' => $router['name'],
-                        'routerId' => $router['id']
+                        'routerId' => $router['id'],
+                        'popular' => ($popularPlanId > 0 && (int) $plan['id'] === $popularPlanId)
                     ];
                 }
             }

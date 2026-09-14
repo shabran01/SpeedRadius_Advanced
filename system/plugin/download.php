@@ -643,6 +643,7 @@ $htmlContent .= "                    <h2 class=\"text-sm font-medium uppercase t
 $htmlContent .= "                        \${item.planname}\n";
 $htmlContent .= "                    </h2>\n";
 $htmlContent .= "                </div>\n";
+$htmlContent .= "                \${item.popular ? '<div class=\"bg-amber-100 text-amber-800 text-center font-bold\" style=\"font-size:10px;padding:3px 0;letter-spacing:.05em;\">🔥 MOST POPULAR</div>' : ''}\n";
 $htmlContent .= "                <div class=\"px-4 py-2 flex-grow\">\n";
 $htmlContent .= "                    <p class=\"text-2xl font-bold text-green-600 mb-1\">\n";
 $htmlContent .= "                        <span class=\"text-lg font-medium text-black\">\${item.currency}</span>\n";

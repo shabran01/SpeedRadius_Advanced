@@ -58,6 +58,19 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.17] - 2026-09-14
+
+---
+
+### ADDED: "Most Popular" Badge on Hotspot Packages
+
+**`system/plugin/hotspot_plan.php` + `system/plugin/download.php`**
+
+- The hotspot page now badges the package that customers on **that specific router** bought most over the last 30 days, alongside the existing pricing cards.
+- `hotspot_plan.php` runs a grouped count over `tbl_user_recharges` (filtered by router and a 30-day window) and returns a `popular` flag per plan; the top plan is the one flagged.
+- The card renders an amber **🔥 MOST POPULAR** strip only when the flag is set, so at most one card is badged per page. If there is no purchase history, or the lookup fails, no badge is shown and the cards render exactly as before.
+- Uses a parameterised query, so no SQL injection risk from the router name.
+
 ## [2.2.16] - 2026-09-14
 
 ---
