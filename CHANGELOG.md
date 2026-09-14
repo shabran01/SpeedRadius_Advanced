@@ -2,6 +2,19 @@
 
  # CHANGELOG
 
+## [2.2.11] - 2026-09-14
+
+---
+
+### FIXED: Duplicate Hotspot Account Numbers
+
+**`system/plugin/CreateHotspotUser.php` + `system/plugin/download.php`**
+
+- New hotspot and voucher accounts now receive a server-generated unique 5-digit account number.
+- A browser-generated number that collides with another customer's account can no longer attach a second person's payment or voucher to the existing customer.
+- Existing accounts are reused only when the same phone owns the account and the account already has five digits.
+- The final server-assigned account number is returned to the browser so payment-status polling uses the correct customer.
+
 ## [2.2.10] - 2026-09-14
 
 ---

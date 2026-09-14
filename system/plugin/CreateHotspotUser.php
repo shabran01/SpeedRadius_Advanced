@@ -134,8 +134,14 @@ function ReconnectVoucher() {
     }
 
     $user = ORM::for_table('tbl_customers')->where('username', $accountId)->find_one();
+    if ($user && (int) $voucher['user'] !== (int) $user['id']) {
+        // An unused voucher must not attach to an existing customer just
+        // because the browser supplied a colliding account number.
+        $user = null;
+    }
     if (!$user) {
         // Create a new user if not exists
+        $accountId = generateUniqueHotspotAccountId();
         $user = ORM::for_table('tbl_customers')->create();
         $user->username = $accountId;
         $user->password = '1234';
@@ -264,7 +270,6 @@ function VerifyHotspot() {
         ->where('username', $accountId)
         ->order_by_desc('id')
         ->find_one();
-
     if ($user) {
         $status = $user->status;
         $mpesacode = $user->gateway_trx_id;
@@ -310,6 +315,20 @@ function VerifyHotspot() {
 }
 
 
+function generateUniqueHotspotAccountId()
+{
+    for ($attempt = 0; $attempt < 100; $attempt++) {
+        $accountId = (string) random_int(10000, 99999);
+        $exists = ORM::for_table('tbl_customers')
+            ->where('username', $accountId)
+            ->find_one();
+        if (!$exists) {
+            return $accountId;
+        }
+    }
+
+    throw new RuntimeException('Unable to generate a unique 5-digit account number.');
+}
 
 function CreateHostspotUser()
 {
@@ -319,16 +338,13 @@ function CreateHostspotUser()
     if (!$postData) {
         echo json_encode(['status' => 'error', 'code' => 400, 'message' => 'Invalid JSON DATA' . $postData . ' n tes ']);
     } else {
-        $phone = $postData['phone_number'];
-        $planId = $postData['plan_id'];
-        $routerId = $postData['router_id'];
-		  $accountId = $postData['account_id'];
-
-
-
         if (!isset( $postData['phone_number'], $postData['plan_id'], $postData['router_id'], $postData['account_id'])) {
-            echo json_encode(['status' => 'error', 'code' => 400, 'message' => 'missing required fields' . $postData,  'phone' => $phone,  'planId' => $planId, 'routerId' => $routerId, 'accountId' => $accountId]);
+            echo json_encode(['status' => 'error', 'code' => 400, 'message' => 'Missing required fields']);
         } else {
+            $phone = $postData['phone_number'];
+            $planId = $postData['plan_id'];
+            $routerId = $postData['router_id'];
+            $requestedAccountId = trim((string) $postData['account_id']);
             // One shared normaliser: 0712..., 712..., +254712..., 254712... -> 254712...
             $phone = Text::normalizePhone($phone);
             // Stop immediately on invalid input. Continuing here used to create a
@@ -343,13 +359,21 @@ function CreateHostspotUser()
                 echo json_encode(["status" => "error", "message" => "Unable to process your request, please refresh the page."]);
                 exit;
             }
-            $Userexist = ORM::for_table('tbl_customers')->where('username', $accountId)->find_one();
-            if ($Userexist) {
+            $Userexist = ORM::for_table('tbl_customers')->where('username', $requestedAccountId)->find_one();
+            if ($Userexist
+                && preg_match('/^\d{5}$/', $requestedAccountId)
+                && $Userexist['phonenumber'] === $phone
+            ) {
+                $accountId = $requestedAccountId;
                 $Userexist->router_id = $routerId;
                 $Userexist->save();
                 InitiateStkpush($phone, $planId, $accountId, $routerId);
+                echo json_encode(['status' => 'success', 'message' => 'Payment request sent.', 'account_id' => $accountId]);
             } else {
                 try {
+                    // Never trust a browser-generated ID for a new customer.
+                    // A collision must create a new account, not reuse another person's row.
+                    $accountId = generateUniqueHotspotAccountId();
                     $defpass = '1234';
                     $defaddr = 'SpeedRadius';
                     $defmail = $phone . '@gmail.com';
@@ -365,6 +389,7 @@ function CreateHostspotUser()
                     $createUser->service_type = 'Hotspot';
                     if ($createUser->save()) {
                         InitiateStkpush($phone, $planId, $accountId, $routerId);
+                        echo json_encode(['status' => 'success', 'message' => 'Payment request sent.', 'account_id' => $accountId]);
                     } else {
                         echo json_encode(["status" => "error", "message" => "There was a system error when registering user, please contact support."]);
                     }
