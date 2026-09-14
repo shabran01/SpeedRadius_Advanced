@@ -2,6 +2,17 @@
 
  # CHANGELOG
 
+## [2.2.10] - 2026-09-14
+
+---
+
+### FIXED: Missing Orphan Recharges Report Template
+
+**`ui/ui/orphan_recharges.tpl`**
+
+- Added the missing Smarty template required by `system/plugin/orphan_recharges.php`.
+- The Orphan Recharges report now renders its read-only table, record count, escaped values, and empty-state message instead of failing with `Unable to load template 'file:orphan_recharges.tpl'`.
+
 ## [2.2.09] - 2026-09-13
 
 ---
