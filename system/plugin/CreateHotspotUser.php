@@ -488,7 +488,16 @@ function SendSTKcred($phone, $url, $accountId )
     curl_setopt($ch, CURLOPT_URL, $link);
     curl_setopt($ch, CURLOPT_POST, count($fields));
     curl_setopt($ch, CURLOPT_POSTFIELDS, $postvars);
+    // Capture the gateway response instead of printing it. Without this,
+    // curl_exec() writes the gateway body straight into our output, so the
+    // endpoint returned two JSON documents back to back and the browser failed
+    // with "Unexpected non-whitespace character after JSON".
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
     $result = curl_exec($ch);
+    curl_close($ch);
+    return $result;
 }
 
 function mpesa_reconnect() {

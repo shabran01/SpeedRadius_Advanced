@@ -58,6 +58,18 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.15] - 2026-09-14
+
+---
+
+### FIXED: "Unexpected non-whitespace character after JSON" on Buy Now
+
+**`system/plugin/CreateHotspotUser.php` + `system/plugin/download.php`**
+
+- Root cause: `SendSTKcred()` called `curl_exec()` without `CURLOPT_RETURNTRANSFER`, so the payment gateway's response was printed straight into the page. The `grant` endpoint then echoed its own JSON after it, sending two JSON documents back to back — which is exactly what the browser reported as a parse failure at position 78.
+- `SendSTKcred()` now captures the gateway response instead of printing it, with a 10s connect and 20s total timeout so a slow gateway cannot hang the checkout.
+- Defensive fix in the hotspot page: added `safeJson()` and routed every payment response through it, so stray output around the JSON body can no longer break the Buy / Voucher / Reconnect flows.
+
 ## [2.2.14] - 2026-09-14
 
 ---
