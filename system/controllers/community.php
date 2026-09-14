@@ -34,9 +34,13 @@ switch ($action) {
         require_once dirname(__DIR__) . '/helpers/database_updates.php';
         try {
             $result = apply_database_updates();
-            $message = $result['applied'] > 0
-                ? 'Database updated successfully. ' . $result['applied'] . ' migration(s) applied.'
-                : 'Database is already up to date.';
+            if ($result['applied'] > 0) {
+                $message = 'Database updated successfully. ' . $result['applied'] . ' migration(s) applied.';
+            } elseif (!empty($result['index_verified'])) {
+                $message = 'Database is up to date. Unique username index verified.';
+            } else {
+                $message = 'Database is up to date.';
+            }
             r2(U . 'community', 's', $message);
         } catch (Throwable $e) {
             _log('Database update failed: ' . $e->getMessage(), 'Admin', $admin['id']);

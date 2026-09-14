@@ -58,6 +58,18 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.14] - 2026-09-14
+
+---
+
+### IMPROVED: Database Update Button Now Verifies Its Result
+
+**`system/helpers/database_updates.php` + `system/controllers/community.php`**
+
+- The unique-username migration no longer trusts `system/cache/updates.done.json`. The updater queries `information_schema` to confirm the index physically exists, and re-applies it when it does not.
+- This closes a real gap: the legacy `update.php` step 4 swallowed failed SQL and still marked a version complete, so a migration could be recorded as done without ever taking effect.
+- The success message is now truthful — "Unique username index verified" when the index is confirmed present, instead of a generic "already up to date".
+
 ## [2.2.13] - 2026-09-14
 
 ---

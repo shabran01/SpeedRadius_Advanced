@@ -46,11 +46,31 @@ function apply_database_updates()
     $applied = 0;
     $statements = 0;
     $skipped = 0;
+    $UNIQUE_INDEX_MIGRATION = '2026.9.14-unique-customer-username';
+    $UNIQUE_INDEX_NAME = 'uq_tbl_customers_username';
+
     foreach ($updates as $version => $queries) {
-        if (in_array($version, $dones, true)) {
-            continue;
-        }
-        if ($version === '2026.9.14-unique-customer-username') {
+        $alreadyRecorded = in_array($version, $dones, true);
+
+        if ($version === $UNIQUE_INDEX_MIGRATION) {
+            // Never trust the done-file for this migration: the legacy updater
+            // swallowed failed SQL and still marked versions complete. Verify the
+            // index truly exists, and re-apply it when it does not.
+            $indexExists = (int) $db->query(
+                "SELECT COUNT(*) FROM information_schema.statistics
+                 WHERE table_schema = DATABASE()
+                   AND table_name = 'tbl_customers'
+                   AND index_name = " . $db->quote($UNIQUE_INDEX_NAME)
+            )->fetchColumn() > 0;
+
+            if ($indexExists) {
+                if (!$alreadyRecorded) {
+                    $dones[] = $version;
+                }
+                $skipped++;
+                continue;
+            }
+
             $duplicates = $db->query(
                 "SELECT username, COUNT(*) AS total
                  FROM tbl_customers
@@ -68,20 +88,26 @@ function apply_database_updates()
                     . implode(', ', $names)
                 );
             }
+        } elseif ($alreadyRecorded) {
+            continue;
         }
+
         foreach ((array) $queries as $query) {
             try {
                 $db->exec($query);
                 $statements++;
             } catch (PDOException $e) {
-                if ($version === '2026.9.14-unique-customer-username') {
+                if ($version === $UNIQUE_INDEX_MIGRATION) {
                     throw $e;
                 }
                 // Existing-schema errors are expected for some legacy migrations.
                 $skipped++;
             }
         }
-        $dones[] = $version;
+
+        if (!$alreadyRecorded) {
+            $dones[] = $version;
+        }
         $applied++;
     }
 
@@ -89,9 +115,17 @@ function apply_database_updates()
         throw new RuntimeException('Unable to record completed database updates.');
     }
 
+    $indexVerified = (int) $db->query(
+        "SELECT COUNT(*) FROM information_schema.statistics
+         WHERE table_schema = DATABASE()
+           AND table_name = 'tbl_customers'
+           AND index_name = " . $db->quote($UNIQUE_INDEX_NAME)
+    )->fetchColumn() > 0;
+
     return [
         'applied' => $applied,
         'statements' => $statements,
         'skipped' => $skipped,
+        'index_verified' => $indexVerified,
     ];
 }
