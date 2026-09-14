@@ -2,6 +2,20 @@
 
  # CHANGELOG
 
+## [2.2.18] - 2026-09-15
+
+---
+
+### FIXED: "Most Popular" Badge Counted Subscribers, Not Purchases
+
+**`system/plugin/hotspot_plan.php`**
+
+- The badge introduced in 2.2.17 counted rows in `tbl_user_recharges`. That table is not a purchase log — `Package::rechargeUser()` **updates** the existing row on a repeat purchase, so a customer who buys 20 times still has one row. The badge was therefore highlighting the plan with the most current subscribers, which is a different answer.
+- It now counts from `tbl_transactions`, which inserts one row per purchase — the same source and metric used by the dashboard's **Most Popular Plans** panel.
+- Also aligned with the dashboard by excluding internal balance movements (`Customer - Balance`, `Recharge Balance - Administrator`), so plan-to-plan recharges cannot distort the ranking.
+- Scope is deliberately still **per router** and rolling **30 days** (the dashboard is global and uses the current calendar month). Per-router is correct here because the customer is standing at one specific router, and a rolling window avoids the badge vanishing on the 1st of each month.
+- Matching is done on the plan name, the same key the dashboard groups by.
+
 ## [2.2.17] - 2026-09-14
 
 ---

@@ -43,25 +43,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['routername'])) {
             ];
 
             // Which plan do customers on THIS router actually buy most?
-            // Looks back 30 days. A customer undecided between equal-looking
-            // cards tends to take the one everyone else took.
-            $popularPlanId = 0;
+            // Counted from tbl_transactions, which inserts one row per purchase.
+            // (tbl_user_recharges cannot be used here: a repeat purchase updates
+            // the existing row, so it counts subscribers, not purchases.)
+            $popularPlanName = '';
             try {
                 $popularStmt = ORM::get_db()->prepare(
-                    "SELECT plan_id, COUNT(*) AS buys
-                     FROM tbl_user_recharges
-                     WHERE routers = ? AND recharged_on >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-                     GROUP BY plan_id
+                    "SELECT plan_name, COUNT(*) AS buys
+                     FROM tbl_transactions
+                     WHERE routers = ?
+                       AND recharged_on >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                       AND method NOT IN ('Customer - Balance', 'Recharge Balance - Administrator')
+                     GROUP BY plan_name
                      ORDER BY buys DESC
                      LIMIT 1"
                 );
                 $popularStmt->execute([$router['name']]);
                 $popularRow = $popularStmt->fetch(PDO::FETCH_ASSOC);
                 if ($popularRow) {
-                    $popularPlanId = (int) $popularRow['plan_id'];
+                    $popularPlanName = (string) $popularRow['plan_name'];
                 }
             } catch (Exception $e) {
-                $popularPlanId = 0;
+                $popularPlanName = '';
             }
 
             // Filter and collect hotspot plans associated with the router
@@ -89,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['routername'])) {
                         'planId' => $plan['id'],
                         'routerName' => $router['name'],
                         'routerId' => $router['id'],
-                        'popular' => ($popularPlanId > 0 && (int) $plan['id'] === $popularPlanId)
+                        'popular' => ($popularPlanName !== '' && $plan['name_plan'] === $popularPlanName)
                     ];
                 }
             }
