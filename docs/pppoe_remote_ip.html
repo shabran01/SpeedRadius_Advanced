@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPPoE Remote IP — SpeedRadius Documentation</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --text-color: #333;
+            --background-color: #f9f9f9;
+            --card-background: #ffffff;
+            --code-bg: #f4f4f4;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            padding: 20px;
+        }
+
+        .container { max-width: 960px; margin: 0 auto; padding: 20px; }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+            border-bottom: 3px solid var(--secondary-color);
+            padding-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 35px;
+            font-size: 1.05em;
+        }
+
+        .section {
+            background: var(--card-background);
+            border-radius: 8px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        h2 {
+            color: var(--secondary-color);
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h3 {
+            color: var(--primary-color);
+            font-size: 1.1em;
+            margin: 18px 0 8px;
+        }
+
+        p { margin-bottom: 12px; }
+
+        ul, ol { padding-left: 22px; margin-bottom: 12px; }
+        li { margin-bottom: 6px; }
+
+        code {
+            background: var(--code-bg);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.92em;
+            color: #c0392b;
+        }
+
+        .callout {
+            border-left: 4px solid;
+            padding: 14px 18px;
+            border-radius: 0 6px 6px 0;
+            margin: 16px 0;
+        }
+
+        .callout.info    { border-color: var(--secondary-color); background: #eaf4fd; }
+        .callout.success { border-color: var(--success-color);   background: #eafaf1; }
+        .callout.warning { border-color: var(--warning-color);   background: #fef9e7; }
+        .callout.danger  { border-color: var(--accent-color);    background: #fdf2f2; }
+
+        .callout strong { display: block; margin-bottom: 4px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.95em;
+        }
+
+        th {
+            background: var(--primary-color);
+            color: #fff;
+            padding: 10px 14px;
+            text-align: left;
+        }
+
+        td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:nth-child(even) td { background: #f8f8f8; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .badge.yes  { background: #d5f5e3; color: #1e8449; }
+        .badge.no   { background: #fde8e8; color: #c0392b; }
+        .badge.opt  { background: #fef9e7; color: #b7770d; }
+
+        .step-list { counter-reset: step; padding-left: 0; list-style: none; }
+        .step-list li {
+            counter-increment: step;
+            padding: 10px 10px 10px 50px;
+            position: relative;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        .step-list li::before {
+            content: counter(step);
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--secondary-color);
+            color: #fff;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            color: #999;
+            font-size: 0.85em;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <h1>📡 PPPoE Remote IP</h1>
+    <p class="subtitle">Static IP Assignment for PPPoE Customers — SpeedRadius Admin Guide</p>
+
+    <!-- WHAT IS IT -->
+    <div class="section">
+        <h2>📌 What is Remote IP?</h2>
+        <p>
+            The <strong>Remote IP</strong> field on the Customer profile (Add / Edit) assigns a <strong>fixed (static) IP address</strong>
+            to a specific PPPoE customer's connection on the MikroTik router.
+        </p>
+        <p>
+            When a PPPoE customer connects, the router normally picks an IP dynamically from a shared pool.
+            Filling in Remote IP overrides this — that customer will <em>always</em> receive the exact IP you specify,
+            every time they connect.
+        </p>
+        <div class="callout info">
+            <strong>ℹ️ Field Location</strong>
+            Admin Panel → Customers → Add/Edit Customer → <strong>PPPOE section → Remote IP</strong>
+        </div>
+    </div>
+
+    <!-- WHEN TO USE -->
+    <div class="section">
+        <h2>✅ When to Use It</h2>
+        <ul>
+            <li>Customer runs a <strong>server, CCTV system, or web application</strong> that needs a fixed address</li>
+            <li>You need to apply <strong>specific firewall rules</strong> targeting one customer by IP</li>
+            <li>Customer requires <strong>remote access</strong> (VPN, RDP) to equipment at their premises</li>
+            <li>You want to apply a <strong>custom bandwidth queue</strong> tied to a specific IP</li>
+            <li>Integrations or third-party systems reference the customer by a fixed IP address</li>
+        </ul>
+        <div class="callout success">
+            <strong>✅ Most customers don't need this</strong>
+            Leave Remote IP <em>blank</em> for regular Hotspot or standard PPPoE customers.
+            The router will assign a dynamic IP from its pool automatically.
+        </div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div class="section">
+        <h2>⚙️ How It Works</h2>
+
+        <h3>MikroTik Native PPPoE</h3>
+        <p>
+            SpeedRadius pushes the Remote IP value to the MikroTik router as a <strong>PPP Secret</strong> remote-address.
+            When the customer authenticates, the router sees the remote-address configured on their secret and assigns that IP directly.
+        </p>
+
+        <h3>FreeRADIUS</h3>
+        <p>
+            The Remote IP is sent as the <code>Framed-IP-Address</code> RADIUS attribute in the Access-Accept response.
+            The NAS device (MikroTik or other) then assigns that IP to the PPPoE session.
+        </p>
+
+        <div class="callout warning">
+            <strong>⚠️ Important compatibility note</strong>
+            The <strong>PPPoE Username</strong> override field does <em>not</em> work with FreeRADIUS MySQL.
+            The <strong>Remote IP</strong> field works with <em>both</em> MikroTik-native PPPoE and FreeRADIUS.
+        </div>
+    </div>
+
+    <!-- COMPATIBILITY TABLE -->
+    <div class="section">
+        <h2>🔀 Field Compatibility</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>MikroTik Native PPPoE</th>
+                    <th>FreeRADIUS MySQL</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>PPPoE Username</strong></td>
+                    <td><span class="badge yes">✓ Works</span></td>
+                    <td><span class="badge no">✗ Not working</span></td>
+                    <td>Overrides the login username on MikroTik PPP secrets only</td>
+                </tr>
+                <tr>
+                    <td><strong>PPPoE Password</strong></td>
+                    <td><span class="badge yes">✓ Works</span></td>
+                    <td><span class="badge yes">✓ Works</span></td>
+                    <td>Used for PPP authentication</td>
+                </tr>
+                <tr>
+                    <td><strong>Remote IP</strong></td>
+                    <td><span class="badge yes">✓ Works</span></td>
+                    <td><span class="badge yes">✓ Works</span></td>
+                    <td>Passed as <code>Framed-IP-Address</code> on RADIUS</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- HOW TO ASSIGN -->
+    <div class="section">
+        <h2>🛠️ How to Assign a Static IP to a Customer</h2>
+        <ol class="step-list">
+            <li>Go to <strong>Admin Panel → Customers</strong> and open the customer's profile (Edit).</li>
+            <li>Scroll down to the <strong>PPPOE</strong> section.</li>
+            <li>Enter the desired static IP address in the <strong>Remote IP</strong> field (e.g. <code>192.168.100.50</code>).</li>
+            <li>Click <strong>Save Changes</strong>. SpeedRadius will push the change to the router immediately.</li>
+            <li>Ask the customer to <strong>reconnect</strong> their PPPoE session for the new IP to take effect.</li>
+        </ol>
+        <div class="callout danger">
+            <strong>⛔ Avoid IP conflicts</strong>
+            Make sure the IP you assign is <em>outside</em> the router's dynamic IP pool range,
+            or reserve it in the pool, to prevent the same address being given to another customer simultaneously.
+        </div>
+    </div>
+
+    <!-- CLEARING -->
+    <div class="section">
+        <h2>🗑️ How to Remove a Static IP (Back to Dynamic)</h2>
+        <p>
+            Simply <strong>clear the Remote IP field</strong> in the customer's Edit page and save.
+            On the next reconnect, the router will assign a dynamic IP from the pool as normal.
+        </p>
+    </div>
+
+    <!-- FAQ -->
+    <div class="section">
+        <h2>❓ Frequently Asked Questions</h2>
+
+        <h3>Can I assign the same IP to two customers?</h3>
+        <p>
+            Technically the system won't block it, but it will cause an <strong>IP conflict</strong> on the router —
+            only one customer will get connectivity. Always assign unique IPs.
+        </p>
+
+        <h3>Does Remote IP work for Hotspot customers?</h3>
+        <p>
+            No. Remote IP only applies to <strong>PPPoE</strong> customers.
+            Hotspot sessions use MAC-based or username-based IP assignment configured on the router's hotspot profile.
+        </p>
+
+        <h3>What happens if the IP I set is already in use on the network?</h3>
+        <p>
+            The PPPoE session will still connect, but there will be an IP conflict and connectivity will be unreliable.
+            Always check your network's IP plan before assigning a static IP.
+        </p>
+
+        <h3>Can a customer with a static IP be auto-renewed by the system?</h3>
+        <p>
+            Yes. Auto-renewal works independently of the Remote IP setting. The IP assignment persists across renewals.
+        </p>
+    </div>
+
+    <footer>
+        SpeedRadius ISP Management System — PPPoE Remote IP Documentation<br>
+        Generated: April 2, 2026
+    </footer>
+
+</div>
+</body>
+</html>

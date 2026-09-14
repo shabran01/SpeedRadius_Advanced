@@ -1,0 +1,51 @@
+/* Router Status Monitor Styles */
+.router-table td {
+    vertical-align: middle !important;
+}
+
+.status-changed {
+    transition: background-color 0.5s ease;
+    background-color: #fff3cd;
+}
+
+.notification-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.notification-form input {
+    flex: 1;
+}
+
+.router-status span.label {
+    font-size: 12px;
+    padding: 5px 10px;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.status-indicator.online {
+    background-color: #28a745;
+}
+
+.status-indicator.offline {
+    background-color: #dc3545;
+}
+
+/* Animation for status changes */
+@keyframes statusChange {
+    0% { background-color: transparent; }
+    50% { background-color: #fff3cd; }
+    100% { background-color: transparent; }
+}
+
+.status-changed {
+    animation: statusChange 2s ease;
+}

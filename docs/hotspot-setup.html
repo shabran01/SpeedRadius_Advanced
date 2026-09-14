@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MikroTik Hotspot Setup — SpeedcomWifi</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3250;
+      --accent: #4f8ef7;
+      --accent2: #7c3aed;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --text: #e2e8f0;
+      --muted: #8892a4;
+      --code-bg: #131720;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, #1a1d27 0%, #0f1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 0 40px;
+      text-align: center;
+    }
+    header .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    header .logo svg { width: 40px; height: 40px; }
+    header .brand {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.5px;
+    }
+    header h1 {
+      font-size: 36px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 16px;
+      max-width: 560px;
+      margin: 0 auto 20px;
+    }
+    .badge {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 12px;
+      color: var(--muted);
+      margin: 4px;
+    }
+    .badge.green { border-color: var(--green); color: var(--green); }
+    .badge.blue  { border-color: var(--accent); color: var(--accent); }
+
+    /* ── LAYOUT ── */
+    .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    nav ul {
+      display: flex;
+      list-style: none;
+      gap: 0;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px;
+      overflow-x: auto;
+    }
+    nav ul li a {
+      display: block;
+      padding: 14px 16px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    nav ul li a:hover { color: var(--text); border-bottom-color: var(--accent); }
+
+    /* ── SECTIONS ── */
+    section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+    section:last-child { border-bottom: none; }
+
+    h2 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    h2 .num {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .section-desc { color: var(--muted); margin-bottom: 28px; max-width: 680px; }
+
+    h3 { font-size: 16px; font-weight: 600; margin: 24px 0 10px; color: var(--accent); }
+
+    /* ── CARDS ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: var(--accent); }
+    .card .icon { font-size: 24px; margin-bottom: 10px; }
+    .card h4 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    .card p { font-size: 13px; color: var(--muted); }
+    .card .val { font-size: 13px; color: var(--green); font-family: monospace; margin-top: 6px; }
+
+    /* ── CODE BLOCKS ── */
+    .code-wrap {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 16px 0;
+    }
+    .code-header {
+      background: var(--surface2);
+      padding: 8px 16px;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .code-header .dots { display: flex; gap: 6px; }
+    .code-header .dots span {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+    .code-header .dots span:nth-child(1) { background: var(--red); }
+    .code-header .dots span:nth-child(2) { background: var(--yellow); }
+    .code-header .dots span:nth-child(3) { background: var(--green); }
+    pre {
+      padding: 20px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+    code { font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace; }
+    .kw  { color: #c792ea; }
+    .cmd { color: #82aaff; }
+    .val { color: #c3e88d; }
+    .cmt { color: #546e7a; font-style: italic; }
+    .key { color: #f78c6c; }
+
+    /* ── TIMELINE ── */
+    .timeline { position: relative; padding-left: 32px; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 8px; top: 6px; bottom: 6px;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--accent), var(--accent2));
+      border-radius: 2px;
+    }
+    .tl-item { position: relative; margin-bottom: 28px; }
+    .tl-item::before {
+      content: '';
+      position: absolute;
+      left: -28px; top: 6px;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+    }
+    .tl-item .tl-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .tl-item h4 { font-size: 15px; margin-bottom: 4px; }
+    .tl-item p  { font-size: 13px; color: var(--muted); }
+
+    /* ── TABLE ── */
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; }
+    thead th {
+      background: var(--surface2);
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    tbody td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--surface); }
+    .mono { font-family: monospace; color: var(--green); font-size: 13px; }
+
+    /* ── ALERT ── */
+    .alert {
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-size: 14px;
+      margin: 16px 0;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .alert.info  { background: rgba(79,142,247,0.1); border: 1px solid rgba(79,142,247,0.3); }
+    .alert.warn  { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); }
+    .alert.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); }
+    .alert .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .alert p { margin: 0; }
+    .alert strong { display: block; margin-bottom: 4px; }
+
+    /* ── DIAGRAM ── */
+    .diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      margin: 20px 0;
+      overflow-x: auto;
+    }
+    .diagram-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+    }
+    .d-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      min-width: 120px;
+    }
+    .d-box.accent { border-color: var(--accent); color: var(--accent); }
+    .d-box.green  { border-color: var(--green);  color: var(--green);  }
+    .d-box.purple { border-color: var(--accent2); color: var(--accent2); }
+    .d-box small  { display: block; font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+    .d-arrow {
+      color: var(--muted);
+      font-size: 20px;
+      padding: 0 8px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    footer strong { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="20" cy="20" r="20" fill="#1a1d27"/>
+      <path d="M8 20 Q20 8 32 20 Q20 32 8 20Z" fill="none" stroke="#4f8ef7" stroke-width="1.5"/>
+      <circle cx="20" cy="20" r="4" fill="#4f8ef7"/>
+      <path d="M12 20 Q20 12 28 20 Q20 28 12 20Z" fill="none" stroke="#7c3aed" stroke-width="1.2" opacity="0.7"/>
+    </svg>
+    <span class="brand">SpeedcomWifi</span>
+  </div>
+  <h1>MikroTik Hotspot Setup</h1>
+  <p>Complete documentation for configuring a captive portal hotspot on a MikroTik RouterOS device using a remote script.</p>
+  <div>
+    <span class="badge green">✓ Script Executed Successfully</span>
+    <span class="badge blue">RouterOS 6.x / 7.x</span>
+    <span class="badge">May 13, 2026</span>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav>
+  <ul>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#network">Network Layout</a></li>
+    <li><a href="#steps">Configuration Steps</a></li>
+    <li><a href="#script">Full Script</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a></li>
+    <li><a href="#deploy">Deployment</a></li>
+  </ul>
+</nav>
+
+<!-- OVERVIEW -->
+<section id="overview">
+  <div class="container">
+    <h2><span class="num">→</span> Overview</h2>
+    <p class="section-desc">What this setup does and why each part exists.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="icon">🌐</div>
+        <h4>Hotspot Captive Portal</h4>
+        <p>Users connecting via ether2/ether3 are intercepted and redirected to a login page before getting internet access.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🔁</div>
+        <h4>Idempotent Script</h4>
+        <p>The script cleans up any partial previous configuration before applying fresh settings — safe to run multiple times.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📡</div>
+        <h4>Remote Deployment</h4>
+        <p>Hosted at <code>speedcomwifi.xyz/hotspot.rsc</code> and fetched directly by the router over HTTPS.</p>
+        <div class="val">https://speedcomwifi.xyz/hotspot.rsc</div>
+      </div>
+      <div class="card">
+        <div class="icon">🔒</div>
+        <h4>Multi-method Auth</h4>
+        <p>Supports HTTP-CHAP, HTTP-PAP, HTTPS, MAC cookie, and MAC address authentication.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📦</div>
+        <h4>DHCP /22 Pool</h4>
+        <p>Issues IPs from a <code>/22</code> subnet — up to 1022 simultaneous clients.</p>
+        <div class="val">10.0.0.2 – 10.0.3.254</div>
+      </div>
+      <div class="card">
+        <div class="icon">🛡️</div>
+        <h4>NAT Masquerade</h4>
+        <p>All LAN traffic is NATed through ether1 (WAN) so clients share the upstream internet connection.</p>
+      </div>
+      <div class="card">
+        <div class="icon">👤</div>
+        <h4>Hotspot User</h4>
+        <p>A local hotspot login account is created for immediate access testing without needing RADIUS.</p>
+        <div class="val">speedradius / 1234</div>
+      </div>
+      <div class="card">
+        <div class="icon">🚫</div>
+        <h4>Firewall Drop &amp; Fasttrack Disabled</h4>
+        <p>Default drop and fasttrack firewall rules are disabled so hotspot traffic flows freely without being blocked.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NETWORK LAYOUT -->
+<section id="network">
+  <div class="container">
+    <h2><span class="num">2</span> Network Layout</h2>
+    <p class="section-desc">How the physical and logical interfaces are connected.</p>
+
+    <div class="diagram">
+      <div class="diagram-row">
+        <div class="d-box accent">Internet / ISP<small>ether1 (WAN)</small></div>
+        <div class="d-arrow">→</div>
+        <div class="d-box purple">MikroTik Router<small>NAT + Hotspot</small></div>
+        <div class="d-arrow">→</div>
+        <div class="d-box green">Bridge: Hotspot-Server<small>10.0.0.1/22</small></div>
+      </div>
+      <br>
+      <div class="diagram-row">
+        <div class="d-box" style="min-width:80px;">ether2<small>LAN port</small></div>
+        <div class="d-arrow">+</div>
+        <div class="d-box" style="min-width:80px;">ether3<small>LAN port</small></div>
+        <div class="d-arrow">→</div>
+        <div class="d-box green">Bridge<small>Hotspot-Server</small></div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Interface</th>
+          <th>Role</th>
+          <th>IP / Pool</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">ether1</td>
+          <td>WAN (Uplink)</td>
+          <td class="mono">ISP assigned</td>
+          <td>NAT masquerade applied here</td>
+        </tr>
+        <tr>
+          <td class="mono">ether2</td>
+          <td>LAN (Bridge member)</td>
+          <td class="mono">—</td>
+          <td>Carries hotspot traffic</td>
+        </tr>
+        <tr>
+          <td class="mono">ether3</td>
+          <td>LAN (Bridge member)</td>
+          <td class="mono">—</td>
+          <td>Carries hotspot traffic</td>
+        </tr>
+        <tr>
+          <td class="mono">Hotspot-Server</td>
+          <td>Bridge (virtual)</td>
+          <td class="mono">10.0.0.1/22</td>
+          <td>Gateway for all LAN clients</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- CONFIGURATION STEPS -->
+<section id="steps">
+  <div class="container">
+    <h2><span class="num">3</span> Configuration Steps</h2>
+    <p class="section-desc">What each section of the script does, in order.</p>
+
+    <div class="timeline">
+
+      <div class="tl-item">
+        <div class="tl-label">Step 0 — Cleanup</div>
+        <h4>Remove Previous Configuration</h4>
+        <p>Removes any existing bridge ports, hotspot server, hotspot profile, DHCP server, IP pool, and IP address that match this setup. Uses <code>[find ...]</code> so if nothing exists it silently skips — making the script safe to re-run on any router state.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-label">Step 1 — Admin User</div>
+        <h4>Create Admin Account</h4>
+        <p>Adds user <strong>speedradius</strong> with full group permissions. This is the management account for the router — tagged "DONT DELETE" in comments.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-label">Step 2 — Bridge</div>
+        <h4>Create Hotspot-Server Bridge</h4>
+        <p>Creates a software bridge called <code>Hotspot-Server</code> and assigns <code>ether2</code> and <code>ether3</code> as member ports. Both ports now behave as one logical LAN segment.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-label">Step 3 — IP Address</div>
+        <h4>Assign Gateway IP</h4>
+        <p>Sets <code>10.0.0.1/22</code> on the bridge. This becomes the default gateway for all hotspot clients. The <code>/22</code> subnet provides 1022 usable client addresses.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-label">Step 4 — DHCP Server</div>
+        <h4>Auto-assign Client IPs</h4>
+        <p>Creates IP pool <code>10.0.0.2 – 10.0.3.254</code>, a DHCP server on the bridge, and a network entry advertising gateway <code>10.0.0.1</code> and DNS servers <code>8.8.8.8</code> / <code>1.1.1.1</code>.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-label">Step 5 — DNS</div>
+        <h4>Enable DNS Resolver</h4>
+        <p>Enables the router's built-in DNS resolver and allows remote requests from clients. Uses Google and Cloudflare DNS upstream.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-label">Step 6 — NAT</div>
+        <h4>Masquerade LAN Traffic</h4>
+        <p>Adds a srcnat masquerade rule on <code>ether1</code>. All client traffic leaving the LAN appears to come from the router's WAN IP — standard internet sharing setup.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-label">Step 7 — Hotspot Profile</div>
+        <h4>Configure Authentication Methods</h4>
+        <p>Creates profile <code>hsprof1</code> with the hotspot portal reachable at <code>hotspot.wifi</code>. Enables HTTP-CHAP, HTTP-PAP, HTTPS, MAC cookie, and MAC auth. RADIUS is disabled (local auth only).</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-label">Step 8 — Hotspot Server</div>
+        <h4>Start the Hotspot</h4>
+        <p>Creates and enables hotspot server <code>hotspot1</code> on the <code>Hotspot-Server</code> bridge using the profile and DHCP pool defined above.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-label">Step 9 — Walled Garden</div>
+        <h4>Allow Portal Access Before Login</h4>
+        <p>Adds <code>hotspot.wifi</code> to the walled garden so unauthenticated clients can reach the login page without being blocked.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-label">Step 10 — Hotspot User</div>
+        <h4>Create Local Login Account</h4>
+        <p>Adds a hotspot user <strong>speedradius</strong> with password <code>1234</code> on the <code>default</code> profile. This allows immediate login testing without RADIUS or external authentication.</p>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-label">Step 11 — Firewall</div>
+        <h4>Disable Drop &amp; Fasttrack Rules</h4>
+        <p>Disables all firewall filter rules with <code>action=drop</code> (rows 2, 5, 10, 11) and <code>action=fasttrack-connection</code> (row 8). This prevents default defconf rules from blocking or bypassing hotspot traffic.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FULL SCRIPT -->
+<section id="script">
+  <div class="container">
+    <h2><span class="num">4</span> Full Script</h2>
+    <p class="section-desc">The complete <code>hotspot.rsc</code> file as deployed on the server.</p>
+
+    <div class="alert info">
+      <div class="icon">ℹ️</div>
+      <p><strong>Line endings</strong> The file is saved with Unix LF (<code>\n</code>) line endings — NOT Windows CRLF (<code>\r\n</code>). RouterOS will fail with a syntax error if the file has CRLF endings.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <span>hotspot.rsc — RouterOS Script</span>
+        <span>LF · UTF-8</span>
+      </div>
+      <pre><code><span class="cmt"># CLEANUP (safe to run on fresh or partial config)</span>
+<span class="cmd">/interface bridge port</span> <span class="kw">remove</span> [<span class="key">find</span> <span class="key">interface</span>=<span class="val">ether2</span>]
+<span class="cmd">/interface bridge port</span> <span class="kw">remove</span> [<span class="key">find</span> <span class="key">interface</span>=<span class="val">ether3</span>]
+<span class="cmd">/interface bridge</span> <span class="kw">remove</span> [<span class="key">find</span> <span class="key">name</span>=<span class="val">Hotspot-Server</span>]
+<span class="cmd">/ip hotspot</span> <span class="kw">remove</span> [<span class="key">find</span> <span class="key">name</span>=<span class="val">hotspot1</span>]
+<span class="cmd">/ip hotspot profile</span> <span class="kw">remove</span> [<span class="key">find</span> <span class="key">name</span>=<span class="val">hsprof1</span>]
+<span class="cmd">/ip dhcp-server</span> <span class="kw">remove</span> [<span class="key">find</span> <span class="key">name</span>=<span class="val">dhcp1</span>]
+<span class="cmd">/ip pool</span> <span class="kw">remove</span> [<span class="key">find</span> <span class="key">name</span>=<span class="val">hotspot-pool</span>]
+<span class="cmd">/ip address</span> <span class="kw">remove</span> [<span class="key">find</span> <span class="key">address</span>=<span class="val">"10.0.0.1/22"</span>]
+
+<span class="cmt"># Admin user</span>
+<span class="cmd">/user</span> <span class="kw">add</span> <span class="key">name</span>=<span class="val">speedradius</span> <span class="key">password</span>=<span class="val">"KWEYU01@@"</span> <span class="key">group</span>=<span class="val">full</span> <span class="key">comment</span>=<span class="val">"DONT DELETE"</span>
+
+<span class="cmt"># Bridge</span>
+<span class="cmd">/interface bridge</span> <span class="kw">add</span> <span class="key">name</span>=<span class="val">Hotspot-Server</span>
+<span class="cmd">/interface bridge port</span> <span class="kw">add</span> <span class="key">bridge</span>=<span class="val">Hotspot-Server</span> <span class="key">interface</span>=<span class="val">ether2</span>
+<span class="cmd">/interface bridge port</span> <span class="kw">add</span> <span class="key">bridge</span>=<span class="val">Hotspot-Server</span> <span class="key">interface</span>=<span class="val">ether3</span>
+
+<span class="cmt"># IP Address</span>
+<span class="cmd">/ip address</span> <span class="kw">add</span> <span class="key">address</span>=<span class="val">10.0.0.1/22</span> <span class="key">interface</span>=<span class="val">Hotspot-Server</span>
+
+<span class="cmt"># DHCP</span>
+<span class="cmd">/ip pool</span> <span class="kw">add</span> <span class="key">name</span>=<span class="val">hotspot-pool</span> <span class="key">ranges</span>=<span class="val">10.0.0.2-10.0.3.254</span>
+<span class="cmd">/ip dhcp-server</span> <span class="kw">add</span> <span class="key">name</span>=<span class="val">dhcp1</span> <span class="key">interface</span>=<span class="val">Hotspot-Server</span> <span class="key">address-pool</span>=<span class="val">hotspot-pool</span> <span class="key">disabled</span>=<span class="val">no</span>
+<span class="cmd">/ip dhcp-server network</span> <span class="kw">add</span> <span class="key">address</span>=<span class="val">10.0.0.0/22</span> <span class="key">gateway</span>=<span class="val">10.0.0.1</span> <span class="key">dns-server</span>=<span class="val">8.8.8.8,1.1.1.1</span>
+
+<span class="cmt"># DNS</span>
+<span class="cmd">/ip dns</span> <span class="kw">set</span> <span class="key">allow-remote-requests</span>=<span class="val">yes</span> <span class="key">servers</span>=<span class="val">8.8.8.8,1.1.1.1</span>
+
+<span class="cmt"># NAT</span>
+<span class="cmd">/ip firewall nat</span> <span class="kw">add</span> <span class="key">chain</span>=<span class="val">srcnat</span> <span class="key">out-interface</span>=<span class="val">ether1</span> <span class="key">action</span>=<span class="val">masquerade</span>
+
+<span class="cmt"># Hotspot profile</span>
+<span class="cmd">/ip hotspot profile</span> <span class="kw">add</span> <span class="key">name</span>=<span class="val">hsprof1</span> <span class="key">hotspot-address</span>=<span class="val">10.0.0.1</span> <span class="key">dns-name</span>=<span class="val">hotspot.wifi</span> <span class="key">login-by</span>=<span class="val">http-chap,http-pap,https,mac-cookie,mac</span> <span class="key">mac-auth-password</span>=<span class="val">1234</span> <span class="key">use-radius</span>=<span class="val">no</span>
+
+<span class="cmt"># Hotspot server</span>
+<span class="cmd">/ip hotspot</span> <span class="kw">add</span> <span class="key">name</span>=<span class="val">hotspot1</span> <span class="key">interface</span>=<span class="val">Hotspot-Server</span> <span class="key">address-pool</span>=<span class="val">hotspot-pool</span> <span class="key">profile</span>=<span class="val">hsprof1</span> <span class="key">disabled</span>=<span class="val">no</span>
+
+<span class="cmt"># Walled garden</span>
+<span class="cmd">/ip hotspot walled-garden</span> <span class="kw">add</span> <span class="key">dst-host</span>=<span class="val">hotspot.wifi</span> <span class="key">comment</span>=<span class="val">"Hotspot Login"</span>
+
+<span class="cmt"># Hotspot user</span>
+<span class="cmd">/ip hotspot user</span> <span class="kw">add</span> <span class="key">name</span>=<span class="val">speedradius</span> <span class="key">password</span>=<span class="val">1234</span> <span class="key">profile</span>=<span class="val">default</span>
+
+<span class="cmt"># Disable firewall drop &amp; fasttrack rules</span>
+<span class="cmd">/ip firewall filter</span> <span class="kw">set</span> [<span class="key">find</span> <span class="key">action</span>=<span class="val">drop</span>] <span class="key">disabled</span>=<span class="val">yes</span>
+<span class="cmd">/ip firewall filter</span> <span class="kw">set</span> [<span class="key">find</span> <span class="key">action</span>=<span class="val">fasttrack-connection</span>] <span class="key">disabled</span>=<span class="val">yes</span>
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- TROUBLESHOOTING -->
+<section id="troubleshooting">
+  <div class="container">
+    <h2><span class="num">5</span> Troubleshooting</h2>
+    <p class="section-desc">Errors encountered during setup and how they were resolved.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Error</th>
+          <th>Cause</th>
+          <th>Fix</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono" style="color:var(--red);">syntax error (line 64 col 38)</td>
+          <td>Backslash <code>\</code> line continuations with Windows CRLF line endings — the <code>\r</code> before <code>\n</code> breaks RouterOS parser</td>
+          <td>Removed all <code>\</code> continuations; each command put on one line; file saved with LF endings only</td>
+        </tr>
+        <tr>
+          <td class="mono" style="color:var(--red);">syntax error (line 51 col 38)</td>
+          <td><code>action=accept</code> used in <code>/ip hotspot walled-garden add</code> — this parameter does not exist; entries are implicitly permitted</td>
+          <td>Removed <code>action=accept</code> from the walled garden command</td>
+        </tr>
+        <tr>
+          <td class="mono" style="color:var(--red);">device already added as bridge port</td>
+          <td>ether2/ether3 were already members of a bridge from a previous partial run</td>
+          <td>Added <code>/interface bridge port remove [find interface=ether2/3]</code> before the add commands</td>
+        </tr>
+        <tr>
+          <td class="mono" style="color:var(--red);">ether2 is already slave</td>
+          <td>ether2 was still enslaved to the old <code>Hotspot-Server</code> bridge which had not been removed</td>
+          <td>Added full cleanup block at top of script: removes hotspot, profile, DHCP, pool, IP address, bridge ports, and bridge before rebuilding</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="alert success" style="margin-top:24px;">
+      <div class="icon">✅</div>
+      <p><strong>Final result</strong> Script file loaded and executed successfully — all four errors resolved through iterative fixes.</p>
+    </div>
+  </div>
+</section>
+
+<!-- DEPLOYMENT -->
+<section id="deploy">
+  <div class="container">
+    <h2><span class="num">6</span> Deployment</h2>
+    <p class="section-desc">How to deploy and re-run the script on any MikroTik router.</p>
+
+    <h3>Option A — Remote fetch (recommended)</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <span>MikroTik Terminal</span>
+      </div>
+      <pre><code><span class="cmd">/tool fetch</span> <span class="key">url</span>=<span class="val">"https://speedcomwifi.xyz/hotspot.rsc"</span> <span class="key">mode</span>=<span class="val">https</span> <span class="key">dst-path</span>=<span class="val">hotspot.rsc</span>; <span class="cmd">/import</span> <span class="key">file-name</span>=<span class="val">hotspot.rsc</span></code></pre>
+    </div>
+
+    <h3>Option B — Direct paste</h3>
+    <p style="color:var(--muted); font-size:14px; margin-bottom:12px;">Copy the full script from Section 4 and paste it line-by-line into the MikroTik terminal or Winbox terminal.</p>
+
+    <div class="alert warn">
+      <div class="icon">⚠️</div>
+      <p><strong>Important — Line endings</strong> If you edit <code>hotspot.rsc</code> on Windows, always save with LF (Unix) line endings. In VS Code, click the <strong>CRLF</strong> indicator in the bottom-right status bar and switch to <strong>LF</strong> before saving.</p>
+    </div>
+
+    <div class="alert info">
+      <div class="icon">ℹ️</div>
+      <p><strong>Script is idempotent</strong> The cleanup block at the top means you can safely run this script on a router that already has a partial or complete hotspot config — it will reset and reapply everything cleanly.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>SpeedcomWifi &nbsp;·&nbsp; MikroTik Hotspot Setup Documentation &nbsp;·&nbsp; Generated <strong>May 13, 2026</strong></p>
+  <p style="margin-top:6px;">Script hosted at <strong>https://speedcomwifi.xyz/hotspot.rsc</strong></p>
+</footer>
+
+</body>
+</html>

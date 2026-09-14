@@ -1,0 +1,49 @@
+/* Fix for blank panels in settings/app */
+.panel-collapse {
+    display: block !important;
+    height: auto !important;
+}
+
+.panel-body-visible {
+    padding: 15px;
+    border-top: 1px solid #ddd;
+}
+
+/* Override Bootstrap's collapse hiding */
+.collapse:not(.in) {
+    display: block !important;
+}
+
+/* Ensure all panels are always shown */
+.panel-collapse, 
+[id^="collapse"], 
+[class*="panel-collapse"],
+[class*="collapse"] {
+    display: block !important;
+    height: auto !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Make panel headings look clickable for better UX */
+.panel-heading {
+    cursor: pointer;
+}
+
+.panel-heading:hover {
+    background-color: #f8f8f8;
+}
+
+/* Add visual separation between sections */
+.panel {
+    margin-bottom: 25px;
+    border: 1px solid #e7e7e7;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.quick-nav {
+    background: #f8f8f8;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #e7e7e7;
+}
