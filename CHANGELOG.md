@@ -2,6 +2,19 @@
 
  # CHANGELOG
 
+## [2.2.16] - 2026-09-14
+
+---
+
+### FIXED: "Not Active" Packages Still Appeared on the Hotspot Page
+
+**`system/plugin/hotspot_plan.php` + `system/plugin/download.php`**
+
+- The hotspot plan cards are drawn client-side from the `plugin/hotspot_plan` endpoint, and that endpoint only filtered by `type` and router name — it never checked `enabled`. A package switched to **Not Active** disappeared from the customer portal (which does filter) but stayed buyable on the hotspot page.
+- `hotspot_plan.php` now filters `enabled = '1'`, so Active/Not Active behaves consistently everywhere.
+- Removed the dead, unused plan query in `download.php` (it was the only place applying the filter, and its result was never rendered).
+- Replaced a leftover hardcoded `codevibeisp.co.ke` payment link in `hotspot_plan.php` with this installation's own `APP_URL`.
+
 ## [2.2.15] - 2026-09-14
 
 ---

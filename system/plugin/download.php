@@ -249,11 +249,8 @@ $company      = $settings['CompanyName'] ?? 'ISP';
 $routerName   = $settings['router_name'] ?? '';
 $routerId     = $settings['router_id'] ?? '';
 
-// Fetch available plans — uses idx_plans_type index
-$planStmt = $mysqli->prepare("SELECT id, name_plan, price, validity, validity_unit FROM tbl_plans WHERE routers = ? AND type = 'Hotspot' AND enabled = '1'");
-$planStmt->bind_param("s", $routerName);
-$planStmt->execute();
-$planResult = $planStmt->get_result();
+// Package cards are rendered client-side by fetchData() -> plugin/hotspot_plan,
+// which applies the active/enabled filter. No server-side plan query is needed here.
 
 // Initialize HTML content variable
 $htmlContent = "";
@@ -1287,7 +1284,6 @@ $htmlContent .= "</script>\n";
 
 $htmlContent .= "</html>\n";
 
-$planStmt->close(); 
 $mysqli->close();
 // Check if the download parameter is set
 if (isset($_GET['download']) && $_GET['download'] == '1') {

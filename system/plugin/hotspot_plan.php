@@ -7,7 +7,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['routername'])) {
 
     // Fetch routers and hotspot plans from database
     $routers = ORM::for_table('tbl_routers')->find_many();
-    $plans_hotspot = ORM::for_table('tbl_plans')->where('type', 'hotspot')->find_many(); // Filter for hotspot plans
+    // Only Active plans may be purchased. This matches the customer portal
+    // (order.php), which also filters on enabled = '1'. Without this filter a
+    // package switched to "Not Active" stayed visible on the hotspot page.
+    $plans_hotspot = ORM::for_table('tbl_plans')
+        ->where('type', 'hotspot')
+        ->where('enabled', '1')
+        ->find_many();
 
     // Fetch bandwidth limits for all plans
     $bandwidth_limits = ORM::for_table('tbl_bandwidth')->find_many();
@@ -42,8 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['routername'])) {
                     $plan_id = $plan['id'];
                     $bandwidth_data = isset($bandwidth_map[$plan_id]) ? $bandwidth_map[$plan_id] : [];
                     
-                    // Construct payment link using $_url
-                    $paymentlink = "https://codevibeisp.co.ke/index.php?_route=plugin/hotspot_pay&routerName={$router['name']}&planId={$plan['id']}&routerId={$router['id']}";
+                    // Build the payment link from this installation's own URL.
+                    $paymentlink = APP_URL . "/index.php?_route=plugin/hotspot_pay&routerName=" . urlencode($router['name']) . "&planId={$plan['id']}&routerId={$router['id']}";
                     
                     // Prepare plan data to be sent in JSON response
                     $routerData['plans_hotspot'][] = [
