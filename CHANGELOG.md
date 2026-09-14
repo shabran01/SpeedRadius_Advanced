@@ -2,6 +2,30 @@
 
  # CHANGELOG
 
+## [2.2.13] - 2026-09-14
+
+---
+
+### FIXED: Database-Level Duplicate Customer Usernames
+
+**`system/updates.json` + `system/helpers/database_updates.php`**
+
+- Added a unique database index on `tbl_customers.username`, providing the final protection against two customers sharing one username.
+- The Community database updater now checks for existing duplicates first and stops with the duplicate usernames listed; it does not silently mark the migration complete or rename customer accounts automatically.
+- After duplicates are resolved, press **Community > Update Database** again to add the index.
+
+## [2.2.12] - 2026-09-14
+
+---
+
+### ADDED: One-Click Database Updates from Community
+
+**`system/controllers/community.php` + `ui/ui/community.tpl` + `system/helpers/database_updates.php`**
+
+- The Community dashboard's **Update Database** button now runs pending migrations from `system/updates.json` directly from the application.
+- Added CSRF protection, admin authentication through the Community controller, migration tracking via `system/cache/updates.done.json`, and success/error feedback after redirect.
+- No phpMyAdmin login is needed for normal database updates.
+
 ## [2.2.11] - 2026-09-14
 
 ---

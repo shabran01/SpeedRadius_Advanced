@@ -27,6 +27,22 @@ if ($version === '') {
 $ui->assign('version', $version);
 
 switch ($action) {
+    case 'database-update':
+        if (!Csrf::check(_post('csrf_token'))) {
+            r2(U . 'community', 'e', 'Invalid or expired CSRF token.');
+        }
+        require_once dirname(__DIR__) . '/helpers/database_updates.php';
+        try {
+            $result = apply_database_updates();
+            $message = $result['applied'] > 0
+                ? 'Database updated successfully. ' . $result['applied'] . ' migration(s) applied.'
+                : 'Database is already up to date.';
+            r2(U . 'community', 's', $message);
+        } catch (Throwable $e) {
+            _log('Database update failed: ' . $e->getMessage(), 'Admin', $admin['id']);
+            r2(U . 'community', 'e', 'Database update failed: ' . $e->getMessage());
+        }
+        break;
     case 'rollback':
         $ui->assign('_title', 'Rollback Update');
         $masters = json_decode(Http::getData("https://api.github.com/repos/hotspotbilling/phpnuxbill/commits?per_page=100",['User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0']), true);
@@ -37,5 +53,6 @@ switch ($action) {
         $ui->display('community-rollback.tpl');
         break;
     default:
+        $ui->assign('csrf_token', Csrf::generateAndStoreToken());
         $ui->display('community.tpl');
 }

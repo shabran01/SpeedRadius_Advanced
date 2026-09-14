@@ -100,7 +100,10 @@
           </div>
         </div>
         <div class="cm-foot">
-          <a href="/update.php?step=4" class="cm-btn cm-btn-primary">&#x1F5C4; Update Database</a>
+          <form method="post" action="{$_url}community/database-update" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{$csrf_token}">
+            <button type="submit" class="cm-btn cm-btn-primary" onclick="return confirm('Run pending database updates now?');">&#x1F5C4; Update Database</button>
+          </form>
           <a href="./update.php" target="_blank" class="cm-btn cm-btn-amber">&#x2B06; Install Latest</a>
           <a href="./CHANGELOG.md" target="_blank" class="cm-btn cm-btn-ghost">&#x1F4C4; Changelog</a>
           <a href="https://github.com/shabran01/SpeedRadius_Advanced/blob/main/CHANGELOG.md" target="_blank" class="cm-btn cm-btn-ghost">&#x1F419; Repo Changelog</a>

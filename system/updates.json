@@ -174,5 +174,8 @@
     ],
     "2024.10.31" : [
         "ALTER TABLE `tbl_customers` ADD `photo` VARCHAR(128) NOT NULL DEFAULT '/user.default.jpg' AFTER `password`;"
+    ],
+    "2026.9.14-unique-customer-username": [
+        "ALTER TABLE `tbl_customers` ADD UNIQUE KEY `uq_tbl_customers_username` (`username`);"
     ]
 }
