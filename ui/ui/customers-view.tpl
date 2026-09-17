@@ -664,9 +664,11 @@
                                         </code>
                                     </td>
                                     <td>
-                                        <code style="background: #f8f9fa; padding: 5px 8px; border-radius: 4px; color: #495057; font-size: 13px;">
-                                            <i class="fa fa-globe"></i> {$device['ip_address']}
-                                        </code>
+                                        <a href="http://{$device['ip_address']}" target="_blank" rel="noopener" title="Open device web interface" style="text-decoration:none;">
+                                            <code style="background: #eef4ff; padding: 5px 8px; border-radius: 4px; color: #2563eb; font-size: 13px; cursor: pointer;">
+                                                <i class="fa fa-globe"></i> {$device['ip_address']}
+                                            </code>
+                                        </a>
                                     </td>
                                     <td>
                                         <code style="background: #f8f9fa; padding: 5px 8px; border-radius: 4px; color: #495057; font-size: 13px;">

@@ -20,6 +20,54 @@ $leafletpickerHeader = <<<EOT
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
 EOT;
 
+/**
+ * Resolve the router a customer is bound to.
+ *
+ * tbl_customers.routers is NOT written by the hotspot provisioning flow — that
+ * flow stores router_id instead (see CreateHotspotUser.php), which is what
+ * monitor.php reads. Resolving from the wrong column was worse than useless:
+ * when the column is NULL, Idiorm skips the WHERE clause entirely, so
+ * find_one(null) silently returned the FIRST router in the table. That queried
+ * the wrong device list and recorded usage snapshots against the wrong router_id.
+ */
+function resolve_customer_router($customer)
+{
+    if (empty($customer)) {
+        return null;
+    }
+
+    // 1. Preferred: explicit numeric binding used by the hotspot flow.
+    if (!empty($customer['router_id'])) {
+        $router = ORM::for_table('tbl_routers')->where('id', $customer['router_id'])->find_one();
+        if ($router) {
+            return $router;
+        }
+    }
+
+    // 2. Legacy: router name stored on the customer row.
+    if (!empty($customer['routers'])) {
+        $router = ORM::for_table('tbl_routers')->where('name', $customer['routers'])->find_one();
+        if ($router) {
+            return $router;
+        }
+    }
+
+    // 3. Last resort: the router on the customer's active recharge.
+    $active = ORM::for_table('tbl_user_recharges')
+        ->where('customer_id', $customer['id'])
+        ->where('status', 'on')
+        ->order_by_desc('id')
+        ->find_one();
+    if ($active && !empty($active['routers'])) {
+        $router = ORM::for_table('tbl_routers')->where('name', $active['routers'])->find_one();
+        if ($router) {
+            return $router;
+        }
+    }
+
+    return null;
+}
+
 function customers_online_map()
 {
     global $CACHE_PATH;
@@ -565,8 +613,8 @@ switch ($action) {
             $customer = ORM::for_table('tbl_customers')->find_one($id);
         }
         if ($customer) {
-            // Get customer's router
-            $router = ORM::for_table('tbl_routers')->find_one($customer['routers']);
+            // Get customer's router (router_id first, then name, then active recharge)
+            $router = resolve_customer_router($customer);
             require_once 'system/helpers/monthly_usage.php';
             // FIX: monthly_usage_ensure_tables() removed — tables created once via setup
 
@@ -605,7 +653,7 @@ switch ($action) {
             $customFields = ORM::for_table('tbl_customers_fields')
                 ->where('customer_id', $customer['id'])
                 ->find_many();
-            $v = $routes['3'];
+            $v = $routes['3'] ?? '';
             if (empty($v)) {
                 $v = 'activation';
             }
@@ -1802,7 +1850,7 @@ switch ($action) {
             echo json_encode(['success' => false, 'error' => 'Customer not found']);
             exit;
         }
-        $router = ORM::for_table('tbl_routers')->find_one($customer['routers']);
+        $router = resolve_customer_router($customer);
         if (!$router) {
             header('Content-Type: application/json');
             echo json_encode(['success' => false, 'error' => 'No router assigned', 'bytes_in' => 0, 'bytes_out' => 0]);
@@ -1892,7 +1940,7 @@ switch ($action) {
             echo json_encode(['success' => false, 'error' => 'Customer not found', 'logs' => []]);
             exit;
         }
-        $router = ORM::for_table('tbl_routers')->find_one($customer['routers']);
+        $router = resolve_customer_router($customer);
         if (!$router) {
             header('Content-Type: application/json');
             echo json_encode(['success' => false, 'error' => 'No router assigned', 'logs' => []]);

@@ -58,6 +58,21 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.19] - 2026-09-17
+
+---
+
+### FIXED: Customer Page Resolved the Wrong Router (and Credited Usage to It)
+
+**`system/controllers/customers.php` + `ui/ui/customers-view.tpl`**
+
+- The customer detail page looked up the router with `find_one($customer['routers'])`, but `tbl_customers.routers` is **never written** by the hotspot provisioning flow — that flow stores `router_id` (as `monitor.php` already reads).
+- When that column is `NULL`, Idiorm skips the `WHERE` clause entirely, so `find_one(null)` silently returned the **first router in the table**. The page then queried a router the customer may not be on, and `get_customer_enabled_status()` reported that router instead.
+- Worse, the same wrong id was passed into `monthly_usage_process_session()`, where `router_id` is part of a UNIQUE key (`ux_user_router`). Monthly usage was therefore being recorded against the wrong router.
+- Added a shared `resolve_customer_router()` helper using a three-step fallback — `router_id`, then the legacy `routers` name, then the router on the customer's active recharge — and applied it in all three places that had the bug: the detail view, the `live_stats` AJAX endpoint, and the `mikrotik_logs` AJAX endpoint.
+- Fixed a PHP 8 warning on every view: `$v = $routes['3']` is now `$routes['3'] ?? ''` (the segment does not exist for `/customers/view/<id>`).
+- The device **IP address** in Connected Devices is now a clickable link that opens the device's web interface in a new tab.
+
 ## [2.2.18] - 2026-09-15
 
 ---
