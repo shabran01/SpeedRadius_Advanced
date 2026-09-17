@@ -58,6 +58,17 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.20] - 2026-09-17
+
+---
+
+### FIXED: Reconnect with Phone Number Always Failed
+
+**`system/plugin/download.php`**
+
+- The `reconnect_phone` handler calls `Text::normalizePhone()`, but this file is loaded directly by the hotspot page and never goes through `init.php`'s autoloader, so the call died with `Class "Text" not found`. Because the file also suppresses errors, the browser only showed a vague "Unexpected server response".
+- `Text.php` is now required explicitly, so the handler works as intended.
+
 ## [2.2.19] - 2026-09-17
 
 ---

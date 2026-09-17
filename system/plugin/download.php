@@ -1,6 +1,11 @@
 <?php
 include '../../config.php';
 
+// This file is loaded directly by the hotspot page, so it never goes through
+// init.php's autoloader. Text::normalizePhone() is used by the reconnect_phone
+// handler below, and without this require it died with "Class Text not found".
+require_once __DIR__ . '/../autoload/Text.php';
+
 // ────────────────────────────────────────────────
 // CORS — allow requests from MikroTik hotspot
 // ────────────────────────────────────────────────
