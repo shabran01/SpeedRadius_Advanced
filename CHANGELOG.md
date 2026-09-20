@@ -2,6 +2,17 @@
 
  # CHANGELOG
 
+## [2.2.24] - 2026-09-20
+
+---
+
+### CHANGED: Larger Live Online Indicator Dot
+
+**`ui/ui/customers-view.tpl`**
+
+- Enlarged the live status dot on the package cards from 9px to **13px**, with the left margin nudged from 5px to 6px so the spacing stays even beside the plan name.
+- Colours are unchanged: dark green (`#166534`) when the customer is online, solid red (`#dc2626`) when the router check errors.
+
 ## [2.2.23] - 2026-09-20
 
 ---
