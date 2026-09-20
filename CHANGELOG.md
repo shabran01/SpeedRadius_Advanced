@@ -2,6 +2,26 @@
 
  # CHANGELOG
 
+## [2.2.22] - 2026-09-20
+
+---
+
+### IMPROVED: Modernised the Entire Customer Detail Page
+
+**`ui/ui/customers-view.tpl`**
+
+- Extended the 2.2.21 work beyond the profile card to every component on the page, so the view now presents one consistent visual language instead of a half-modernised mix.
+- The page content is wrapped in a single `.sr-cust` container and every new rule is scoped under it, so no other page or shared component can be affected.
+- **Cards:** 14px radius, hairline border, soft layered shadow; Bootstrap's coloured top borders neutralised.
+- **Tabs:** underline style (muted 12.5px, active blue with a 2px underline) replacing the old Bootstrap tab boxes.
+- **Tables (all five):** uppercase 10.5px muted headers on a light tint, hairline row dividers, borders and zebra striping removed, row hover retained.
+- **Labels and badges:** soft rounded pills in muted semantic colours.
+- **Buttons:** uniform 10px radius and 12.5px/700 type; the 3D bevel effect removed; destructive actions are soft red, primary actions blue.
+- **Package cards:** same flex row layout as the profile card — uppercase muted labels, right-aligned values, prominent plan header and price. Scoped with `:not(.sr-profile)` so they do not conflict with the profile card, which shares the `box-profile` class name.
+- Forms, dropdowns, pagination, alerts, `hr` and `code` restyled to match.
+- `.box-body` padding is deliberately not `!important`, so the tab container keeps its inline `padding:0` and its tables stay edge-to-edge.
+- Display-only change: no PHP, Smarty logic or JavaScript behaviour was modified.
+
 ## [2.2.21] - 2026-09-20
 
 ---
