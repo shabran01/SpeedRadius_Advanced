@@ -58,6 +58,19 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.23] - 2026-09-20
+
+---
+
+### FIXED: Live Online Indicator Rendered as a Washed-Out Green Blob
+
+**`ui/ui/customers-view.tpl`**
+
+- The live status dot on each package card looked like a pale mint oval rather than a status light. `autoload/customer_is_active` returns a Bootstrap label whose only content is `&nbsp;`, so it renders as a dot, not text — but the 2.2.22 restyle recoloured every `.label-success` to a pastel tint and applied 10px of horizontal padding to it, producing the washed-out stretched shape.
+- The dot is now targeted specifically through its `title` attribute (`title="online"` and `title="error"`), so the override cannot leak onto any other label or badge on the page.
+- It renders as a crisp 9px circle in **dark green** (`#166534`) with a soft matching halo, and the router-error state as a solid red (`#dc2626`) dot.
+- Horizontal padding and font-size are zeroed so the dot can never stretch back into an oval.
+
 ## [2.2.22] - 2026-09-20
 
 ---

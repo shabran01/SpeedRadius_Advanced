@@ -350,6 +350,33 @@
 .sr-cust .badge.bg-green { background: #dcfce7 !important; color: #15803d !important; }
 .sr-cust .badge.bg-red   { background: #fee2e2 !important; color: #b91c1c !important; }
 
+/* Live online / error dot.
+   autoload/customer_is_active returns a label containing only &nbsp;, so it
+   renders as a dot rather than text. Keep this one solid, not pastel. */
+.sr-cust .label-success[title="online"],
+.sr-cust .label-danger[title="error"] {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    min-width: 9px;
+    padding: 0 !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    border-radius: 999px !important;
+    vertical-align: middle;
+    margin-left: 5px;
+    position: relative;
+    top: -1px;
+}
+.sr-cust .label-success[title="online"] {
+    background: #166534 !important;
+    box-shadow: 0 0 0 3px rgba(22,101,52,.22) !important;
+}
+.sr-cust .label-danger[title="error"] {
+    background: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220,38,38,.22) !important;
+}
+
 /* Buttons */
 .sr-cust .btn {
     border-radius: 10px !important;
