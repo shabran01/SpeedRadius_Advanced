@@ -58,6 +58,27 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.27] - 2026-09-20
+
+---
+
+### FIXED: "Actions" Dropdown Menu Was Clipped Behind the Profile Card
+
+**`ui/ui/customers-view.tpl`**
+
+- The **Actions** menu on the profile card (Sync / Reconnect / Enable Customer / Disable Customer / Send Message / Login as Customer) was being swallowed by the card instead of floating above it.
+- Cause: the rounded-card treatment set `overflow: hidden` on `.sr-profile` (v2.2.21) and again on `.sr-cust .box` (v2.2.22) so that child backgrounds would be cut to the new `16px` / `14px` radius. Bootstrap 3 positions `.dropdown-menu` **inside** the card, so that clip removed the menu along with the corners.
+- Both rules are now overridden to `overflow: visible`. This is safe because nothing inside these cards actually reaches a corner:
+  - `.sr-cust .box-header` is forced to `background: #fff !important`, so it is invisible against the white card
+  - both `box-footer` strips in this template are already transparent (the "Last Updated" strip and the Live Bandwidth strip)
+  - `.list-group` items are transparent and sit inside the `.box-profile` `18px` padding, so they never touch the radius
+- The override is declared after both original rules at matching specificity, so it wins without `!important`. Cards that set `overflow:hidden` **inline** (the monthly-usage card) keep their own clipping, since inline styles beat a non-`!important` rule.
+
+### CHANGED: Actions Menu Now Anchored Inside the Card
+
+- The menu was left-aligned (`left: 0`) on a button sitting at the right edge of the card, so its labels ran off the card and were truncated mid-word (`Enable Cust...`, `Disable Cust...`). It is now right-anchored (`right: 0; left: auto`) with `min-width: 200px`.
+- Menu labels no longer wrap (`white-space: nowrap`), and items gained a 6px offset below the button plus aligned 16px icon slots so the leading icons line up in a column.
+
 ## [2.2.26] - 2026-09-20
 
 ---

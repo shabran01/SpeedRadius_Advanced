@@ -593,6 +593,35 @@
     border-top: 1px solid var(--c-line) !important;
     padding: 9px 16px !important;
 }
+
+/* ---- Dropdown clipping fix -------------------------------------------
+   The rounded-card treatment set `overflow: hidden` on .box / .sr-profile to
+   clip child backgrounds into the radius. That also clipped the "Actions"
+   dropdown menu, hiding it behind the card. Nothing inside these cards
+   actually reaches a corner: .sr-cust .box-header is forced to #fff, both
+   box-footers are transparent, and list groups sit inside the body padding -
+   so the clipping was only ever hiding the menu.
+   Declared after the rules above (same specificity, later wins). Cards that
+   set overflow:hidden inline keep their own clip, since inline beats this. */
+.sr-cust .box,
+.sr-cust .sr-profile { overflow: visible; }
+
+/* Anchor the Actions menu to the right edge so it stays inside the card
+   instead of running off it, and stop the labels wrapping mid-word. */
+.sr-profile .box-tools .dropdown-menu {
+    right: 0;
+    left: auto;
+    min-width: 200px;
+    margin-top: 6px;
+}
+.sr-profile .box-tools .dropdown-menu > li > a { white-space: nowrap; }
+.sr-profile .box-tools .dropdown-menu > li > a > i {
+    width: 16px;
+    text-align: center;
+    margin-right: 4px;
+    color: #94a3b8;
+}
+.sr-profile .box-tools .dropdown-menu > li > a:hover > i { color: #475569; }
 </style>
 
 <div class="sr-cust">
