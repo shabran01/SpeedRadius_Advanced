@@ -2,6 +2,31 @@
 
  # CHANGELOG
 
+## [2.2.25] - 2026-09-20
+
+---
+
+### CHANGED: Modernised Action Bar, Live Bandwidth Panel & Footer Strips
+
+**`ui/ui/customers-view.tpl`**
+
+- **Action bar** (Back / Sync / Send Message / Login as Customer) is now a single card instead of a bare `<hr>` + floating row: white surface, `14px` radius, hairline border, soft drop shadow, and an `8px` flex gap so the four buttons are evenly separated at every screen width.
+- Buttons are a uniform **40px tall**, use flex centring so the icon and label sit on one baseline, and each now carries an icon: `fa-arrow-left` (Back), `fa-refresh` (Sync), `fa-envelope` (Send Message), `fa-sign-in` (Login as Customer).
+- **Back** is a neutral surface button (`#f8fafc` on `#dbe3ec` border, slate text) — previously pure white with a near-invisible border.
+- **Sync** was `btn-3d-info`, which resolved to the same grey-on-grey as Back and made the two indistinguishable. It is now a solid **amber** (`#f59e0b`, hover `#d97706`) primary-style action with a warm shadow.
+- Send Message keeps solid green (`#16a34a`) and Login as Customer solid blue (`#2563eb`); both gained matching coloured drop shadows. The row now reads as a clean grey → amber → green → blue progression.
+
+### CHANGED: Live Bandwidth Metric Tiles
+
+- The three speed tiles (Download / Upload / Session Total DL) previously used hard-coded inline styles (`background:#f0faf2; border-left:3px solid #27ae60` and friends), which could not be themed. They are now driven by `.sr-metric` classes: a soft tinted fill, a full `1px` border in a matching shade, a `12px` radius, and a two-line label/value stack.
+- Uppercase labels use a tighter `10px` / `700` treatment with `letter-spacing:.06em`; the values step up to `20px` with `-0.4px` tracking so large numbers stay compact.
+
+### CHANGED: Panel Footers and Live Controls
+
+- The Live Bandwidth footer strip (`Updates every 3 seconds | …`) dropped its inline `#f8f9fa` fill for a transparent background with a hairline top border, so it reads as part of the card.
+- The "Last Updated" strip under the devices table gained a `sr-lastupdated` class that removes the same inline grey fill in favour of the same transparent + hairline treatment — the two footers now match.
+- The pause/resume control is a proper **30px circular icon button** (`#f1f5f9` on `#e2e8f0`) instead of a flat square `btn-xs`, and the session-type badge is scaled to `10.5px` so it no longer competes with the box title.
+
 ## [2.2.24] - 2026-09-20
 
 ---

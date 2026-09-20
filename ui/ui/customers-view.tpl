@@ -487,6 +487,112 @@
 .sr-cust .alert-info    { background: #eff6ff !important; border-color: #bfdbfe !important; color: #1e40af !important; }
 .sr-cust hr { border: 0 !important; border-top: 1px solid var(--c-line) !important; margin: 16px 0 !important; }
 .sr-cust code { background: #f1f5f9; border-radius: 6px; padding: 2px 6px; color: #334155; font-size: 12px; }
+
+/* ---- Footer action bar ---- */
+.sr-cust .sr-actionbar {
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-radius: 14px;
+    padding: 12px !important;
+    margin: 0 0 18px !important;
+    box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 12px 26px -22px rgba(16,24,40,.5);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.sr-cust .sr-actionbar > [class*="col-"] {
+    padding: 0 !important;
+    margin: 0 !important;
+    float: none !important;
+    width: auto !important;
+    flex: 1 1 160px;
+}
+.sr-cust .sr-actionbar .btn {
+    width: 100%;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-size: 12.5px !important;
+}
+.sr-cust .sr-actionbar .btn-3d-success { box-shadow: 0 8px 16px -10px rgba(22,163,74,.85) !important; }
+.sr-cust .sr-actionbar .btn-3d-primary { box-shadow: 0 8px 16px -10px rgba(37,99,235,.85) !important; }
+.sr-cust .sr-actionbar .btn-default {
+    background: #f8fafc !important;
+    border-color: #dbe3ec !important;
+    color: #334155 !important;
+}
+.sr-cust .sr-actionbar .btn-default:hover {
+    background: #eef2f7 !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+.sr-cust .sr-actionbar .btn-3d-info {
+    background: #f59e0b !important;
+    border-color: #f59e0b !important;
+    color: #fff !important;
+    box-shadow: 0 8px 16px -10px rgba(217,119,6,.9) !important;
+}
+.sr-cust .sr-actionbar .btn-3d-info:hover {
+    background: #d97706 !important;
+    border-color: #d97706 !important;
+    color: #fff !important;
+}
+
+/* ---- Live bandwidth metric tiles ---- */
+.sr-cust .sr-metric {
+    border-radius: 12px;
+    padding: 10px 13px;
+    border: 1px solid transparent;
+}
+.sr-cust .sr-metric-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 2px;
+}
+.sr-cust .sr-metric-value {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -.4px;
+}
+.sr-cust .sr-metric-dl { background: #f0fdf4; border-color: #bbf7d0; }
+.sr-cust .sr-metric-dl .sr-metric-label { color: #15803d; }
+.sr-cust .sr-metric-dl .sr-metric-value { color: #166534; }
+.sr-cust .sr-metric-ul { background: #eff6ff; border-color: #bfdbfe; }
+.sr-cust .sr-metric-ul .sr-metric-label { color: #1d4ed8; }
+.sr-cust .sr-metric-ul .sr-metric-value { color: #1e40af; }
+.sr-cust .sr-metric-total { background: #fff7ed; border-color: #fed7aa; }
+.sr-cust .sr-metric-total .sr-metric-label { color: #b45309; }
+.sr-cust .sr-metric-total .sr-metric-value { color: #9a3412; }
+
+/* ---- Live bandwidth panel ---- */
+.sr-cust #live-graph-box .box-footer {
+    background: transparent !important;
+    border-top: 1px solid var(--c-line) !important;
+    padding: 9px 16px !important;
+}
+.sr-cust #live-toggle {
+    width: 30px;
+    height: 30px;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9 !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #334155 !important;
+}
+.sr-cust #live-toggle:hover { background: #e2e8f0 !important; color: #0f172a !important; }
+.sr-cust #live-session-type { font-size: 10.5px !important; }
+.sr-cust .sr-lastupdated {
+    background: transparent !important;
+    border-top: 1px solid var(--c-line) !important;
+    padding: 9px 16px !important;
+}
 </style>
 
 <div class="sr-cust">
@@ -1121,7 +1227,7 @@
                     </table>
                 </div>
             </div>
-            <div class="box-footer text-center" style="background-color: #f8f9fa; border-top: 1px solid #e9ecef;">
+            <div class="box-footer text-center sr-lastupdated">
                 <small class="text-muted">
                     <i class="fa fa-info-circle"></i> Last Updated: {$smarty.now|date_format:"%H:%M:%S"}
                 </small>
@@ -1168,23 +1274,22 @@
 </div>
 {/if}
 
-<hr>
-<div class="row">
+<div class="row sr-actionbar">
     <div class="col-xs-6 col-md-3">
-        <a href="{$_url}customers/list" class="btn btn-3d btn-3d btn-default btn-sm btn-block">{Lang::T('Back')}</a>
+        <a href="{$_url}customers/list" class="btn btn-3d btn-default btn-sm btn-block"><i class="fa fa-arrow-left"></i> {Lang::T('Back')}</a>
     </div>
     <div class="col-xs-6 col-md-3">
         <a href="{$_url}customers/sync/{$d['id']}&token={$csrf_token}" onclick="return ask(this, 'This will sync Customer to Mikrotik?')"
-            class="btn btn-3d btn-3d-info btn-sm btn-block">{Lang::T('Sync')}</a>
+            class="btn btn-3d btn-3d-info btn-sm btn-block"><i class="fa fa-refresh"></i> {Lang::T('Sync')}</a>
     </div>
     <div class="col-xs-6 col-md-3">
         <a href="{$_url}message/send/{$d['id']}&token={$csrf_token}" class="btn btn-3d btn-3d-success btn-sm btn-block">
-            {Lang::T('Send Message')}
+            <i class="fa fa-envelope"></i> {Lang::T('Send Message')}
         </a>
     </div>
     <div class="col-xs-6 col-md-3">
         <a href="{$_url}customers/login/{$d['id']}&token={$csrf_token}" target="_blank" class="btn btn-3d btn-3d-primary btn-sm btn-block">
-            {Lang::T('Login as Customer')}
+            <i class="fa fa-sign-in"></i> {Lang::T('Login as Customer')}
         </a>
     </div>
 </div>
@@ -1328,21 +1433,21 @@ setInterval(function() {
             <div class="box-body" style="padding-bottom:6px;">
                 <div class="row" style="margin-bottom:10px;">
                     <div class="col-xs-4">
-                        <div style="background:#f0faf2;border-left:3px solid #27ae60;padding:8px 12px;border-radius:4px;">
-                            <div style="font-size:10px;font-weight:600;color:#27ae60;text-transform:uppercase;letter-spacing:.5px;">Download</div>
-                            <div id="live-dl-speed" style="font-size:20px;font-weight:700;color:#1e8449;">0 bps</div>
+                        <div class="sr-metric sr-metric-dl">
+                            <div class="sr-metric-label">Download</div>
+                            <div id="live-dl-speed" class="sr-metric-value">0 bps</div>
                         </div>
                     </div>
                     <div class="col-xs-4">
-                        <div style="background:#f0f5ff;border-left:3px solid #2980b9;padding:8px 12px;border-radius:4px;">
-                            <div style="font-size:10px;font-weight:600;color:#2980b9;text-transform:uppercase;letter-spacing:.5px;">Upload</div>
-                            <div id="live-ul-speed" style="font-size:20px;font-weight:700;color:#1f618d;">0 bps</div>
+                        <div class="sr-metric sr-metric-ul">
+                            <div class="sr-metric-label">Upload</div>
+                            <div id="live-ul-speed" class="sr-metric-value">0 bps</div>
                         </div>
                     </div>
                     <div class="col-xs-4">
-                        <div style="background:#fff8f0;border-left:3px solid #e67e22;padding:8px 12px;border-radius:4px;">
-                            <div style="font-size:10px;font-weight:600;color:#e67e22;text-transform:uppercase;letter-spacing:.5px;">Session Total DL</div>
-                            <div id="live-total-dl" style="font-size:20px;font-weight:700;color:#ca6f1e;">0 B</div>
+                        <div class="sr-metric sr-metric-total">
+                            <div class="sr-metric-label">Session Total DL</div>
+                            <div id="live-total-dl" class="sr-metric-value">0 B</div>
                         </div>
                     </div>
                 </div>
