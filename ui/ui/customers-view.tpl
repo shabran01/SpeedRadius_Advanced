@@ -1198,13 +1198,13 @@
                                     <td>
                                         <span class="label label-success" style="font-size: 11px;">
                                             <i class="fa fa-download"></i> 
-                                            <span class="data-usage" data-bytes="{$device['bytes_in']}">Loading...</span>
+                                            <span class="data-usage" data-bytes="{$device['bytes_out']}">Loading...</span>
                                         </span>
                                     </td>
                                     <td>
                                         <span class="label label-info" style="font-size: 11px;">
                                             <i class="fa fa-upload"></i> 
-                                            <span class="data-usage" data-bytes="{$device['bytes_out']}">Loading...</span>
+                                            <span class="data-usage" data-bytes="{$device['bytes_in']}">Loading...</span>
                                         </span>
                                     </td>
                                     <td>
@@ -1777,18 +1777,18 @@ setInterval(function() {
                 document.getElementById('live-uptime').textContent = data.uptime ? ('Up: ' + data.uptime) : '';
 
                 // Session total download
-                document.getElementById('live-total-dl').textContent = fmtBytes(data.bytes_in);
+                document.getElementById('live-total-dl').textContent = fmtBytes(data.download);
 
                 // Compute speed from delta
                 var dlSpeed = 0, ulSpeed = 0;
                 if (prevBytes && data.type !== 'offline') {
                     var dt = data.timestamp - prevBytes.ts;
                     if (dt > 0) {
-                        dlSpeed = Math.max(0, (data.bytes_in  - prevBytes.in)  / dt);
-                        ulSpeed = Math.max(0, (data.bytes_out - prevBytes.out) / dt);
+                        dlSpeed = Math.max(0, (data.download - prevBytes.dl) / dt);
+                        ulSpeed = Math.max(0, (data.upload   - prevBytes.ul) / dt);
                     }
                 }
-                prevBytes = { in: data.bytes_in, out: data.bytes_out, ts: data.timestamp };
+                prevBytes = { dl: data.download, ul: data.upload, ts: data.timestamp };
 
                 // Update speed cards
                 document.getElementById('live-dl-speed').textContent = fmtSpeed(dlSpeed);

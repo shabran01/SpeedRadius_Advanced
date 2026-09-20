@@ -1837,7 +1837,9 @@ switch ($action) {
         break;
 
     case 'live_stats':
-        // AJAX endpoint: returns current bytes_in / bytes_out for the customer live-graph
+        // AJAX endpoint: returns current download / upload bytes for the customer live-graph.
+        // download = MikroTik tx-byte (PPPoE) / bytes-out (Hotspot)  - traffic sent TO the customer
+        // upload   = MikroTik rx-byte (PPPoE) / bytes-in  (Hotspot)  - traffic received FROM the customer
         $id = $routes['2'];
         if (!is_numeric($id)) {
             header('Content-Type: application/json');
@@ -1853,7 +1855,7 @@ switch ($action) {
         $router = resolve_customer_router($customer);
         if (!$router) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'error' => 'No router assigned', 'bytes_in' => 0, 'bytes_out' => 0]);
+            echo json_encode(['success' => false, 'error' => 'No router assigned', 'download' => 0, 'upload' => 0]);
             exit;
         }
         require_once 'system/autoload/Mikrotik.php';
@@ -1862,13 +1864,18 @@ switch ($action) {
             $client = Mikrotik::getClient($router['ip_address'], $router['username'], $router['password']);
             if (!$client) {
                 header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'error' => 'Cannot connect to router', 'bytes_in' => 0, 'bytes_out' => 0]);
+                echo json_encode(['success' => false, 'error' => 'Cannot connect to router', 'download' => 0, 'upload' => 0]);
                 exit;
             }
             $uname     = $customer['username'];
             $pppoe_uname = !empty($customer['pppoe_username']) ? $customer['pppoe_username'] : $uname;
-            $bytes_in  = 0;
-            $bytes_out = 0;
+            // MikroTik counters are ROUTER-perspective:
+            //   bytes-in  / rx-byte = traffic the router RECEIVED from the customer = customer UPLOAD
+            //   bytes-out / tx-byte = traffic the router SENT to the customer     = customer DOWNLOAD
+            // Same convention as system/plugin/ui/mikrotik_monitor.tpl ("Download (TX)" / "Upload (RX)").
+            // Do not route these through an "in"/"out" name again - that is what inverted them before.
+            $download_bytes = 0;
+            $upload_bytes   = 0;
             $session_type = 'offline';
             $ip = '';
             $uptime = '';
@@ -1877,8 +1884,8 @@ switch ($action) {
             $req->setQuery(PEAR2\Net\RouterOS\Query::where('user', $uname));
             foreach ($client->sendSync($req) as $r) {
                 if ($r->getType() === PEAR2\Net\RouterOS\Response::TYPE_DATA) {
-                    $bytes_in     = (int)$r->getProperty('bytes-in');
-                    $bytes_out    = (int)$r->getProperty('bytes-out');
+                    $upload_bytes   = (int)$r->getProperty('bytes-in');
+                    $download_bytes = (int)$r->getProperty('bytes-out');
                     $ip           = (string)$r->getProperty('address');
                     $uptime       = (string)$r->getProperty('uptime');
                     $session_type = 'Hotspot';
@@ -1901,8 +1908,8 @@ switch ($action) {
                         $ifReq->setQuery(PEAR2\Net\RouterOS\Query::where('name', $ifaceName));
                         foreach ($client->sendSync($ifReq) as $ir) {
                             if ($ir->getType() === PEAR2\Net\RouterOS\Response::TYPE_DATA) {
-                                $bytes_in  = (int)($ir->getProperty('rx-byte') ?: 0);
-                                $bytes_out = (int)($ir->getProperty('tx-byte') ?: 0);
+                                $upload_bytes   = (int)($ir->getProperty('rx-byte') ?: 0);
+                                $download_bytes = (int)($ir->getProperty('tx-byte') ?: 0);
                                 break;
                             }
                         }
@@ -1912,17 +1919,17 @@ switch ($action) {
             }
             header('Content-Type: application/json');
             echo json_encode([
-                'success'      => true,
-                'bytes_in'     => $bytes_in,
-                'bytes_out'    => $bytes_out,
-                'timestamp'    => microtime(true),
-                'type'         => $session_type,
-                'ip'           => $ip,
-                'uptime'       => $uptime,
+                'success'   => true,
+                'download'  => $download_bytes,
+                'upload'    => $upload_bytes,
+                'timestamp' => microtime(true),
+                'type'      => $session_type,
+                'ip'        => $ip,
+                'uptime'    => $uptime,
             ]);
         } catch (Exception $e) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'error' => $e->getMessage(), 'bytes_in' => 0, 'bytes_out' => 0]);
+            echo json_encode(['success' => false, 'error' => $e->getMessage(), 'download' => 0, 'upload' => 0]);
         }
         exit;
 

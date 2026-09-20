@@ -58,6 +58,26 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.26] - 2026-09-20
+
+---
+
+### FIXED: Download and Upload Were Swapped on the Live Bandwidth Panel
+
+**`system/controllers/customers.php`, `ui/ui/customers-view.tpl`**
+
+- On a PPPoE session the panel showed the customer's **uplink as Download** and their **downlink as Upload** — a browsing subscriber would see e.g. `DOWNLOAD 307.96 Kbps` / `UPLOAD 4.12 Mbps`, with the chart's green Download line pinned at zero while the blue Upload line carried all the traffic.
+- Root cause: MikroTik counters are **router-perspective**, but the panel labelled them client-perspective.
+  - `/interface/print` → `rx-byte` on `<pppoe-user>` = traffic the router **received from** the customer = **Upload**
+  - `/interface/print` → `tx-byte` on `<pppoe-user>` = traffic the router **sent to** the customer = **Download**
+  - `/ip hotspot active` → `bytes-in` / `bytes-out` follow the same convention
+- `live_stats` fed those into generic `bytes_in` / `bytes_out` keys, and the template rendered `bytes_in` as the Download card, the Download chart series and "Session Total DL". The `in`/`out` naming is what hid the inversion.
+- The endpoint now emits **explicitly named `download` / `upload`** keys, and the template consumes them directly, so the two can no longer be crossed.
+- The devices table on the same page carried the identical inversion — its Download column read `bytes_in` and its Upload column read `bytes_out`. Those two cells are now swapped to match (`mikrotik_device_info.php` names PPPoE `rx-byte` as `bytes_in`, so `bytes_out` is the download).
+- Verified against the codebase's own convention: `system/plugin/ui/mikrotik_monitor.tpl` pairs the header `Download (TX)` with DataTable column `tx_bytes` and `Upload (RX)` with `rx_bytes`, and `system/plugin/mikrotik_monitor.php` fills `rxBytes` from `bytes-in` / `rx-byte`.
+
+> **Known related issue (not changed in this release):** the monthly-usage pipeline is inverted the same way. `monthly_usage_process_session()` passes `$bytes_in` (upload) into `monthly_usage_accumulate()` as `delta_in`, which is written to `tbl_customer_monthly_usage.download_bytes` — so stored monthly totals have download/upload swapped, affecting the Monthly Data Usage panel, `dashboard.php`, `home.php` and `peak_hours_report.php`. Correcting it needs a decision on back-filling existing rows, so it is tracked separately.
+
 ## [2.2.25] - 2026-09-20
 
 ---
