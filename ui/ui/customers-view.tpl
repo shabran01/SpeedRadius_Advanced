@@ -74,11 +74,162 @@
     font-size: 12px;
     letter-spacing: -0.2px;
 }
+
+/* ── Modern customer profile card ───────────────────────────────── */
+.sr-profile {
+    border: 1px solid #e9edf3 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 16px 32px -24px rgba(16,24,40,.45) !important;
+    overflow: hidden;
+    background: #fff;
+}
+.sr-profile.box-primary { border-top: 3px solid #2563eb !important; }
+.sr-profile.box-danger  { border-top: 3px solid #dc2626 !important; }
+
+.sr-profile .box-profile { padding: 18px 18px 16px !important; }
+
+.sr-profile .box-tools { margin: 0 0 6px; }
+.sr-profile .box-tools .btn-3d {
+    background: #f8fafc !important;
+    color: #475569 !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+    border-radius: 10px !important;
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    font-weight: 700;
+    transition: background .15s ease, color .15s ease;
+}
+.sr-profile .box-tools .btn-3d:hover { background: #eef2f7 !important; color: #0f172a !important; }
+
+.sr-profile .profile-user-img {
+    width: 92px; height: 92px;
+    object-fit: cover;
+    display: block;
+    margin: 4px auto 12px;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 1px #e6eaf0, 0 10px 22px -14px rgba(16,24,40,.5);
+    cursor: pointer;
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+.sr-profile .profile-user-img:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 1px #dbe2ea, 0 16px 26px -14px rgba(16,24,40,.5);
+}
+
+.sr-profile .profile-username {
+    font-size: 17px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -.2px;
+    margin: 0 0 14px;
+}
+
+.sr-profile .list-group { margin: 0 -18px; padding: 0; }
+.sr-profile .list-group-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 18px !important;
+    border: 0 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    background: transparent !important;
+    font-size: 13px;
+    transition: background .12s ease;
+}
+.sr-profile .list-group-item:hover { background: #f8fafc !important; }
+.sr-profile .list-group-item:last-child { border-bottom: 0 !important; }
+.sr-profile .list-group-item > b {
+    flex: 0 0 auto;
+    color: #64748b;
+    font-weight: 700;
+    font-size: 10.5px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+.sr-profile .list-group-item .pull-right {
+    float: none !important;
+    margin-left: auto;
+    text-align: right;
+    color: #0f172a;
+    font-weight: 600;
+    word-break: break-word;
+}
+.sr-profile .pull-right.bg-red {
+    background: #fee2e2 !important;
+    color: #b91c1c !important;
+    border-radius: 999px;
+    padding: 3px 11px !important;
+    font-size: 11px;
+    font-weight: 700;
+}
+.sr-profile .pull-right.bg-green {
+    background: #dcfce7 !important;
+    color: #15803d !important;
+    border-radius: 999px;
+    padding: 3px 11px !important;
+    font-size: 11px;
+    font-weight: 700;
+}
+.sr-profile input[type="password"].pull-right {
+    border: 0;
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 4px 10px;
+    max-width: 60%;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 12.5px;
+    color: #0f172a;
+    cursor: pointer;
+    outline: none !important;
+}
+
+.sr-profile hr { border: 0; border-top: 1px solid #eef2f7; margin: 16px 0; }
+
+.sr-profile .btn-3d {
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 10px !important;
+    border-radius: 10px !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+    font-size: 12.5px !important;
+    font-weight: 700;
+    letter-spacing: 0;
+    transition: transform .12s ease, background .12s ease, box-shadow .12s ease;
+}
+.sr-profile .btn-3d:hover { transform: translateY(-1px); opacity: 1 !important; }
+.sr-profile .btn-3d:active { transform: translateY(0); box-shadow: none !important; }
+.sr-profile .btn-3d-danger { background: #fee2e2 !important; color: #b91c1c !important; border-color: #fecaca !important; }
+.sr-profile .btn-3d-danger:hover { background: #fecaca !important; color: #991b1b !important; }
+.sr-profile .btn-3d-primary { background: #2563eb !important; color: #fff !important; box-shadow: 0 8px 16px -10px rgba(37,99,235,.9) !important; }
+.sr-profile .btn-3d-primary:hover { background: #1d4ed8 !important; }
+.sr-profile .btn-3d-info { background: #f1f5f9 !important; color: #334155 !important; border-color: #e2e8f0 !important; }
+.sr-profile .btn-3d-info:hover { background: #e2e8f0 !important; color: #0f172a !important; }
+.sr-profile .btn-default { background: #fff !important; color: #475569 !important; border-color: #e2e8f0 !important; }
+.sr-profile .btn-default:hover { background: #f8fafc !important; color: #0f172a !important; }
+.sr-profile .btn-change-router { padding: 0 6px !important; white-space: nowrap; }
+
+.sr-profile > .box-body > .row { margin-left: -4px; margin-right: -4px; }
+.sr-profile > .box-body > .row > [class*="col-"] { padding-left: 4px; padding-right: 4px; margin-bottom: 8px; }
+
+.sr-profile .dropdown-menu {
+    border-radius: 12px;
+    border: 1px solid #e9edf3;
+    box-shadow: 0 12px 28px -14px rgba(16,24,40,.45);
+    padding: 6px;
+}
+.sr-profile .dropdown-menu > li > a { border-radius: 8px; font-size: 13px; padding: 8px 12px; }
+.sr-profile .dropdown-menu > li > a:hover { background: #f1f5f9; }
 </style>
 
 <div class="row">
     <div class="col-sm-4 col-md-4">
-        <div class="box box-{if $d['status']=='Active'}primary{else}danger{/if}">
+        <div class="box box-{if $d['status']=='Active'}primary{else}danger{/if} sr-profile">
             <div class="box-body box-profile">
                 <div class="box-tools pull-right">
                     <div class="btn-group">
@@ -105,7 +256,7 @@
                 <ul class="list-group list-group-unbordered">
                     <li class="list-group-item">
                         <b>{Lang::T('Status')}</b> <span
-                            class="pull-right {if $d['status'] !='Active'}bg-red{/if}">&nbsp;{Lang::T($d['status'])}&nbsp;</span>
+                            class="pull-right {if $d['status'] !='Active'}bg-red{else}bg-green{/if}">{Lang::T($d['status'])}</span>
                     </li>
                     <li class="list-group-item">
                         <b>{Lang::T('Username')}</b> <span class="pull-right">{$d['username']}</span>

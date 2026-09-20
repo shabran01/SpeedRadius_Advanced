@@ -2,6 +2,21 @@
 
  # CHANGELOG
 
+## [2.2.21] - 2026-09-20
+
+---
+
+### IMPROVED: Modernised the Customer Profile Card
+
+**`ui/ui/customers-view.tpl`**
+
+- Rebuilt the customer profile card (avatar, identity, details, action buttons) on the customer detail page: 16px radius, soft layered shadow, 1px hairline border, and a colour-coded top accent (blue when Active, red otherwise).
+- Detail rows no longer use Bootstrap's `list-group-unbordered` hairline table. They are now a flex layout with uppercase 10.5px muted labels on the left and 13px weight-600 values aligned right. Long values such as `MpesatillStk - UIKR774XJL` wrap instead of breaking the alignment.
+- Customer status is now a coloured pill — green for Active, red otherwise — instead of plain text.
+- Buttons share a consistent 38px height, 10px radius and semantic colouring (red = destructive, blue = primary, slate = secondary), replacing the old 3D bevel effect.
+- Password display restyled as a monospace chip; dropdown menus given rounded corners and a softer shadow; avatar enlarged to 92px with a ring and a subtle hover lift.
+- Every rule is scoped under `.sr-profile`, so no other page or component is affected. Display-only change — no logic touched.
+
 ## [2.2.20] - 2026-09-17
 
 ---
