@@ -360,6 +360,21 @@ function cron_cleanup_tv_bindings($client, $router_name)
                         break;
                     }
                 }
+
+                // And the simple queue that was shaping it - otherwise the limit
+                // outlives the package and would apply to whatever gets that IP next.
+                $qName = 'SR-tv-' . str_replace(':', '', $mac);
+                $qq = new PEAR2\Net\RouterOS\Request('/queue/simple/print');
+                $qq->setQuery(PEAR2\Net\RouterOS\Query::where('name', $qName));
+                foreach ($client->sendSync($qq) as $qrow) {
+                    if ($qrow->getType() === PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                        $qr = new PEAR2\Net\RouterOS\Request('/queue/simple/remove');
+                        $qr->setArgument('numbers', (string)$qrow->getProperty('.id'));
+                        $client->sendSync($qr);
+                        echo "[TVBind] Removed speed queue {$qName}\n";
+                        break;
+                    }
+                }
             }
         }
     } catch (\Throwable $e) {

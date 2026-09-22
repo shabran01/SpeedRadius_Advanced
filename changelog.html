@@ -58,6 +58,33 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.36] - 2026-09-22
+
+---
+
+### FIXED: Devices bound through "Pay For a TV" ran at full line speed
+
+**`system/plugin/download.php`, `system/cron.php`**
+
+A package with a 4 Mbps limit was delivering full speed to bound devices.
+
+**Why:** the speed limit lives on the hotspot **user profile** (`rate-limit`). A `bypassed` device never authenticates, so RouterOS never applies a profile to it and therefore never creates a queue — it routes straight through unshaped. Nothing was misconfigured; the limit simply had no path to reach that device. This is the visible half of the `bypassed` trade-off.
+
+### FIXED: `tv_bind` now gives the device its own queue
+
+- After writing the binding, `tv_bind` creates a `/queue simple` entry for the device: `target=<ip>/32`, `max-limit=<rate>`, name `SR-tv-<mac>`, carrying the same `SR|…` comment as the binding.
+- **The rate is copied off the hotspot profile**, not rebuilt from the plan. That guarantees the device receives exactly the speed a normal login would have got, and the two cannot drift apart when a plan is edited. It falls back to `tbl_plans` → `tbl_bandwidth` only if the profile has no `rate-limit`.
+- The profile value is trimmed to its first whitespace-separated token, because a profile `rate-limit` may carry a **burst** spec (e.g. `2M/4M 4M/8M 8/8 8/8`) that a simple queue's `max-limit` would reject.
+- Idempotent: an existing `SR-tv-<mac>` queue is removed before re-adding, so re-purchasing refreshes the limit instead of stacking queues.
+- **Shaping never fails the bind.** If the queue cannot be applied the device is still online, so the response carries `shape_warning` and the form shows it in amber. Encountering a failure on connectivity work should not cost the customer their purchase.
+- Guards against an address ending in `.0` or `.255`: a queue aimed at a network or broadcast address shapes nothing, and one of those silently broke an earlier test binding. It warns instead of writing something meaningless.
+
+### FIXED: The queue is removed when the package lapses
+
+- `cron_cleanup_tv_bindings()` now removes the `SR-tv-<mac>` queue alongside the binding. Without this the limit would **outlive the package** and, worse, would go on limiting whatever device picked up that IP next.
+
+> **Still not enforced for `bypassed` devices: the data cap.** A simple queue shapes bandwidth; it cannot enforce a package's time or volume quota. Time is handled (the cron removes the binding at expiry). A `limit-bytes-total` cap is **not** enforced on a bypassed device. Closing that would mean the cron checking the device's byte counters and either zeroing its `max-limit` or converting the binding to `blocked` once the cap is hit.
+
 ## [2.2.35] - 2026-09-22
 
 ---

@@ -534,6 +534,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             exit;
         }
 
+        // ── Speed limit ───────────────────────────────────────────────────────
+        // A bypassed device never authenticates, so the hotspot never applies the
+        // plan's profile and therefore never shapes it - it would run at full line
+        // speed. The limit is applied here instead, as a simple queue for the
+        // device's IP. The rate is COPIED off the hotspot profile rather than
+        // rebuilt from the plan, so the device gets exactly what a normal login
+        // would have got and the two cannot drift apart.
+        $rateLimit = '';
+        $pfReq = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/profile/print');
+        $pfReq->setArgument('.proplist', '.id,rate-limit');
+        $pfReq->setQuery(\PEAR2\Net\RouterOS\Query::where('name', $profileName));
+        foreach ($client->sendSync($pfReq) as $pf) {
+            if ($pf->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                $rateLimit = trim((string)$pf->getProperty('rate-limit'));
+                break;
+            }
+        }
+
+        // Fall back to the plan's bandwidth table if the profile has no rate-limit.
+        if ($rateLimit === '' && $profileName !== '') {
+            $bwQ = $mysqli->prepare("SELECT b.rate_up, b.rate_up_unit, b.rate_down, b.rate_down_unit
+                                     FROM tbl_plans p LEFT JOIN tbl_bandwidth b ON b.id = p.id_bw
+                                     WHERE p.name_plan = ? LIMIT 1");
+            $bwQ->bind_param("s", $profileName);
+            $bwQ->execute();
+            $bw = $bwQ->get_result()->fetch_assoc();
+            if ($bw && !empty($bw['rate_down'])) {
+                $upRate   = $bw['rate_up']   . ($bw['rate_up_unit']   === 'Kbps' ? 'K' : 'M');
+                $downRate = $bw['rate_down'] . ($bw['rate_down_unit'] === 'Kbps' ? 'K' : 'M');
+                $rateLimit = $upRate . '/' . $downRate;
+            }
+        }
+
+        // A simple queue takes one 'up/down' pair, but a profile rate-limit can carry
+        // a burst spec after the first token, which the queue would reject.
+        $maxLimit = '';
+        if ($rateLimit !== '') {
+            $rateBits = preg_split('/\s+/', $rateLimit);
+            $maxLimit = $rateBits[0] ?? '';
+        }
+
+        $shapeWarning = '';
+        $queueName    = 'SR-tv-' . str_replace(':', '', $mac);
+
+        // A queue pointed at a network or broadcast address shapes nothing, and one
+        // of those silently broke an earlier test binding - so refuse rather than
+        // write something meaningless.
+        $lastOctet = (int)substr($ip, strrpos($ip, '.') + 1);
+        if ($lastOctet === 0 || $lastOctet === 255) {
+            $shapeWarning = 'Connected, but the speed limit was not applied: the device reported an unusual address (' . $ip . '). Reconnect the device so it picks up a normal address, then bind again.';
+        } elseif ($maxLimit === '') {
+            $shapeWarning = 'Connected, but no speed limit was found for this package, so it is running unshaped.';
+        } else {
+            try {
+                // Idempotent: drop any earlier queue for this device so re-purchasing
+                // does not stack queues.
+                $qPrint = new \PEAR2\Net\RouterOS\Request('/queue/simple/print');
+                $qPrint->setQuery(\PEAR2\Net\RouterOS\Query::where('name', $queueName));
+                foreach ($client->sendSync($qPrint) as $qOld) {
+                    if ($qOld->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                        $qRm = new \PEAR2\Net\RouterOS\Request('/queue/simple/remove');
+                        $qRm->setArgument('numbers', (string)$qOld->getProperty('.id'));
+                        $client->sendSync($qRm);
+                        break;
+                    }
+                }
+
+                $qAdd = new \PEAR2\Net\RouterOS\Request('/queue/simple/add');
+                $qAdd->setArgument('name', $queueName);
+                $qAdd->setArgument('target', $ip . '/32');
+                $qAdd->setArgument('max-limit', $maxLimit);
+                $qAdd->setArgument('comment', $comment);
+
+                $qResp = $client->sendSync($qAdd);
+                if ($qResp->getType() === \PEAR2\Net\RouterOS\Response::TYPE_FATAL) {
+                    // Never fail the bind over shaping - the device is already online.
+                    $shapeWarning = 'Connected, but the speed limit could not be applied: ' . $qResp->getProperty('message');
+                }
+            } catch (\Throwable $e) {
+                $shapeWarning = 'Connected, but the speed limit could not be applied: ' . $e->getMessage();
+            }
+        }
+
         // Report the profile state too, so a silent MAC-login misconfiguration is
         // visible during testing instead of showing up as "customer paid, TV dead".
         // Only meaningful for the MAC-login binding type - a bypassed device never
@@ -548,6 +631,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'username'          => $account['username'],
             'profile'           => $profileName,
             'mac_login_enabled' => $macLoginOn,
+            'max_limit'         => $maxLimit,
+            'shape_warning'     => $shapeWarning,
             'message'           => 'Done! Your device should now connect without the login page.'
         ]);
     } catch (\Throwable $e) {
@@ -1133,6 +1218,9 @@ $htmlContent .= "        if (data.status === 'success') {\n";
 $htmlContent .= "            var extra = '';\n";
 $htmlContent .= "            if (data.mac_login_enabled === false) {\n";
 $htmlContent .= "                extra = '<br><strong>Note:</strong> device sign-in is not enabled on this network, so the device may still need help connecting. Please contact support.';\n";
+$htmlContent .= "            }\n";
+$htmlContent .= "            if (data.shape_warning) {\n";
+$htmlContent .= "                extra += '<br><span style=\"color:#b45309;\">' + data.shape_warning + '</span>';\n";
 $htmlContent .= "            }\n";
 $htmlContent .= "            tvShowMsg('<strong>' + data.message + '</strong><br>Device MAC: ' + data.mac + '<br>Package: ' + data.profile + extra, 'ok');\n";
 $htmlContent .= "            btn.textContent = 'Done';\n";
