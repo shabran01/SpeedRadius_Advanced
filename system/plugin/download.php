@@ -241,6 +241,169 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 
+// ────────────────────────────────────────────────
+// TV / DEVICE BINDING (POST) — for devices that cannot display the hotspot
+// login page (most smart TVs). The customer opens this page on their phone,
+// enters the TV's MAC, picks a package and pays. Once the payment is confirmed
+// we bind the TV's MAC on the router so it gets online without the login page.
+// ────────────────────────────────────────────────
+//
+// How the binding behaves on the router:
+//   'regular'  — the MAC is tied to the purchased hotspot user, so the TV skips
+//                the login page AND the plan's time/data limits still apply.
+//                Requires the hotspot profile to allow MAC login (login-by=mac).
+//   'bypassed' — the device skips the hotspot entirely. Guaranteed to get the TV
+//                online, but the router will NOT enforce the plan's limits.
+// Change this one constant if 'regular' does not work on your setup.
+if (!defined('TV_BINDING_TYPE')) {
+    define('TV_BINDING_TYPE', 'regular');
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'tv_bind') {
+    header('Content-Type: application/json');
+
+    try {
+        $rawMac     = trim($_POST['mac'] ?? '');
+        $deviceName = trim($_POST['device_name'] ?? '');
+        $accountId  = trim($_POST['account_id'] ?? '');
+        $routerId   = (int)($_POST['router_id'] ?? 0);
+
+        // Normalise the MAC: accept AA:BB:CC:DD:EE:FF, aa-bb-..., AABBCCDDEEFF
+        $mac = strtoupper(preg_replace('/[^0-9A-Fa-f]/', '', $rawMac));
+        if (strlen($mac) !== 12) {
+            echo json_encode(['status' => 'error', 'message' => 'That MAC address looks wrong. It needs 12 characters, like AA:BB:CC:DD:EE:FF.']);
+            exit;
+        }
+        $mac = implode(':', str_split($mac, 2));
+
+        if ($accountId === '') {
+            echo json_encode(['status' => 'error', 'message' => 'Missing account reference. Please start the payment again.']);
+            exit;
+        }
+
+        // ── Payment gate ──────────────────────────────────────────────────────
+        // Never bind a device before the money is confirmed. The recharge row is
+        // only set to 'on' by the payment verification step, so requiring an
+        // active row is what stops a free bind.
+        $accQ = $mysqli->prepare("SELECT username FROM tbl_customers WHERE username = ? LIMIT 1");
+        $accQ->bind_param("s", $accountId);
+        $accQ->execute();
+        $account = $accQ->get_result()->fetch_assoc();
+        if (!$account) {
+            echo json_encode(['status' => 'error', 'message' => 'We could not find an account for this payment.']);
+            exit;
+        }
+
+        $payQ = $mysqli->prepare("SELECT id, expiration FROM tbl_user_recharges WHERE username = ? AND status = 'on' ORDER BY id DESC LIMIT 1");
+        $payQ->bind_param("s", $account['username']);
+        $payQ->execute();
+        $paid = $payQ->get_result()->fetch_assoc();
+        if (!$paid) {
+            echo json_encode(['status' => 'error', 'message' => 'This payment is not active yet. Please wait a moment and try again.']);
+            exit;
+        }
+
+        // ── Resolve the router ────────────────────────────────────────────────
+        // $settings is loaded further down this file, after the POST handlers run,
+        // so the configured router name has to be read here instead.
+        if ($routerId > 0) {
+            $rq = $mysqli->prepare("SELECT * FROM tbl_routers WHERE id = ? LIMIT 1");
+            $rq->bind_param("i", $routerId);
+        } else {
+            $nameRes = $mysqli->query("SELECT value FROM tbl_appconfig WHERE setting = 'router_name' LIMIT 1");
+            $nameRow = $nameRes ? $nameRes->fetch_assoc() : null;
+            $rname   = $nameRow['value'] ?? '';
+            $rq = $mysqli->prepare("SELECT * FROM tbl_routers WHERE name = ? LIMIT 1");
+            $rq->bind_param("s", $rname);
+        }
+        $rq->execute();
+        $router = $rq->get_result()->fetch_assoc();
+        if (!$router) {
+            echo json_encode(['status' => 'error', 'message' => 'Router not configured. Please contact support.']);
+            exit;
+        }
+
+        require_once __DIR__ . '/../autoload/PEAR2/Autoload.php';
+
+        $rip = explode(':', $router['ip_address']);
+        $rhost = $rip[0];
+        $rport = !empty($rip[1]) ? $rip[1] : 8728;
+
+        $client = new \PEAR2\Net\RouterOS\Client($rhost, $router['username'], $router['password'], $rport, false, 8);
+
+        // ── The binding needs an IP, not just a MAC ───────────────────────────
+        // /ip hotspot ip-binding requires an 'address'. We get it from the TV's
+        // DHCP lease, which exists as soon as the TV has joined the WiFi - even
+        // when it cannot display the login page.
+        $ip = '';
+        $leaseReq = new \PEAR2\Net\RouterOS\Request('/ip/dhcp-server/lease/print');
+        $leaseReq->setQuery(\PEAR2\Net\RouterOS\Query::where('mac-address', $mac));
+        foreach ($client->sendSync($leaseReq) as $lease) {
+            if ($lease->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                $ip = (string)$lease->getProperty('address');
+                break;
+            }
+        }
+
+        if ($ip === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'We could not find this TV on the network yet. Connect the TV to the WiFi, wait about 30 seconds, then press Bind & Pay again.'
+            ]);
+            exit;
+        }
+
+        // Comment records who the binding belongs to and when it lapses, so it can
+        // be audited (and cleaned up) from the router.
+        $comment = 'SR|' . $account['username'] . '|exp ' . ($paid['expiration'] ?? '-');
+        if ($deviceName !== '') {
+            $comment .= '|' . str_replace('|', '/', substr($deviceName, 0, 40));
+        }
+
+        // Idempotent: update the binding if this MAC already has one, otherwise add.
+        $existingId = '';
+        $bindReq = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/ip-binding/print');
+        $bindReq->setQuery(\PEAR2\Net\RouterOS\Query::where('mac-address', $mac));
+        foreach ($client->sendSync($bindReq) as $b) {
+            if ($b->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                $existingId = (string)$b->getProperty('.id');
+                break;
+            }
+        }
+
+        if ($existingId !== '') {
+            $req = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/ip-binding/set');
+            $req->setArgument('.id', $existingId);
+        } else {
+            $req = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/ip-binding/add');
+        }
+        $req->setArgument('mac-address', $mac);
+        $req->setArgument('address', $ip);
+        $req->setArgument('type', TV_BINDING_TYPE);
+        $req->setArgument('server', 'all');
+        $req->setArgument('comment', $comment);
+
+        $resp = $client->sendSync($req);
+        if ($resp->getType() === \PEAR2\Net\RouterOS\Response::TYPE_FATAL) {
+            echo json_encode(['status' => 'error', 'message' => 'Router rejected the binding: ' . $resp->getProperty('message')]);
+            exit;
+        }
+
+        echo json_encode([
+            'status'   => 'success',
+            'mac'      => $mac,
+            'ip'       => $ip,
+            'type'     => TV_BINDING_TYPE,
+            'username' => $account['username'],
+            'message'  => 'Done! Your TV should now connect without the login page.'
+        ]);
+    } catch (\Throwable $e) {
+        echo json_encode(['status' => 'error', 'message' => 'Could not reach the router: ' . $e->getMessage()]);
+    }
+    exit;
+}
+
+
 // Batch load all settings in 1 query — 6× faster than 5 separate queries
 $settings = [];
 $allSettings = $mysqli->query("SELECT setting, value FROM tbl_appconfig WHERE setting IN ('hotspot_title','description','phone','CompanyName','router_name','router_id')");
@@ -582,6 +745,69 @@ $htmlContent .= "    }\n";
 $htmlContent .= "}\n";
 $htmlContent .= "</script>\n";
 
+// ── Pay For a TV ────────────────────────────────────────────────────────
+// Some smart TVs cannot render the hotspot login page at all. The customer
+// opens this page on their phone instead and supplies the TV's MAC.
+// Attributes below use single quotes on purpose: this whole page is built as a
+// double-quoted PHP string, so single-quoted HTML avoids a layer of escaping.
+$htmlContent .= "    <div class=\"container mx-auto px-4 mb-4\">\n";
+$htmlContent .= "        <div class=\"max-w-md mx-auto rounded-2xl overflow-hidden\" style=\"background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(8px);\">\n";
+$htmlContent .= "            <div class=\"px-5 py-4\">\n";
+$htmlContent .= "                <p style='color:#fff;font-size:14px;font-weight:700;margin:0 0 6px;'>TV not showing the login page?</p>\n";
+$htmlContent .= "                <p style='color:rgba(255,255,255,0.55);font-size:12.5px;line-height:1.6;margin:0 0 12px;'>Smart TVs usually cannot open the hotspot sign-in page. Enter your TV's MAC address, choose a package and pay &mdash; we will connect the TV for you.</p>\n";
+$htmlContent .= "                <button type=\"button\" onclick=\"openTvModal()\" class=\"btn-3d btn-3d-blue w-full flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white outline-none\">\n";
+$htmlContent .= "                    <i class=\"fas fa-tv\"></i> Pay For a TV\n";
+$htmlContent .= "                </button>\n";
+$htmlContent .= "            </div>\n";
+$htmlContent .= "        </div>\n";
+$htmlContent .= "    </div>\n";
+
+$htmlContent .= "    <div id='tv-modal' style='display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.65);overflow-y:auto;padding:16px;'>\n";
+$htmlContent .= "        <div style='max-width:460px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 60px -20px rgba(0,0,0,.5);'>\n";
+$htmlContent .= "            <div style='padding:14px 18px;border-bottom:1px solid #eef2f7;display:flex;align-items:center;justify-content:space-between;'>\n";
+$htmlContent .= "                <strong style='font-size:15px;color:#0f172a;'>Pay For a TV</strong>\n";
+$htmlContent .= "                <button type='button' onclick='closeTvModal()' style='background:none;border:0;font-size:22px;line-height:1;color:#94a3b8;cursor:pointer;'>&times;</button>\n";
+$htmlContent .= "            </div>\n";
+$htmlContent .= "            <div style='padding:16px 18px 20px;'>\n";
+$htmlContent .= "                <div style='background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.6;margin-bottom:12px;'>\n";
+$htmlContent .= "                    <strong>Tip:</strong> If your TV can open this page, you do not need to enter a MAC address &mdash; just pick a package above and buy normally. Only use this form if your TV cannot show the sign-in page.\n";
+$htmlContent .= "                </div>\n";
+$htmlContent .= "                <p style='font-size:12.5px;color:#334155;margin:0 0 12px;'>Enter the MAC address from your TV settings, choose a package and pay.</p>\n";
+$htmlContent .= "                <details style='margin-bottom:14px;'>\n";
+$htmlContent .= "                    <summary style='cursor:pointer;font-size:12.5px;font-weight:700;color:#2563eb;'>How do I find my TV MAC address?</summary>\n";
+$htmlContent .= "                    <div style='font-size:12px;color:#475569;line-height:1.8;margin-top:8px;background:#f8fafc;border-radius:10px;padding:10px 12px;'>\n";
+$htmlContent .= "                        <p style='margin:0 0 6px;'>On your TV, go to:</p>\n";
+$htmlContent .= "                        <ul style='margin:0 0 8px;padding-left:18px;'>\n";
+$htmlContent .= "                            <li><strong>Vitron</strong> &mdash; Settings &rarr; Network &rarr; Network Status / About</li>\n";
+$htmlContent .= "                            <li><strong>Samsung</strong> &mdash; Settings &rarr; General &rarr; Network &rarr; Network Status</li>\n";
+$htmlContent .= "                            <li><strong>LG</strong> &mdash; Settings &rarr; Network &rarr; Wi-Fi &rarr; Advanced Settings</li>\n";
+$htmlContent .= "                            <li><strong>Sony / Android TV</strong> &mdash; Settings &rarr; About &rarr; Status</li>\n";
+$htmlContent .= "                            <li><strong>Hisense</strong> &mdash; Settings &rarr; Network &rarr; Network Information</li>\n";
+$htmlContent .= "                            <li><strong>TCL / Roku</strong> &mdash; Settings &rarr; Network &rarr; About</li>\n";
+$htmlContent .= "                        </ul>\n";
+$htmlContent .= "                        <p style='margin:0;'>Look for <strong>MAC Address</strong> or <strong>Wi-Fi Address</strong> (format AA:BB:CC:DD:EE:FF).</p>\n";
+$htmlContent .= "                    </div>\n";
+$htmlContent .= "                </details>\n";
+$htmlContent .= "                <label style='display:block;font-size:11.5px;font-weight:700;color:#334155;margin-bottom:5px;'>Device MAC Address</label>\n";
+$htmlContent .= "                <input id='tv-mac' type='text' autocomplete='off' placeholder='e.g. AA:BB:CC:DD:EE:FF' oninput='tvFormatMac(this)' style='width:100%;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;font-size:13px;font-family:ui-monospace,Consolas,monospace;margin-bottom:12px;'>\n";
+$htmlContent .= "                <label style='display:block;font-size:11.5px;font-weight:700;color:#334155;margin-bottom:5px;'>Device Name (optional)</label>\n";
+$htmlContent .= "                <input id='tv-name' type='text' autocomplete='off' placeholder='e.g. Living Room TV' style='width:100%;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;font-size:13px;margin-bottom:12px;'>\n";
+$htmlContent .= "                <label style='display:block;font-size:11.5px;font-weight:700;color:#334155;margin-bottom:5px;'>Select Package</label>\n";
+$htmlContent .= "                <select id='tv-plan' style='width:100%;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;font-size:13px;background:#fff;margin-bottom:12px;'>\n";
+$htmlContent .= "                    <option value=''>Loading packages&hellip;</option>\n";
+$htmlContent .= "                </select>\n";
+$htmlContent .= "                <div style='background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:9px 12px;font-size:11.5px;line-height:1.6;margin-bottom:12px;'>\n";
+$htmlContent .= "                    <strong>One device per package.</strong> This package works on this one device only. Please do not buy one package for several devices.\n";
+$htmlContent .= "                </div>\n";
+$htmlContent .= "                <label style='display:block;font-size:11.5px;font-weight:700;color:#334155;margin-bottom:5px;'>Phone Number (M-Pesa)</label>\n";
+$htmlContent .= "                <input id='tv-phone' type='tel' autocomplete='off' placeholder='e.g. 0712345678' style='width:100%;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;font-size:13px;margin-bottom:14px;'>\n";
+$htmlContent .= "                <div id='tv-msg' style='display:none;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.5;margin-bottom:12px;'></div>\n";
+$htmlContent .= "                <button type='button' id='tv-submit' onclick='submitTvPay()' style='width:100%;background:#2563eb;color:#fff;border:0;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;'>Bind &amp; Pay</button>\n";
+$htmlContent .= "                <button type='button' onclick='closeTvModal()' style='width:100%;background:#f1f5f9;color:#475569;border:0;border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;'>Cancel</button>\n";
+$htmlContent .= "            </div>\n";
+$htmlContent .= "        </div>\n";
+$htmlContent .= "    </div>\n";
+
 $htmlContent .= "    <div class=\"mx-auto max-w-screen-2xl px-4 md:px-8\">\n";
 $htmlContent .= "        <div class=\"mx-auto mb-4 max-w-lg\">\n";
 $htmlContent .= "            <div class=\"border-t py-4\">\n";
@@ -589,6 +815,165 @@ $htmlContent .= "                <p class=\"text-xs text-center\" style=\"color:
 $htmlContent .= "            </div>\n";
 $htmlContent .= "        </div>\n";
 $htmlContent .= "    </div>\n";
+$htmlContent .= "<script>\n";
+$htmlContent .= "// ---- Pay For a TV -------------------------------------------------------\n";
+$htmlContent .= "function openTvModal() {\n";
+$htmlContent .= "    var m = document.getElementById('tv-modal');\n";
+$htmlContent .= "    if (m) m.style.display = 'block';\n";
+$htmlContent .= "    tvHideMsg();\n";
+$htmlContent .= "    // Fresh start: the button goes back to the payment step.\n";
+$htmlContent .= "    var b = document.getElementById('tv-submit');\n";
+$htmlContent .= "    if (b) { b.onclick = submitTvPay; b.disabled = false; b.style.opacity = '1'; b.textContent = 'Bind & Pay'; b.style.background = '#2563eb'; }\n";
+$htmlContent .= "}\n";
+$htmlContent .= "function closeTvModal() {\n";
+$htmlContent .= "    var m = document.getElementById('tv-modal');\n";
+$htmlContent .= "    if (m) m.style.display = 'none';\n";
+$htmlContent .= "}\n";
+$htmlContent .= "function tvHideMsg() {\n";
+$htmlContent .= "    var el = document.getElementById('tv-msg');\n";
+$htmlContent .= "    if (el) { el.style.display = 'none'; el.innerHTML = ''; }\n";
+$htmlContent .= "}\n";
+$htmlContent .= "function tvShowMsg(text, kind) {\n";
+$htmlContent .= "    var el = document.getElementById('tv-msg');\n";
+$htmlContent .= "    if (!el) return;\n";
+$htmlContent .= "    var bg = '#fef2f2', fg = '#b91c1c', bd = '#fecaca';\n";
+$htmlContent .= "    if (kind === 'ok') { bg = '#f0fdf4'; fg = '#166634'; bd = '#bbf7d0'; }\n";
+$htmlContent .= "    if (kind === 'info') { bg = '#eff6ff'; fg = '#1e40af'; bd = '#bfdbfe'; }\n";
+$htmlContent .= "    el.style.display = 'block';\n";
+$htmlContent .= "    el.style.background = bg; el.style.color = fg; el.style.border = '1px solid ' + bd;\n";
+$htmlContent .= "    el.innerHTML = text;\n";
+$htmlContent .= "}\n";
+$htmlContent .= "// Live-formats the MAC while typing and accepts AABBCCDDEEFF or AA-BB-...\n";
+$htmlContent .= "function tvFormatMac(input) {\n";
+$htmlContent .= "    var v = (input.value || '').toUpperCase().replace(/[^0-9A-F]/g, '').substring(0, 12);\n";
+$htmlContent .= "    var out = '';\n";
+$htmlContent .= "    for (var i = 0; i < v.length; i++) {\n";
+$htmlContent .= "        if (i > 0 && i % 2 === 0) out += ':';\n";
+$htmlContent .= "        out += v.charAt(i);\n";
+$htmlContent .= "    }\n";
+$htmlContent .= "    input.value = out;\n";
+$htmlContent .= "}\n";
+$htmlContent .= "function tvResetBtn(text) {\n";
+$htmlContent .= "    var b = document.getElementById('tv-submit');\n";
+$htmlContent .= "    if (!b) return;\n";
+$htmlContent .= "    b.disabled = false; b.style.opacity = '1'; b.textContent = text;\n";
+$htmlContent .= "}\n";
+$htmlContent .= "// Once the money is taken, a failed bind must NEVER send the customer back to\n";
+$htmlContent .= "// the payment step - that would charge them twice. From this point the button\n";
+$htmlContent .= "// only retries the binding, which the server allows because the package is\n";
+$htmlContent .= "// already active.\n";
+$htmlContent .= "var tvBindCtx = null;\n";
+$htmlContent .= "function tvOfferBindRetry(accountId, mac, deviceName, routerId, note) {\n";
+$htmlContent .= "    tvBindCtx = {accountId: accountId, mac: mac, deviceName: deviceName, routerId: routerId};\n";
+$htmlContent .= "    tvShowMsg('<strong>Your payment went through - do not pay again.</strong><br>' + note, 'err');\n";
+$htmlContent .= "    var b = document.getElementById('tv-submit');\n";
+$htmlContent .= "    if (b) {\n";
+$htmlContent .= "        b.onclick = tvRetryBind;\n";
+$htmlContent .= "        b.disabled = false; b.style.opacity = '1'; b.textContent = 'Retry Connection';\n";
+$htmlContent .= "    }\n";
+$htmlContent .= "}\n";
+$htmlContent .= "function tvRetryBind() {\n";
+$htmlContent .= "    if (!tvBindCtx) return;\n";
+$htmlContent .= "    tvBindDevice(tvBindCtx.accountId, tvBindCtx.mac, tvBindCtx.deviceName, tvBindCtx.routerId, document.getElementById('tv-submit'));\n";
+$htmlContent .= "}\n";
+$htmlContent .= "function submitTvPay() {\n";
+$htmlContent .= "    tvHideMsg();\n";
+$htmlContent .= "    var mac = (document.getElementById('tv-mac').value || '').toUpperCase().replace(/[^0-9A-F]/g, '');\n";
+$htmlContent .= "    if (mac.length !== 12) {\n";
+$htmlContent .= "        tvShowMsg('Please enter the full 12-character MAC address, like AA:BB:CC:DD:EE:FF.', 'err');\n";
+$htmlContent .= "        return;\n";
+$htmlContent .= "    }\n";
+$htmlContent .= "    var macFormatted = mac.match(/.{2}/g).join(':');\n";
+$htmlContent .= "    var deviceName = (document.getElementById('tv-name').value || '').trim();\n";
+$htmlContent .= "    var sel = document.getElementById('tv-plan');\n";
+$htmlContent .= "    if (!sel.value) { tvShowMsg('Please choose a package.', 'err'); return; }\n";
+$htmlContent .= "    var planId = sel.value;\n";
+$htmlContent .= "    var opt = sel.options[sel.selectedIndex];\n";
+$htmlContent .= "    var routerId = opt.getAttribute('data-router');\n";
+$htmlContent .= "    var price = opt.getAttribute('data-price');\n";
+$htmlContent .= "    var phoneRaw = (document.getElementById('tv-phone').value || '').trim();\n";
+$htmlContent .= "    if (!phoneRaw) { tvShowMsg('Please enter the M-Pesa number to charge.', 'err'); return; }\n";
+$htmlContent .= "    var phone = formatPhoneNumber(phoneRaw);\n";
+$htmlContent .= "    if (phone.length !== 12) { tvShowMsg('That phone number does not look right. Use the format 07XXXXXXXX.', 'err'); return; }\n";
+$htmlContent .= "    if (!confirm('Pay for this TV?\\n\\nMAC: ' + macFormatted + '\\nPackage: ' + price + '\\nM-Pesa: ' + phone)) return;\n";
+$htmlContent .= "    var btn = document.getElementById('tv-submit');\n";
+$htmlContent .= "    btn.disabled = true; btn.style.opacity = '0.7'; btn.textContent = 'Sending request...';\n";
+$htmlContent .= "    var accountId = persistAccountId();\n";
+$htmlContent .= "    fetch('" . APP_URL . "/index.php?_route=plugin/CreateHotspotuser&type=grant', {\n";
+$htmlContent .= "        method: 'POST',\n";
+$htmlContent .= "        headers: {'Content-Type': 'application/json'},\n";
+$htmlContent .= "        body: JSON.stringify({phone_number: phone, plan_id: planId, router_id: routerId, account_id: accountId}),\n";
+$htmlContent .= "    })\n";
+$htmlContent .= "    .then(function (r) { return r.text().then(safeJson); })\n";
+$htmlContent .= "    .then(function (data) {\n";
+$htmlContent .= "        if (data.status === 'error') { throw new Error(data.message || 'Payment could not be started.'); }\n";
+$htmlContent .= "        if (data.account_id) { accountId = data.account_id; setCookie('accountId', accountId, 7); }\n";
+$htmlContent .= "        if (data.redirect_url) { window.open(data.redirect_url, '_blank'); }\n";
+$htmlContent .= "        tvShowMsg('Check your phone and enter your M-Pesa PIN. Waiting for confirmation...', 'info');\n";
+$htmlContent .= "        tvPollPayment(accountId, macFormatted, deviceName, routerId, btn);\n";
+$htmlContent .= "    })\n";
+$htmlContent .= "    .catch(function (e) {\n";
+$htmlContent .= "        tvShowMsg(e.message, 'err');\n";
+$htmlContent .= "        tvResetBtn('Bind & Pay');\n";
+$htmlContent .= "    });\n";
+$htmlContent .= "}\n";
+$htmlContent .= "// Waits for the payment to be confirmed before anything is bound. Binding is\n";
+$htmlContent .= "// driven entirely by the server confirming an active recharge, so this poll\n";
+$htmlContent .= "// cannot be used to obtain a free bind.\n";
+$htmlContent .= "function tvPollPayment(accountId, mac, deviceName, routerId, btn) {\n";
+$htmlContent .= "    var tries = 0, maxTries = 40; // ~2 minutes at 3s\n";
+$htmlContent .= "    var iv = setInterval(function () {\n";
+$htmlContent .= "        tries++;\n";
+$htmlContent .= "        if (tries > maxTries) {\n";
+$htmlContent .= "            clearInterval(iv);\n";
+$htmlContent .= "            // The bind endpoint re-checks the payment server-side, so retrying is\n";
+$htmlContent .= "            // safe even when we are unsure whether M-Pesa confirmed.\n";
+$htmlContent .= "            tvOfferBindRetry(accountId, mac, deviceName, routerId, 'We did not receive the M-Pesa confirmation in time. If the payment shows on your phone, press Retry Connection - nothing will be charged again.');\n";
+$htmlContent .= "            return;\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        fetch('" . APP_URL . "/index.php?_route=plugin/CreateHotspotuser&type=verify', {\n";
+$htmlContent .= "            method: 'POST',\n";
+$htmlContent .= "            headers: {'Content-Type': 'application/json'},\n";
+$htmlContent .= "            body: JSON.stringify({account_id: accountId}),\n";
+$htmlContent .= "        })\n";
+$htmlContent .= "        .then(function (r) { return r.text().then(safeJson); })\n";
+$htmlContent .= "        .then(function (data) {\n";
+$htmlContent .= "            if (data && data.Resultcode === '3') {\n";
+$htmlContent .= "                clearInterval(iv);\n";
+$htmlContent .= "                tvBindDevice(accountId, mac, deviceName, routerId, btn);\n";
+$htmlContent .= "            }\n";
+$htmlContent .= "        })\n";
+$htmlContent .= "        .catch(function () { /* keep waiting */ });\n";
+$htmlContent .= "    }, 3000);\n";
+$htmlContent .= "}\n";
+$htmlContent .= "function tvBindDevice(accountId, mac, deviceName, routerId, btn) {\n";
+$htmlContent .= "    tvShowMsg('Payment received. Connecting your TV...', 'info');\n";
+$htmlContent .= "    var body = new URLSearchParams();\n";
+$htmlContent .= "    body.append('action', 'tv_bind');\n";
+$htmlContent .= "    body.append('mac', mac);\n";
+$htmlContent .= "    body.append('device_name', deviceName);\n";
+$htmlContent .= "    body.append('account_id', accountId);\n";
+$htmlContent .= "    body.append('router_id', routerId || '');\n";
+$htmlContent .= "    // Absolute URL: this page is proxied by the hotspot, so a path relative\n";
+$htmlContent .= "    // to the browser address bar would not resolve.\n";
+$htmlContent .= "    fetch('" . APP_URL . "/system/plugin/download.php', { method: 'POST', body: body })\n";
+$htmlContent .= "    .then(function (r) { return r.json(); })\n";
+$htmlContent .= "    .then(function (data) {\n";
+$htmlContent .= "        if (data.status === 'success') {\n";
+$htmlContent .= "            tvShowMsg('<strong>' + data.message + '</strong><br>Device MAC: ' + data.mac, 'ok');\n";
+$htmlContent .= "            btn.textContent = 'Done';\n";
+$htmlContent .= "            btn.style.background = '#16a34a';\n";
+$htmlContent .= "            btn.disabled = true;\n";
+$htmlContent .= "        } else {\n";
+$htmlContent .= "            tvOfferBindRetry(accountId, mac, deviceName, routerId, (data.message || 'We could not connect your TV yet.'));\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "    })\n";
+$htmlContent .= "    .catch(function () {\n";
+$htmlContent .= "        tvOfferBindRetry(accountId, mac, deviceName, routerId, 'We could not reach the server to finish the setup.');\n";
+$htmlContent .= "    });\n";
+$htmlContent .= "}\n";
+$htmlContent .= "</script>\n";
+
 $htmlContent .= "</body>\n";
 
 $htmlContent .= "<script>\n";
@@ -671,6 +1056,18 @@ $htmlContent .= "            `;\n";
 $htmlContent .= "            cardsContainer.appendChild(cardDiv);\n";
 $htmlContent .= "        });\n";
 $htmlContent .= "    });\n";
+$htmlContent .= "    // The same package list feeds the Pay For a TV dropdown, so the two\n";
+$htmlContent .= "    // can never disagree about what is on sale.\n";
+$htmlContent .= "    var tvSel = document.getElementById('tv-plan');\n";
+$htmlContent .= "    if (tvSel) {\n";
+$htmlContent .= "        var tvOpts = \"<option value=''>-- Choose a package --</option>\";\n";
+$htmlContent .= "        data.data.forEach(function (rt) {\n";
+$htmlContent .= "            rt.plans_hotspot.forEach(function (it) {\n";
+$htmlContent .= "                tvOpts += \"<option value='\" + it.planId + \"' data-router='\" + it.routerId + \"' data-price='\" + it.price + \"'>\" + it.planname + \" - \" + it.currency + \" \" + it.price + \"</option>\";\n";
+$htmlContent .= "            });\n";
+$htmlContent .= "        });\n";
+$htmlContent .= "        tvSel.innerHTML = tvOpts;\n";
+$htmlContent .= "    }\n";
 $htmlContent .= "}\n";
 $htmlContent .= "fetchData();\n";
 $htmlContent .= "</script>\n";

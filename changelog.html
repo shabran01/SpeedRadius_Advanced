@@ -58,6 +58,43 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.33] - 2026-09-22
+
+---
+
+### NEW: "Pay For a TV" — buy a package for a device that cannot show the login page
+
+**`system/plugin/download.php`**
+
+Many smart TVs cannot render the hotspot login page at all, so the customer has no way to buy. The portal now carries a **Pay For a TV** button that opens a form where they enter the TV's MAC address on their phone, pick a package and pay by M-Pesa. Once the payment is confirmed the TV is bound on the router and connects without ever seeing the login page.
+
+**The form**
+
+- Device MAC Address (required), Device Name (optional), Select Package, Phone Number (M-Pesa).
+- A collapsible **"How do I find my TV MAC address?"** panel with the menu path for Vitron, Samsung, LG, Sony/Android TV, Hisense and TCL/Roku, so the customer does not have to phone support.
+- The MAC input formats itself as it is typed and accepts `AABBCCDDEEFF`, `AA-BB-CC-DD-EE-FF` or `AA:BB:CC:DD:EE:FF` — customers rarely type the colons.
+- The package dropdown is populated from the **same** `plugin/hotspot_plan` call that builds the package cards, so the two can never offer different prices.
+
+**Payment is reused, not rebuilt**
+
+- The form calls the existing `plugin/CreateHotspotuser&type=grant` endpoint and waits on the existing `type=verify` poll, exactly like the normal Buy button. No second payment path was introduced.
+
+**The binding**
+
+- A new `tv_bind` POST handler resolves the router, looks the TV up in `/ip/dhcp-server/lease` by MAC and writes an `/ip/hotspot/ip-binding` entry.
+- **IP lookup:** `/ip/hotspot/ip-binding` requires an `address`, not just a MAC — the project's own `ip_bindings_add()` rejects an entry without one. The address is read from the TV's DHCP lease, which exists as soon as the TV has joined the WiFi, even when it cannot display the login page. If there is no lease yet the customer is told to connect the TV, wait and retry.
+- **Idempotent:** if the MAC already has a binding it is `set`, otherwise `add`ed, so retrying never stacks up duplicate entries.
+- **Auditable:** the binding's `comment` records `SR|<username>|exp <expiry>|<device name>`, so bindings can be traced back to a customer and cleaned up after expiry.
+- The binding type lives in a single constant, `TV_BINDING_TYPE`, defaulting to `regular`.
+
+> **Router prerequisite most likely to bite:** with `type=regular`, the TV skips the login page *and* the plan's limits still apply — but only if the hotspot profile permits MAC login (`login-by` must include `mac`). If the profile does not, the binding will be created and the payment will succeed while the TV still has no internet. In that case change `TV_BINDING_TYPE` to `'bypassed'`, which is guaranteed to get the TV online but means the router will **not** enforce the plan's time or data limits.
+
+### FIXED: Post-payment retry could have charged the customer twice
+
+- The first draft reset the submit button to the payment step whenever the binding failed — so a customer whose TV had not yet appeared on the network would be sent back through a fresh M-Pesa STK push for a payment they had already made.
+- Once payment is confirmed the button now becomes **Retry Connection** and re-runs *only* the binding. The bind endpoint independently verifies that an active recharge exists, so this is safe in both directions: an unpaid attempt is rejected, and a paid one is completed without any second charge.
+- The payment-poll timeout takes the same path for the same reason — it can leave the payment state genuinely unknown, and retrying the binding resolves that safely instead of risking a duplicate charge.
+
 ## [2.2.32] - 2026-09-22
 
 ---
