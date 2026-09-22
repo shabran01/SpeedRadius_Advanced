@@ -400,23 +400,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $client = new \PEAR2\Net\RouterOS\Client($rhost, $router['username'], $router['password'], $rport, false, 8);
 
         // ── The binding needs an IP, not just a MAC ───────────────────────────
-        // /ip hotspot ip-binding requires an 'address'. We get it from the TV's
-        // DHCP lease, which exists as soon as the TV has joined the WiFi - even
-        // when it cannot display the login page.
-        $ip = '';
-        $leaseReq = new \PEAR2\Net\RouterOS\Request('/ip/dhcp-server/lease/print');
-        $leaseReq->setQuery(\PEAR2\Net\RouterOS\Query::where('mac-address', $mac));
-        foreach ($client->sendSync($leaseReq) as $lease) {
-            if ($lease->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
-                $ip = (string)$lease->getProperty('address');
-                break;
+        // /ip hotspot ip-binding requires an 'address'. Two sources are consulted
+        // and the result is VALIDATED, because the first version trusted the DHCP
+        // lease alone and happily wrote a binding pointing at a broadcast address
+        // (10.0.2.255). It looked completely healthy and did nothing.
+        $ipCandidates = [];
+
+        // 1) The hotspot's own host table - the address the device is really using.
+        try {
+            $hostReq = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/host/print');
+            $hostReq->setArgument('.proplist', '.id,address,mac-address');
+            $hostReq->setQuery(\PEAR2\Net\RouterOS\Query::where('mac-address', $mac));
+            foreach ($client->sendSync($hostReq) as $hRow) {
+                if ($hRow->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                    $ipCandidates[] = trim((string)$hRow->getProperty('address'));
+                }
             }
+        } catch (\Throwable $e) {
+            // optional source - carry on with the lease table
+        }
+
+        // 2) The DHCP lease, which exists as soon as the device has joined the WiFi.
+        try {
+            $leaseReq = new \PEAR2\Net\RouterOS\Request('/ip/dhcp-server/lease/print');
+            $leaseReq->setArgument('.proplist', '.id,address,mac-address,status');
+            $leaseReq->setQuery(\PEAR2\Net\RouterOS\Query::where('mac-address', $mac));
+            foreach ($client->sendSync($leaseReq) as $lease) {
+                if ($lease->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                    $ipCandidates[] = trim((string)$lease->getProperty('address'));
+                }
+            }
+        } catch (\Throwable $e) {
+            // optional source
+        }
+
+        // Take the first candidate that is a real host address.
+        $ip       = '';
+        $rejected = [];
+        foreach ($ipCandidates as $candidate) {
+            if ($candidate === '') {
+                continue;
+            }
+            if (!filter_var($candidate, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                $rejected[] = $candidate;
+                continue;
+            }
+            $lastOctet = (int)substr($candidate, strrpos($candidate, '.') + 1);
+            if ($lastOctet === 0 || $lastOctet === 255) {
+                $rejected[] = $candidate;
+                continue;
+            }
+            $ip = $candidate;
+            break;
         }
 
         if ($ip === '') {
+            $detail = $rejected
+                ? ' The router reported ' . implode(', ', array_unique($rejected)) . ', which is not a usable device address.'
+                : '';
             echo json_encode([
                 'status'  => 'error',
-                'message' => 'We could not find this TV on the network yet. Connect the TV to the WiFi, wait about 30 seconds, then press Bind & Pay again.'
+                'message' => 'We could not find a usable network address for this device.' . $detail . ' Make sure the device is connected to the WiFi, wait about 30 seconds, then try again.'
             ]);
             exit;
         }
@@ -578,13 +622,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $shapeWarning = '';
         $queueName    = 'SR-tv-' . str_replace(':', '', $mac);
 
-        // A queue pointed at a network or broadcast address shapes nothing, and one
-        // of those silently broke an earlier test binding - so refuse rather than
-        // write something meaningless.
-        $lastOctet = (int)substr($ip, strrpos($ip, '.') + 1);
-        if ($lastOctet === 0 || $lastOctet === 255) {
-            $shapeWarning = 'Connected, but the speed limit was not applied: the device reported an unusual address (' . $ip . '). Reconnect the device so it picks up a normal address, then bind again.';
-        } elseif ($maxLimit === '') {
+        // The address has already been validated as a real host address above, so
+        // there is no network/broadcast case left to handle here.
+        if ($maxLimit === '') {
             $shapeWarning = 'Connected, but no speed limit was found for this package, so it is running unshaped.';
         } else {
             try {

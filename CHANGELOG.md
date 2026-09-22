@@ -2,6 +2,36 @@
 
  # CHANGELOG
 
+## [2.2.37] - 2026-09-22
+
+---
+
+### FIXED: Device address was taken from the DHCP lease alone and could be a broadcast address
+
+**`system/plugin/download.php`**
+
+A live test bound the device successfully but reported:
+
+> Connected, but the speed limit was not applied: the device reported an unusual address (10.0.2.255).
+
+That warning was added in 2.2.36 as a backstop, and it earned its place on the first real run — it caught the bug rather than letting a useless binding be written silently. `10.0.2.255` is a broadcast address; the device does not have it.
+
+**Cause:** `tv_bind` resolved the device's address from `/ip/dhcp-server/lease` alone and accepted whatever came back. No validation, no second opinion.
+
+### FIXED: Address resolution now uses two sources and validates the result
+
+- **`/ip/hotspot/host` is consulted first** — that is the address the hotspot is actually seeing the device on, which is the most direct answer available.
+- **`/ip/dhcp-server/lease` is the fallback.**
+- Every candidate is validated: it must parse as IPv4, and it must not end in `.0` or `.255`.
+- The first usable candidate wins. If none qualify, the customer gets an explanation that includes **which addresses were rejected**, so the router's own view is visible instead of buried.
+- Both lookups are individually wrapped in `try/catch`, so a router that does not permit one of them still resolves via the other rather than failing the whole bind.
+- As a consequence the `.0`/`.255` guard inside the shaping block is now unreachable and has been removed — the address is guaranteed to be a host address by the time shaping runs, and leaving dead code in the path that just failed would only mislead the next reader.
+
+> **Manual cleanup:** the test binding written against `10.0.2.255` is still on the router with a queue that was never created. Remove it before retesting:
+> ```
+> /ip hotspot ip-binding remove [find mac-address="62:9B:F1:3F:B2:DD"]
+> ```
+
 ## [2.2.36] - 2026-09-22
 
 ---
