@@ -288,6 +288,85 @@ unlink($lockFile);
 
 $timestampFile = "$UPLOAD_PATH/cron_last_run.txt";
 file_put_contents($timestampFile, time());
+
+/**
+ * Remove "Pay For a TV" bindings once the package behind them has lapsed.
+ *
+ * Devices bought through the TV flow use a *bypassed* ip-binding, and the router
+ * will never expire one on its own - a bypassed device simply keeps working. So
+ * the end of the package has to be enforced here instead.
+ *
+ * The binding's comment carries the account it was bought for in the form
+ * "SR|<username>|exp <date>|<device name>", which is all we need: the database
+ * stays the source of truth for whether the package is still live, so a stale or
+ * forged date in the comment cannot extend anyone's access.
+ *
+ * @return int number of bindings removed
+ */
+function cron_cleanup_tv_bindings($client, $router_name)
+{
+    $removed = 0;
+    try {
+        $req = new PEAR2\Net\RouterOS\Request('/ip/hotspot/ip-binding/print');
+        foreach ($client->sendSync($req) as $b) {
+            if ($b->getType() !== PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                continue;
+            }
+
+            $comment = (string)$b->getProperty('comment');
+            if (strpos($comment, 'SR') !== 0) {
+                continue; // not one of ours
+            }
+
+            // Written with '|' but RouterOS renders it as '/' in places, so accept both.
+            $parts    = preg_split('/[|\/]/', $comment);
+            $username = isset($parts[1]) ? trim($parts[1]) : '';
+            if ($username === '') {
+                continue;
+            }
+
+            $stillActive = ORM::for_table('tbl_user_recharges')
+                ->where('username', $username)
+                ->where('status', 'on')
+                ->where_raw("CONCAT(expiration, ' ', COALESCE(time, '00:00:00')) > NOW()")
+                ->find_one();
+
+            if ($stillActive) {
+                continue;
+            }
+
+            $bindId = (string)$b->getProperty('.id');
+            if ($bindId !== '') {
+                $rm = new PEAR2\Net\RouterOS\Request('/ip/hotspot/ip-binding/remove');
+                $rm->setArgument('numbers', $bindId);
+                $client->sendSync($rm);
+                $removed++;
+                echo "[TVBind] Removed expired binding for {$username} on {$router_name}\n";
+            }
+
+            // A 'regular' binding also created a hotspot user named after the MAC;
+            // drop it too so the device cannot sign in by MAC either.
+            $mac = strtoupper((string)$b->getProperty('mac-address'));
+            if ($mac !== '') {
+                $uq = new PEAR2\Net\RouterOS\Request('/ip/hotspot/user/print');
+                $uq->setArgument('.proplist', '.id');
+                $uq->setQuery(PEAR2\Net\RouterOS\Query::where('name', $mac));
+                foreach ($client->sendSync($uq) as $mu) {
+                    if ($mu->getType() === PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                        $ur = new PEAR2\Net\RouterOS\Request('/ip/hotspot/user/remove');
+                        $ur->setArgument('numbers', (string)$mu->getProperty('.id'));
+                        $client->sendSync($ur);
+                        echo "[TVBind] Removed device login user {$mac}\n";
+                        break;
+                    }
+                }
+            }
+        }
+    } catch (\Throwable $e) {
+        echo "[TVBind] Cleanup error on {$router_name}: " . $e->getMessage() . "\n";
+    }
+    return $removed;
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // Monthly Data-Usage Tracking
 // Snapshots active hotspot / PPPoE session bytes for every customer and
@@ -322,6 +401,11 @@ try {
                 echo "[DataUsage] Cannot connect to router {$router['name']}\n";
                 continue;
             }
+
+            // ── Expire "Pay For a TV" bindings ───────────────────────────
+            // Runs on the connection that is already open, so it costs no extra
+            // router login.
+            cron_cleanup_tv_bindings($client, $router['name']);
 
             // ── Hotspot active users ──────────────────────────────────────
             $hotspot_router_count = 0;

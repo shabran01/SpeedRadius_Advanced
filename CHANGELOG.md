@@ -2,6 +2,43 @@
 
  # CHANGELOG
 
+## [2.2.35] - 2026-09-22
+
+---
+
+### CHANGED: "Pay For a TV" now binds as `bypassed`, with expiry enforced by the cron
+
+**`system/plugin/download.php`, `system/cron.php`**
+
+After three attempts, MAC login (`type=regular`) was abandoned as the default. It depends on too many things being exactly right — `mac` in the hotspot profile's `login-by`, a hotspot user whose name matches the MAC in the exact format RouterOS expects, and a correct IP in the binding. Each one fails silently, and the customer has already paid by the time we find out.
+
+A `bypassed` binding has none of those dependencies. The device skips the hotspot entirely and gets online with **no username and no login page**, which is the whole reason the TV flow exists.
+
+### The trade-off, and how it is handled
+
+The router will not expire a bypassed device — it keeps working indefinitely. So the end of the package is now enforced by the app:
+
+- `tv_bind` already writes `SR|<username>|exp <date>|<device name>` into the binding's `comment`.
+- A new **`cron_cleanup_tv_bindings()`** in `system/cron.php` walks each router's IP bindings, takes the username out of that comment, and **checks `tbl_user_recharges`** to decide whether the package is still live.
+- The **database stays the source of truth** — the date in the comment is only informational, so a stale or hand-edited comment cannot extend anyone's access.
+- Lapsed bindings are removed, and any MAC-named hotspot user left behind by the `regular` path is removed with them.
+- It runs on the client connection the cron has already opened for usage tracking, so it costs no extra router login.
+- The comment separator is written as `|` but RouterOS renders it as `/` in places, so parsing accepts both.
+
+### Also
+
+- The MAC-named hotspot user is now created **only** for `type=regular`. A bypassed device never authenticates, so the user was pointless clutter on the router.
+- The pre-payment capability check no longer blocks payment when the binding is `bypassed` — MAC login is irrelevant in that case, and blocking on it would have refused money for a flow that works. It still blocks for `regular`, which genuinely needs it.
+- The "device sign-in is not enabled" warning no longer appears for `bypassed` binds for the same reason.
+- The profile-name lookup only aborts the bind for `regular`; a bypassed bind does not need a profile at all.
+
+> **Reverting to MAC login:** set `TV_BINDING_TYPE` back to `'regular'` in `download.php` and add `mac` to the hotspot profile's `login-by`. Everything needed is still in place and unchanged — the MAC-named user, the limits mirrored from the purchased account, and the pre-payment capability check.
+>
+> **Manual step:** the test binding created before this release still exists on the router with `type=regular` and a broadcast address. Delete it before testing, or it will linger until its package lapses:
+> ```
+> /ip hotspot ip-binding remove [find mac-address="62:9B:F1:3F:B2:DD"]
+> ```
+
 ## [2.2.34] - 2026-09-22
 
 ---

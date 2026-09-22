@@ -249,14 +249,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // ────────────────────────────────────────────────
 //
 // How the binding behaves on the router:
-//   'regular'  — the MAC is tied to the purchased hotspot user, so the TV skips
-//                the login page AND the plan's time/data limits still apply.
-//                Requires the hotspot profile to allow MAC login (login-by=mac).
-//   'bypassed' — the device skips the hotspot entirely. Guaranteed to get the TV
-//                online, but the router will NOT enforce the plan's limits.
-// Change this one constant if 'regular' does not work on your setup.
+//   'bypassed' - the device skips the hotspot entirely and gets internet with no
+//                username and no login page. This is what the TV flow uses: a TV
+//                cannot type a username, so MAC-login is one moving part too many.
+//                The router will NOT expire it, so cron.php removes the binding
+//                once the package behind it lapses.
+//   'regular'  - MAC login: the device is tied to a hotspot user named after its
+//                MAC. Limits are enforced by the router, but it additionally
+//                requires 'mac' in the hotspot profile's login-by list.
 if (!defined('TV_BINDING_TYPE')) {
-    define('TV_BINDING_TYPE', 'regular');
+    define('TV_BINDING_TYPE', 'bypassed');
 }
 
 /**
@@ -322,11 +324,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $client = new \PEAR2\Net\RouterOS\Client($rip[0], $router['username'], $router['password'], $rport, false, 8);
 
         $macLogin = tv_mac_login_enabled($client);
+        // A bypassed binding never authenticates, so MAC login is irrelevant; only
+        // the 'regular' (MAC login) type depends on it.
+        $blocked = (TV_BINDING_TYPE === 'regular' && !$macLogin);
 
         echo json_encode([
-            'status'          => 'success',
-            'mac_login'       => $macLogin,
-            'message'         => $macLogin ? '' : 'Device sign-in is not enabled on this network yet.'
+            'status'       => 'success',
+            'mac_login'    => !$blocked,
+            'binding_type' => TV_BINDING_TYPE,
+            'message'      => $blocked ? 'Device sign-in is not enabled on this network yet.' : ''
         ]);
     } catch (\Throwable $e) {
         echo json_encode(['status' => 'error', 'message' => 'Could not check the router: ' . $e->getMessage()]);
@@ -446,52 +452,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             // Fall back to the profile name recorded on the recharge row.
             $profileName = (string)($paid['namebp'] ?? '');
         }
-        if ($profileName === '') {
+        if ($profileName === '' && TV_BINDING_TYPE === 'regular') {
             echo json_encode(['status' => 'error', 'message' => 'Could not work out which package profile to apply. Please contact support.']);
             exit;
         }
 
         // Idempotent: update the MAC user if it exists, otherwise add it.
-        $macUserId = '';
-        $macQ = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/print');
-        $macQ->setArgument('.proplist', '.id');
-        $macQ->setQuery(\PEAR2\Net\RouterOS\Query::where('name', $mac));
-        foreach ($client->sendSync($macQ) as $mu) {
-            if ($mu->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
-                $macUserId = (string)$mu->getProperty('.id');
-                break;
-            }
-        }
-
-        if ($macUserId !== '') {
-            $uReq = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/set');
-            $uReq->setArgument('.id', $macUserId);
-        } else {
-            $uReq = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/add');
-            $uReq->setArgument('name', $mac);
-            $uReq->setArgument('password', $mac);
-        }
-        $uReq->setArgument('profile', $profileName);
-        if ($srcUser) {
-            foreach (['limit-uptime', 'limit-bytes-total'] as $limitProp) {
-                $val = $srcUser->getProperty($limitProp);
-                if ($val !== null && $val !== '') {
-                    $uReq->setArgument($limitProp, $val);
+        // A bypassed device skips the hotspot entirely and never authenticates, so
+        // it needs no login account at all. The MAC-named user is only required for
+        // the 'regular' (MAC login) binding type.
+        if (TV_BINDING_TYPE === 'regular') {
+            $macUserId = '';
+            $macQ = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/print');
+            $macQ->setArgument('.proplist', '.id');
+            $macQ->setQuery(\PEAR2\Net\RouterOS\Query::where('name', $mac));
+            foreach ($client->sendSync($macQ) as $mu) {
+                if ($mu->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                    $macUserId = (string)$mu->getProperty('.id');
+                    break;
                 }
             }
-        }
-        $uReq->setArgument('comment', $comment);
 
-        $uResp = $client->sendSync($uReq);
-        if ($uResp->getType() === \PEAR2\Net\RouterOS\Response::TYPE_FATAL) {
-            echo json_encode(['status' => 'error', 'message' => 'Router rejected the device account: ' . $uResp->getProperty('message')]);
-            exit;
-        }
+            if ($macUserId !== '') {
+                $uReq = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/set');
+                $uReq->setArgument('.id', $macUserId);
+            } else {
+                $uReq = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/add');
+                $uReq->setArgument('name', $mac);
+                $uReq->setArgument('password', $mac);
+            }
+            $uReq->setArgument('profile', $profileName);
+            if ($srcUser) {
+                foreach (['limit-uptime', 'limit-bytes-total'] as $limitProp) {
+                    $val = $srcUser->getProperty($limitProp);
+                    if ($val !== null && $val !== '') {
+                        $uReq->setArgument($limitProp, $val);
+                    }
+                }
+            }
+            $uReq->setArgument('comment', $comment);
 
-        // Explicitly enable it - required on RouterOS 7.18+ (same as addHotspotUser).
-        $enableReq = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/enable');
-        $enableReq->setArgument('numbers', $mac);
-        $client->sendSync($enableReq);
+            $uResp = $client->sendSync($uReq);
+            if ($uResp->getType() === \PEAR2\Net\RouterOS\Response::TYPE_FATAL) {
+                echo json_encode(['status' => 'error', 'message' => 'Router rejected the device account: ' . $uResp->getProperty('message')]);
+                exit;
+            }
+
+            // Explicitly enable it - required on RouterOS 7.18+ (same as addHotspotUser).
+            $enableReq = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/enable');
+            $enableReq->setArgument('numbers', $mac);
+            $client->sendSync($enableReq);
+        }
 
         // ── Bind the MAC, which pins the device to its IP ────────────────────
         // Idempotent: update the binding if this MAC already has one, otherwise add.
@@ -525,7 +536,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         // Report the profile state too, so a silent MAC-login misconfiguration is
         // visible during testing instead of showing up as "customer paid, TV dead".
-        $macLoginOn = tv_mac_login_enabled($client);
+        // Only meaningful for the MAC-login binding type - a bypassed device never
+        // authenticates at all, so there is nothing to warn about.
+        $macLoginOn = (TV_BINDING_TYPE === 'regular') ? tv_mac_login_enabled($client) : true;
 
         echo json_encode([
             'status'            => 'success',
