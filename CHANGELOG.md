@@ -2,6 +2,33 @@
 
  # CHANGELOG
 
+## [2.2.31] - 2026-09-22
+
+---
+
+### CHANGED: Package Card on the Customer View Now Uses Colour
+
+**`ui/ui/customers-view.tpl`**
+
+- The package cards (Active / Type / Bandwidth / Created On / Expires On / Router / Method) were entirely greyscale — grey labels against near-black values with faint dividers and no indication of whether the package was live. They now carry colour:
+  - The card regains a **status accent** on its top border — green when the package is on, red when it is not. The v2.2.22 restyle had flattened every card to a uniform grey border, which removed the only at-a-glance status cue.
+  - The card header becomes a **tinted band** matching that status, so a live package reads green and an expired one red without opening it.
+  - **Active** is a green/red pill instead of a bare `yes`/`no`.
+  - **Bandwidth** is a blue chip, **Expires On** an amber chip — the two values an operator scans for.
+  - **Router** and **Method** are slate monospace chips, so a router name or an `M-Pesa` reference cannot be mistaken for prose.
+- Rows gained a soft hover tint and a small monospace-styled icon on each label, and `.sr-cust` label styling now applies to them properly (see below).
+- Scoped with `:not(.sr-profile)` throughout, so the customer profile card in the left column is unaffected.
+
+### FIXED: Package Card Labels Were Never Getting the Label Styling
+
+- The `.sr-cust` rules style a row label via `.list-group-item > b` (uppercase, 10.5px, letter-spacing). But the package card emitted its labels as **bare text nodes** — `{Lang::T('Active')} <span class="pull-right">` — with no `<b>` wrapper at all. So the uppercase/tracking treatment silently never applied to this card, and its labels rendered as ordinary body text while every other panel on the page had proper labels.
+- Labels are now wrapped, so this card finally matches the rest of the page.
+
+### CHANGED: Router and Method Split Into Their Own Rows
+
+- These two values were crammed into a single row that used the **router name as the label**: `{$package['routers']} <span class="pull-right">{$package['method']}</span>`. A reader could not tell which value was which, and no label was translated.
+- They are now two labelled rows — **Router** and **Method** — consistent with every other row in the card.
+
 ## [2.2.30] - 2026-09-22
 
 ---

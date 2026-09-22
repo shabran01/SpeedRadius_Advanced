@@ -442,6 +442,90 @@
     word-break: break-word;
 }
 
+/* ---- Package card colour ----
+   The rows above are plain grey-on-white; these rules give the card a status tint
+   and turn the key values into readable chips. Scoped with :not(.sr-profile) so the
+   customer profile card on the left is untouched. */
+.sr-cust .box:not(.sr-profile).box-success { border-top: 3px solid #16a34a !important; }
+.sr-cust .box:not(.sr-profile).box-danger  { border-top: 3px solid #dc2626 !important; }
+
+.sr-cust .box:not(.sr-profile) .box-profile > h4 {
+    padding: 10px 12px !important;
+    border: 1px solid #e9edf3;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #334155 !important;
+}
+.sr-cust .box:not(.sr-profile).box-success .box-profile > h4 {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534 !important;
+}
+.sr-cust .box:not(.sr-profile).box-danger .box-profile > h4 {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b !important;
+}
+.sr-cust .box:not(.sr-profile) .box-profile > h4 small {
+    color: #64748b !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+}
+
+/* Label icons sit in a fixed slot so every row aligns */
+.sr-cust .box:not(.sr-profile) .list-group-item > b i {
+    width: 14px;
+    margin-right: 6px;
+    text-align: center;
+    font-size: 11px;
+    color: #cbd5e1;
+}
+
+/* Row rhythm - padding gives the hover tint somewhere to breathe */
+.sr-cust .box:not(.sr-profile) .list-group-item {
+    padding: 9px 8px !important;
+    margin: 0 -8px;
+    border-radius: 8px;
+}
+.sr-cust .box:not(.sr-profile) .list-group-item:hover { background: #f8fafc !important; }
+
+/* Value chips */
+.sr-cust .box:not(.sr-profile) .list-group-item .sr-chip {
+    display: inline-block;
+    padding: 3px 10px !important;
+    border: 1px solid transparent;
+    border-radius: 999px !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+.sr-cust .box:not(.sr-profile) .list-group-item .sr-chip i { margin-right: 4px; }
+.sr-cust .box:not(.sr-profile) .list-group-item .sr-chip-ok {
+    background: #dcfce7 !important; color: #15803d !important; border-color: #bbf7d0 !important;
+}
+.sr-cust .box:not(.sr-profile) .list-group-item .sr-chip-bad {
+    background: #fee2e2 !important; color: #b91c1c !important; border-color: #fecaca !important;
+}
+.sr-cust .box:not(.sr-profile) .list-group-item .sr-chip-bw {
+    background: #eff6ff !important; color: #1d4ed8 !important; border-color: #bfdbfe !important;
+}
+.sr-cust .box:not(.sr-profile) .list-group-item .sr-chip-exp {
+    background: #fff7ed !important; color: #b45309 !important; border-color: #fed7aa !important;
+}
+.sr-cust .box:not(.sr-profile) .list-group-item .sr-chip-mono {
+    background: #f1f5f9 !important;
+    color: #334155 !important;
+    border-color: #e2e8f0 !important;
+    border-radius: 8px !important;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    max-width: 62%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* Forms and menus */
 .sr-cust .form-control {
     border-radius: 10px !important;
@@ -1065,28 +1149,32 @@
                             </h4>
                             <ul class="list-group list-group-unbordered">
                                 <li class="list-group-item">
-                                    {Lang::T('Active')} <span class="pull-right">{if
-                        $package['status']=='on'}yes{else}no
-                                    {/if}</span>
+                                    <b><i class="fa fa-power-off"></i>{Lang::T('Active')}</b>
+                                    <span class="pull-right sr-chip {if $package['status']=='on'}sr-chip-ok{else}sr-chip-bad{/if}">{if $package['status']=='on'}{Lang::T('Yes')}{else}{Lang::T('No')}{/if}</span>
                                 </li>
                                 <li class="list-group-item">
-                                    {Lang::T('Type')} <span class="pull-right">
-                                        {if $package['prepaid'] eq yes}Prepaid{else}<b>Postpaid</b>{/if}</span>
+                                    <b><i class="fa fa-tag"></i>{Lang::T('Type')}</b>
+                                    <span class="pull-right">{if $package['prepaid'] eq yes}{Lang::T('Prepaid')}{else}{Lang::T('Postpaid')}{/if}</span>
                                 </li>
                                 <li class="list-group-item">
-                                    {Lang::T('Bandwidth')} <span class="pull-right">
-                                        {$package['name_bw']}</span>
+                                    <b><i class="fa fa-tachometer"></i>{Lang::T('Bandwidth')}</b>
+                                    <span class="pull-right sr-chip sr-chip-bw">{$package['name_bw']}</span>
                                 </li>
                                 <li class="list-group-item">
-                                    {Lang::T('Created On')} <span
-                                        class="pull-right">{Lang::dateAndTimeFormat($package['recharged_on'],$package['recharged_time'])}</span>
+                                    <b><i class="fa fa-calendar-plus-o"></i>{Lang::T('Created On')}</b>
+                                    <span class="pull-right">{Lang::dateAndTimeFormat($package['recharged_on'],$package['recharged_time'])}</span>
                                 </li>
                                 <li class="list-group-item">
-                                    {Lang::T('Expires On')} <span class="pull-right">{Lang::dateAndTimeFormat($package['expiration'],
-                        $package['time'])}</span>
+                                    <b><i class="fa fa-hourglass-half"></i>{Lang::T('Expires On')}</b>
+                                    <span class="pull-right sr-chip sr-chip-exp">{Lang::dateAndTimeFormat($package['expiration'],$package['time'])}</span>
                                 </li>
                                 <li class="list-group-item">
-                                    {$package['routers']} <span class="pull-right">{$package['method']}</span>
+                                    <b><i class="fa fa-server"></i>{Lang::T('Router')}</b>
+                                    <span class="pull-right sr-chip sr-chip-mono">{$package['routers']}</span>
+                                </li>
+                                <li class="list-group-item">
+                                    <b><i class="fa fa-credit-card"></i>{Lang::T('Method')}</b>
+                                    <span class="pull-right sr-chip sr-chip-mono">{$package['method']}</span>
                                 </li>
                             </ul>
                             <div class="row" style="margin-bottom: 10px;">
