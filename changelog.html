@@ -58,6 +58,41 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.34] - 2026-09-22
+
+---
+
+### FIXED: "Pay For a TV" took the payment but left the device offline
+
+**`system/plugin/download.php`**
+
+A test with a phone confirmed the money was taken and the binding was written, yet the device still had no internet. The binding was fine — the device was never **authenticated**.
+
+**Root cause**
+
+With `login-by=mac`, RouterOS does not log a device in as "whoever owns that MAC". It looks for a **hotspot user whose name *is* the MAC address**. The purchased account is named after the account id, so the MAC could never match it, and the hotspot left the device unauthenticated while every visible artefact (payment, recharge row, ip-binding) looked correct.
+
+### FIXED: The device now gets its own hotspot user
+
+- `tv_bind` now creates (or updates) a hotspot user **named after the MAC address**, carrying the same `profile` as the purchased account and mirrored `limit-uptime` / `limit-bytes-total` values read off that account.
+- Reading the limits off the existing user rather than recomputing them from the plan means the device gets **exactly** the limits a normal login would have received, and it keeps working if the plan's limit logic changes later.
+- The profile name is read from the purchased user first, falling back to `tbl_user_recharges.namebp`.
+- The user is explicitly enabled after creation, matching what `MikrotikHotspot::addHotspotUser()` already does for RouterOS 7.18+.
+- Still idempotent: an existing MAC-named user is updated rather than duplicated, so retrying is safe.
+
+### NEW: Capability check runs BEFORE payment
+
+- New `tv_check` endpoint plus a `tv_resolve_router()` / `tv_mac_login_enabled()` helper pair.
+- Opening the TV form now asks the router whether any hotspot profile has `mac` in its `login-by` list. If it does not, the form explains that a TV cannot be connected yet and **disables the pay button**, stating plainly that the customer has not been charged.
+- This exists specifically so we never again take money for a device we cannot connect. The previous flow could only discover the misconfiguration *after* payment.
+- The bind response also returns `mac_login_enabled`, and the success message warns if it is false, so a silent misconfiguration stays visible during testing.
+
+> **One-time router setting required for this to work:**
+> ```
+> /ip hotspot profile set [find] login-by=mac,http-chap,http-pap
+> ```
+> Adding `mac` to the existing `login-by` list is additive — existing username/password logins keep working. Until this is set, the form will correctly refuse to take payment.
+
 ## [2.2.33] - 2026-09-22
 
 ---

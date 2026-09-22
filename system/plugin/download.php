@@ -259,6 +259,81 @@ if (!defined('TV_BINDING_TYPE')) {
     define('TV_BINDING_TYPE', 'regular');
 }
 
+/**
+ * Resolve the router to work on: the one passed in, else the configured one.
+ * $settings is loaded further down this file, after the POST handlers run, so
+ * the appconfig row is read directly here instead.
+ */
+function tv_resolve_router($mysqli, $routerId = 0) {
+    if ($routerId > 0) {
+        $q = $mysqli->prepare("SELECT * FROM tbl_routers WHERE id = ? LIMIT 1");
+        $q->bind_param("i", $routerId);
+    } else {
+        $res  = $mysqli->query("SELECT value FROM tbl_appconfig WHERE setting = 'router_name' LIMIT 1");
+        $row  = $res ? $res->fetch_assoc() : null;
+        $name = $row['value'] ?? '';
+        $q = $mysqli->prepare("SELECT * FROM tbl_routers WHERE name = ? LIMIT 1");
+        $q->bind_param("s", $name);
+    }
+    $q->execute();
+    return $q->get_result()->fetch_assoc();
+}
+
+/**
+ * Does any hotspot profile on this router accept MAC authentication?
+ *
+ * RouterOS authenticates a MAC-login device by looking for a hotspot user whose
+ * NAME is the device's MAC address. Without 'mac' in the profile's login-by
+ * list that lookup never happens, so a bound device stays offline while looking
+ * perfectly healthy. This is why the check happens BEFORE taking payment.
+ */
+function tv_mac_login_enabled($client) {
+    $req = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/profile/print');
+    foreach ($client->sendSync($req) as $pr) {
+        if ($pr->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+            if (strpos(strtolower((string)$pr->getProperty('login-by')), 'mac') !== false) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// ────────────────────────────────────────────────
+// TV CAPABILITY CHECK (POST) — run before payment
+// ────────────────────────────────────────────────
+// Nothing worse than taking a customer's money for a device we cannot actually
+// connect, so the page asks this first and blocks the pay button if the router
+// is not ready for MAC login.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'tv_check') {
+    header('Content-Type: application/json');
+
+    try {
+        require_once __DIR__ . '/../autoload/PEAR2/Autoload.php';
+
+        $router = tv_resolve_router($mysqli, (int)($_POST['router_id'] ?? 0));
+        if (!$router) {
+            echo json_encode(['status' => 'error', 'message' => 'Router not configured.']);
+            exit;
+        }
+
+        $rip   = explode(':', $router['ip_address']);
+        $rport = !empty($rip[1]) ? $rip[1] : 8728;
+        $client = new \PEAR2\Net\RouterOS\Client($rip[0], $router['username'], $router['password'], $rport, false, 8);
+
+        $macLogin = tv_mac_login_enabled($client);
+
+        echo json_encode([
+            'status'          => 'success',
+            'mac_login'       => $macLogin,
+            'message'         => $macLogin ? '' : 'Device sign-in is not enabled on this network yet.'
+        ]);
+    } catch (\Throwable $e) {
+        echo json_encode(['status' => 'error', 'message' => 'Could not check the router: ' . $e->getMessage()]);
+    }
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'tv_bind') {
     header('Content-Type: application/json');
 
@@ -304,20 +379,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
 
         // ── Resolve the router ────────────────────────────────────────────────
-        // $settings is loaded further down this file, after the POST handlers run,
-        // so the configured router name has to be read here instead.
-        if ($routerId > 0) {
-            $rq = $mysqli->prepare("SELECT * FROM tbl_routers WHERE id = ? LIMIT 1");
-            $rq->bind_param("i", $routerId);
-        } else {
-            $nameRes = $mysqli->query("SELECT value FROM tbl_appconfig WHERE setting = 'router_name' LIMIT 1");
-            $nameRow = $nameRes ? $nameRes->fetch_assoc() : null;
-            $rname   = $nameRow['value'] ?? '';
-            $rq = $mysqli->prepare("SELECT * FROM tbl_routers WHERE name = ? LIMIT 1");
-            $rq->bind_param("s", $rname);
-        }
-        $rq->execute();
-        $router = $rq->get_result()->fetch_assoc();
+        $router = tv_resolve_router($mysqli, $routerId);
         if (!$router) {
             echo json_encode(['status' => 'error', 'message' => 'Router not configured. Please contact support.']);
             exit;
@@ -360,6 +422,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $comment .= '|' . str_replace('|', '/', substr($deviceName, 0, 40));
         }
 
+        // ── The device needs its OWN hotspot user, named after the MAC ───────
+        // login-by=mac does not log a device in as "whoever owns that MAC".
+        // RouterOS looks for a hotspot user whose NAME is the MAC address. The
+        // purchased account is named after the account id, so the MAC can never
+        // match it - which is exactly why the first version left the device
+        // offline while the binding looked fine. We mirror the purchased user's
+        // profile and limits onto a MAC-named user so the device signs in by
+        // itself AND the plan's limits still apply.
+        $srcUser = null;
+        $srcReq  = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/print');
+        $srcReq->setArgument('.proplist', '.id,profile,limit-uptime,limit-bytes-total');
+        $srcReq->setQuery(\PEAR2\Net\RouterOS\Query::where('name', $account['username']));
+        foreach ($client->sendSync($srcReq) as $su) {
+            if ($su->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                $srcUser = $su;
+                break;
+            }
+        }
+
+        $profileName = $srcUser ? (string)$srcUser->getProperty('profile') : '';
+        if ($profileName === '') {
+            // Fall back to the profile name recorded on the recharge row.
+            $profileName = (string)($paid['namebp'] ?? '');
+        }
+        if ($profileName === '') {
+            echo json_encode(['status' => 'error', 'message' => 'Could not work out which package profile to apply. Please contact support.']);
+            exit;
+        }
+
+        // Idempotent: update the MAC user if it exists, otherwise add it.
+        $macUserId = '';
+        $macQ = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/print');
+        $macQ->setArgument('.proplist', '.id');
+        $macQ->setQuery(\PEAR2\Net\RouterOS\Query::where('name', $mac));
+        foreach ($client->sendSync($macQ) as $mu) {
+            if ($mu->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                $macUserId = (string)$mu->getProperty('.id');
+                break;
+            }
+        }
+
+        if ($macUserId !== '') {
+            $uReq = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/set');
+            $uReq->setArgument('.id', $macUserId);
+        } else {
+            $uReq = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/add');
+            $uReq->setArgument('name', $mac);
+            $uReq->setArgument('password', $mac);
+        }
+        $uReq->setArgument('profile', $profileName);
+        if ($srcUser) {
+            foreach (['limit-uptime', 'limit-bytes-total'] as $limitProp) {
+                $val = $srcUser->getProperty($limitProp);
+                if ($val !== null && $val !== '') {
+                    $uReq->setArgument($limitProp, $val);
+                }
+            }
+        }
+        $uReq->setArgument('comment', $comment);
+
+        $uResp = $client->sendSync($uReq);
+        if ($uResp->getType() === \PEAR2\Net\RouterOS\Response::TYPE_FATAL) {
+            echo json_encode(['status' => 'error', 'message' => 'Router rejected the device account: ' . $uResp->getProperty('message')]);
+            exit;
+        }
+
+        // Explicitly enable it - required on RouterOS 7.18+ (same as addHotspotUser).
+        $enableReq = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/user/enable');
+        $enableReq->setArgument('numbers', $mac);
+        $client->sendSync($enableReq);
+
+        // ── Bind the MAC, which pins the device to its IP ────────────────────
         // Idempotent: update the binding if this MAC already has one, otherwise add.
         $existingId = '';
         $bindReq = new \PEAR2\Net\RouterOS\Request('/ip/hotspot/ip-binding/print');
@@ -389,13 +523,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             exit;
         }
 
+        // Report the profile state too, so a silent MAC-login misconfiguration is
+        // visible during testing instead of showing up as "customer paid, TV dead".
+        $macLoginOn = tv_mac_login_enabled($client);
+
         echo json_encode([
-            'status'   => 'success',
-            'mac'      => $mac,
-            'ip'       => $ip,
-            'type'     => TV_BINDING_TYPE,
-            'username' => $account['username'],
-            'message'  => 'Done! Your TV should now connect without the login page.'
+            'status'            => 'success',
+            'mac'               => $mac,
+            'ip'                => $ip,
+            'type'              => TV_BINDING_TYPE,
+            'username'          => $account['username'],
+            'profile'           => $profileName,
+            'mac_login_enabled' => $macLoginOn,
+            'message'           => 'Done! Your device should now connect without the login page.'
         ]);
     } catch (\Throwable $e) {
         echo json_encode(['status' => 'error', 'message' => 'Could not reach the router: ' . $e->getMessage()]);
@@ -824,6 +964,23 @@ $htmlContent .= "    tvHideMsg();\n";
 $htmlContent .= "    // Fresh start: the button goes back to the payment step.\n";
 $htmlContent .= "    var b = document.getElementById('tv-submit');\n";
 $htmlContent .= "    if (b) { b.onclick = submitTvPay; b.disabled = false; b.style.opacity = '1'; b.textContent = 'Bind & Pay'; b.style.background = '#2563eb'; }\n";
+$htmlContent .= "    tvCheckCapability();\n";
+$htmlContent .= "}\n";
+$htmlContent .= "// Asks the router whether it can sign devices in by MAC at all. Checked BEFORE\n";
+$htmlContent .= "// payment: taking money for a device we cannot connect is the one failure worth\n";
+$htmlContent .= "// blocking up front.\n";
+$htmlContent .= "function tvCheckCapability() {\n";
+$htmlContent .= "    var body = new URLSearchParams();\n";
+$htmlContent .= "    body.append('action', 'tv_check');\n";
+$htmlContent .= "    fetch('" . APP_URL . "/system/plugin/download.php', { method: 'POST', body: body })\n";
+$htmlContent .= "    .then(function (r) { return r.json(); })\n";
+$htmlContent .= "    .then(function (data) {\n";
+$htmlContent .= "        if (!data || data.status !== 'success' || data.mac_login !== false) return;\n";
+$htmlContent .= "        tvShowMsg('Device sign-in is not switched on for this network yet, so a TV cannot be connected right now. Please contact support.<br><strong>You have not been charged.</strong>', 'err');\n";
+$htmlContent .= "        var b = document.getElementById('tv-submit');\n";
+$htmlContent .= "        if (b) { b.disabled = true; b.style.opacity = '0.5'; b.textContent = 'Unavailable'; }\n";
+$htmlContent .= "    })\n";
+$htmlContent .= "    .catch(function () { /* non-fatal: let the customer try */ });\n";
 $htmlContent .= "}\n";
 $htmlContent .= "function closeTvModal() {\n";
 $htmlContent .= "    var m = document.getElementById('tv-modal');\n";
@@ -960,7 +1117,11 @@ $htmlContent .= "    fetch('" . APP_URL . "/system/plugin/download.php', { metho
 $htmlContent .= "    .then(function (r) { return r.json(); })\n";
 $htmlContent .= "    .then(function (data) {\n";
 $htmlContent .= "        if (data.status === 'success') {\n";
-$htmlContent .= "            tvShowMsg('<strong>' + data.message + '</strong><br>Device MAC: ' + data.mac, 'ok');\n";
+$htmlContent .= "            var extra = '';\n";
+$htmlContent .= "            if (data.mac_login_enabled === false) {\n";
+$htmlContent .= "                extra = '<br><strong>Note:</strong> device sign-in is not enabled on this network, so the device may still need help connecting. Please contact support.';\n";
+$htmlContent .= "            }\n";
+$htmlContent .= "            tvShowMsg('<strong>' + data.message + '</strong><br>Device MAC: ' + data.mac + '<br>Package: ' + data.profile + extra, 'ok');\n";
 $htmlContent .= "            btn.textContent = 'Done';\n";
 $htmlContent .= "            btn.style.background = '#16a34a';\n";
 $htmlContent .= "            btn.disabled = true;\n";
