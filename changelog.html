@@ -58,6 +58,26 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.39] - 2026-09-22
+
+---
+
+### FIXED: A TV purchase overwrote the device's own account number
+
+**`system/plugin/download.php`**
+
+After paying for a TV, the phone's **"Enter your account number or user name"** box started showing the account that had just been created for the TV. On a phone that had bought nothing for itself, it looked as though that device owned the TV's package.
+
+**Cause:** `submitTvPay()` called `persistAccountId()` — the helper that reads, creates and stores *this device's* account in the `accountId` cookie — and then wrote the account returned by the payment endpoint straight back into the same cookie. So a TV purchase replaced the device's own account reference with the TV's.
+
+### FIXED: TV purchases now use their own cookie
+
+- The TV flow reads and writes **`tvAccountId`**, a separate cookie, and never touches `accountId`.
+- `persistAccountId()` is no longer called from the TV path at all, so the device's own account is left completely alone by a TV purchase.
+- The retry path keeps using the same TV account, since `tvBindCtx` is built from the value returned by that flow.
+
+> **Residual state to be aware of:** the incorrect cookie was already written to any device that completed a TV purchase before this release, and it is stored for **7 days**. So the box may keep showing the TV's account number until that cookie expires or is cleared — the fix stops it happening again, it does not retroactively undo it. Clearing the browser's cookies for the site resolves it immediately. Any "2 mins test" purchase made while testing is also long expired.
+
 ## [2.2.38] - 2026-09-22
 
 ---
