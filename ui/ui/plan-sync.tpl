@@ -134,7 +134,7 @@ $(document).ready(function() {
     $('#routerSelect, #typeSelect').on('change', function() {
         selectedRouter = $('#routerSelect').length ? $('#routerSelect').val() : selectedRouter;
         selectedType = $('#typeSelect').length ? $('#typeSelect').val() : selectedType;
-        let countParams = { offset: 0, limit: 0, count_only: 1 };
+        let countParams = { offset: 0, limit: 0, count_only: 1, token: '{$csrf_token}' };
         if (selectedRouter) { countParams.router = selectedRouter; }
         if (selectedType) { countParams.type = selectedType; }
         $.getJSON('{$_url}plan/sync-process', countParams)
@@ -180,7 +180,7 @@ $(document).ready(function() {
     
     function syncNextBatch() {
         console.log('Starting syncNextBatch, offset:', offset);
-        let ajaxData = { offset: offset };
+        let ajaxData = { offset: offset, token: '{$csrf_token}' };
         if (selectedRouter) { ajaxData.router = selectedRouter; }
         if (selectedType) { ajaxData.type = selectedType; }
         $.ajax({
@@ -255,6 +255,19 @@ $(document).ready(function() {
             error: function(xhr, status, error) {
                 console.log('AJAX error:', xhr, status, error);
                 console.log('Response text:', xhr.responseText);
+
+                // 403 = the CSRF token expired (they live 30 minutes) or the account
+                // lost permission. Retrying will never succeed, so stop and say why.
+                if (xhr.status === 403) {
+                    let forbidden = 'Security token expired.';
+                    try {
+                        let parsed = JSON.parse(xhr.responseText);
+                        if (parsed && parsed.message) { forbidden = parsed.message; }
+                    } catch (e) { /* keep the fallback text */ }
+                    showError('Stopped: ' + forbidden + ' Reload the page and start the sync again.');
+                    return;
+                }
+
                 let errorMsg = 'Connection error: ';
                 if (status === 'timeout') {
                     errorMsg += 'Request timeout. Will retry...';

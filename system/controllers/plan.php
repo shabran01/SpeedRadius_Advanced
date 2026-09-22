@@ -83,12 +83,21 @@ switch ($action) {
         $ui->assign('allRouters', $allRouters);
         $ui->assign('syncRouter', $syncRouter);
         $ui->assign('syncType', $syncType);
+        $ui->assign('csrf_token', Csrf::generateAndStoreToken());
         $ui->display('plan-sync.tpl');
         break;
         
     case 'sync-process':
+        // This endpoint writes to routers, so it must not be reachable cross-site.
         if (!in_array($admin['user_type'], ['SuperAdmin', 'Admin'])) {
+            header('Content-Type: application/json');
+            http_response_code(403);
             die(json_encode(['success' => false, 'message' => 'Unauthorized - Viewer role has read-only access']));
+        }
+        if (!Csrf::check(_req('token'))) {
+            header('Content-Type: application/json');
+            http_response_code(403);
+            die(json_encode(['success' => false, 'message' => 'Invalid or Expired CSRF Token']));
         }
 
         $filterRouter = isset($_GET['router']) ? trim($_GET['router']) : '';
@@ -144,9 +153,19 @@ switch ($action) {
                         require_once $dvc;
                         $device = new $p['device'];
                         if (method_exists($device, 'add_customer')) {
-                            $device->add_customer($c, $p);
-                            $results[] = ['username' => $tur['username'], 'status' => 'success', 'message' => 'Synced', 'plan' => $tur['namebp'], 'router' => $tur['routers']];
-                            $success++;
+                            // Pass the recharge row so the device targets the router the
+                            // customer is actually on, not the plan's default router.
+                            // add_customer() returns false when the router is missing or
+                            // unreachable - reporting that as "Synced" is what made the
+                            // success counts meaningless.
+                            $synced = $device->add_customer($c, $p, $tur);
+                            if ($synced === false) {
+                                $results[] = ['username' => $tur['username'], 'status' => 'error', 'message' => 'Router unreachable, not found, or rejected the sync', 'plan' => $tur['namebp'], 'router' => $tur['routers']];
+                                $errors++;
+                            } else {
+                                $results[] = ['username' => $tur['username'], 'status' => 'success', 'message' => 'Synced', 'plan' => $tur['namebp'], 'router' => $tur['routers']];
+                                $success++;
+                            }
                         } else {
                             $results[] = ['username' => $tur['username'], 'status' => 'error', 'message' => 'Method missing'];
                             $errors++;

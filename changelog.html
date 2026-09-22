@@ -58,6 +58,38 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.28] - 2026-09-22
+
+---
+
+### FIXED: Bulk Sync Reported "Success" for Customers It Never Synced
+
+**`system/controllers/plan.php`, `system/devices/MikrotikHotspot.php`, `system/devices/MikrotikPppoe.php`**
+
+- `plan/sync-process` discarded `add_customer()`'s return value and recorded `status: success, message: Synced` for every row regardless of the outcome. Both device classes signal failure by returning `false` — a router that cannot be resolved, a client that will not connect, or any caught exception all return `false` after logging to `_log`.
+- The result was that a run against an unreachable router (or one with no active customers) displayed **Success: N, Errors: 0** while nothing at all reached the router. The on-screen counts were not evidence of anything.
+- The return value is now checked with `=== false` rather than a truthy test, so device plugins that return nothing (`null`) are not misreported as failures. Failed rows now show *"Router unreachable, not found, or rejected the sync"* with their plan and router.
+- Concrete case this now catches: rows whose `routers` is `balance` (written by the top-up flows in `Package.php`) or blank. `info()` returns `false` for those, and `MikrotikHotspot::add_customer()` previously dereferenced that `false` as an array — a PHP 8 warning swallowed into a `false` return. That method now has the same explicit `if (!$mikrotik)` guard `MikrotikPppoe` already had, so it returns a clean failure instead.
+
+### FIXED: Sync Scope Filtered One Router but Wrote to Another
+
+**`system/controllers/plan.php`, `system/devices/MikrotikHotspot.php`, `system/devices/MikrotikPppoe.php`**
+
+- The page filtered customer rows on `tbl_user_recharges.routers`, then called `add_customer($customer, $plan)` — which resolves its router from **`tbl_plans.routers`**. The results log reported `$tur['routers']` in between, so the filter, the action and the report could all name different routers.
+- These genuinely diverge: `customers/change_router_post` rewrites `tbl_user_recharges.routers` only, leaving the plan untouched. Selecting *Sync Scope → Router A* could therefore push customers onto Router B while the log said "Router: A".
+- `add_customer()` now accepts an optional third argument holding the recharge row (or a plain router name) and targets that router when present. It stays backwards compatible for every existing 2-argument caller and for third-party device plugins, since the parameter is optional.
+- This also repairs `customers/change_router_post`, which was already calling `add_customer($customer, $plan, $active_plan)` — a third argument that neither class accepted, so PHP silently discarded it and the sync-after-move went to the plan's router instead of the newly selected one.
+- Uses `is_string()` / `is_array()` / `is_object()` checks before reading the third argument so a `false` from a failed lookup cannot trigger an "array offset on bool" warning.
+
+### SECURITY: CSRF Token Now Required on `plan/sync-process`
+
+**`system/controllers/plan.php`, `ui/ui/plan-sync.tpl`**
+
+- `plan/sync-process` is a state-changing, destructive endpoint reachable by **GET** with no token. `_admin()` only verifies login and there is no global admin CSRF layer, so the only protection available is the per-action check that `customers/sync` already performs.
+- An attacker-controlled page could therefore make a logged-in admin's browser walk the whole sync loop — which for hotspot means deleting and recreating every user.
+- The endpoint now verifies `Csrf::check(_req('token'))`, and the page assigns `csrf_token` via `Csrf::generateAndStoreToken()` and sends it with both AJAX calls. `Csrf::check()` honours `$config['csrf_enabled']`, so sites with CSRF disabled are unaffected.
+- Requests now return **HTTP 403** with `success: false` instead of `200` when rejected, and the JS treats a 403 as terminal: it stops the loop and reports *"Security token expired"* (tokens live 30 minutes) rather than retrying the same batch forever or showing a generic *"Connection error: error"*.
+
 ## [2.2.27] - 2026-09-20
 
 ---

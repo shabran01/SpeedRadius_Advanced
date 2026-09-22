@@ -29,14 +29,29 @@ class MikrotikHotspot
     }
 
 
-    function add_customer($customer, $plan)
+    function add_customer($customer, $plan, $recharge = null)
     {
+        // A customer can sit on a different router than their plan's default (set by
+        // customers/change_router, which only rewrites tbl_user_recharges.routers).
+        // When the caller knows that row we must target ITS router, otherwise a
+        // "sync router A" run would silently push users onto router B.
+        // Accepts either a tbl_user_recharges row or a plain router name.
+        $routers = $plan['routers'];
+        if (is_string($recharge) && $recharge !== '') {
+            $routers = $recharge;
+        } elseif ((is_array($recharge) || is_object($recharge)) && !empty($recharge['routers'])) {
+            $routers = $recharge['routers'];
+        }
         try {
-            $mikrotik = $this->info($plan['routers']);
+            $mikrotik = $this->info($routers);
+            if (!$mikrotik) {
+                _log("Router not found for plan: " . $plan['name_plan'] . " (router: {$routers})");
+                return false;
+            }
             $client = $this->getClient($mikrotik['ip_address'], $mikrotik['username'], $mikrotik['password']);
             
             if ($client === null) {
-                _log("Skipping customer {$customer['username']} - Router {$plan['routers']} not available");
+                _log("Skipping customer {$customer['username']} - Router {$routers} not available");
                 return false;
             }
             
@@ -49,7 +64,7 @@ class MikrotikHotspot
             
             return true;
         } catch (\Exception $e) {
-            _log("Error adding customer {$customer['username']} to router {$plan['routers']}: " . $e->getMessage());
+            _log("Error adding customer {$customer['username']} to router {$routers}: " . $e->getMessage());
             return false;
         }
     }
