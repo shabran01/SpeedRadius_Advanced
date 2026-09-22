@@ -147,6 +147,9 @@ class MikrotikPppoe
             
             return true;
         } catch (\Exception $e) {
+            // The pooled connection may be what failed; drop it so the next customer
+            // reconnects instead of inheriting a dead socket.
+            self::dropClients();
             _log("Error adding customer {$customer['username']} to router {$routers}: " . $e->getMessage());
             return false;
         }
@@ -611,11 +614,34 @@ class MikrotikPppoe
         return ORM::for_table('tbl_routers')->where('name', $name)->find_one();
     }
 
+    // Per-request connection pool.
+    //
+    // add_customer() calls getClient() on every invocation, so a bulk sync used to open a
+    // brand new TCP connection, log in and run a /system/resource/print probe for every
+    // single customer. RouterOS API connections are reusable, so the client is kept for the
+    // lifetime of the request. Each PHP request starts with an empty pool, and the CLI/cron
+    // paths run in their own process, so nothing is shared across requests.
+    private static $clientPool = [];
+
+    /**
+     * Forget every pooled connection. Call after a failure so the next customer opens a
+     * fresh socket instead of inheriting one that may be dead.
+     */
+    public static function dropClients()
+    {
+        self::$clientPool = [];
+    }
+
     function getClient($ip, $user, $pass)
     {
         global $_app_stage;
         if ($_app_stage == 'demo') {
             return null;
+        }
+
+        $poolKey = $ip . '|' . $user;
+        if (isset(self::$clientPool[$poolKey])) {
+            return self::$clientPool[$poolKey];
         }
         
         $maxRetries = 3;
@@ -644,6 +670,7 @@ class MikrotikPppoe
                 $pingRequest = new RouterOS\Request('/system/resource/print');
                 $client->sendSync($pingRequest);
                 
+                self::$clientPool[$poolKey] = $client;
                 return $client;
             } catch (\Exception $e) {
                 $attempt++;

@@ -190,7 +190,7 @@ $(document).ready(function() {
             method: 'GET',
             data: ajaxData,
             dataType: 'json',
-            timeout: 60000, // 60 seconds timeout per batch
+            timeout: 90000, // 90s per batch - headroom over the server's own 120s limit
             success: function(response) {
                 console.log('AJAX success:', response);
                 if (response.success) {
@@ -253,7 +253,7 @@ $(document).ready(function() {
                     // Check if more batches to process
                     if (response.stats.hasMore) {
                         offset += response.stats.processed;
-                        setTimeout(syncNextBatch, 500); // Small delay between batches
+                        setTimeout(syncNextBatch, 150); // Small delay between batches
                     } else {
                         // Sync complete
                         completeSyncProcess();

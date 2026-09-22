@@ -58,6 +58,38 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.30] - 2026-09-22
+
+---
+
+### PERFORMANCE: Sync Opened a New RouterOS Connection for Every Single Customer
+
+**`system/devices/MikrotikHotspot.php`, `system/devices/MikrotikPppoe.php`**
+
+- `add_customer()` calls `getClient()` on every invocation, and `getClient()` had no memory of previous calls. Syncing 85 customers therefore performed **85 separate TCP connections, 85 logins, and 85 `/system/resource/print` probes** — the probe result is discarded, it exists purely to validate the connection.
+- RouterOS API connections are reusable, so `getClient()` now keeps the client in a per-request pool keyed by `ip|username` and returns it on subsequent calls. For an 85-customer run on one router that is **85 connections down to 1**.
+- Scope is strictly the request: each PHP request starts with an empty pool, and the cron/CLI paths run in their own process, so nothing is shared or leaked between requests.
+- Added `dropClients()`, called from the failure path of `add_customer()` in both classes. Without it a dead socket would poison every remaining customer in the batch — previously each customer got a fresh connection, so the pool introduced that exposure and this closes it.
+
+### PERFORMANCE: Every Customer Was Removed From the Router Three Times
+
+**`system/devices/MikrotikHotspot.php`**
+
+- `add_customer()` called `removeHotspotUser()`, then a conditional `removeHotspotActiveUser()`, and then `addHotspotUser()` — which *itself* begins by calling `removeHotspotUser()`. Since `removeHotspotUser()` starts by calling `removeHotspotActiveUser()`, that method ran **three times per customer**.
+- `removeHotspotActiveUser()` is the most expensive call in the chain: per IP address it removes firewall connection-tracking entries and the DHCP lease, then does a full MAC-cookie print/remove pass. On a router with a busy connection table the conntrack query in particular is slow.
+- The redundant removal in `add_customer()` is gone, along with the `$isExp` lookup that existed only to feed it. That single query now runs **once per customer instead of three times**, and one database lookup per customer was eliminated as a side effect.
+- Behaviour is unchanged: `addHotspotUser()` still removes then re-adds the user, so counters and the active session are still reset exactly as before. Only the duplicated work was removed.
+
+### CHANGED: Batch Pacing
+
+**`ui/ui/plan-sync.tpl`**
+
+- Inter-batch delay reduced from **500 ms to 150 ms**, and the per-batch AJAX timeout raised from **60 s to 90 s** so a slow batch is less likely to be abandoned mid-flight (an abandoned batch is retried at the same offset, which duplicates the work instead of saving it).
+
+> **Expected effect:** per-customer RouterOS round trips drop from roughly 13–17 to about 8, on a connection that is established once per request instead of once per customer. The connection elimination is the dominant saving.
+>
+> **Measurement note:** if a run is still slow after this, the next thing to check is `tbl_logs` for `Connection attempt N failed` lines from `getClient()`. A first attempt failing triggers a **2 second `sleep()`** before the retry, and it is invisible in the UI because the retry usually succeeds — that shows up as several seconds of dead time per customer with zero reported errors. Also verify that a hotspot user profile exists on the router for every plan name in use; when a profile is missing, `addHotspotUser()` calls `add_plan()` for that customer.
+
 ## [2.2.29] - 2026-09-22
 
 ---
