@@ -940,6 +940,25 @@ $htmlContent .= "            </div>\n";
 $htmlContent .= "        </div>\n";
 $htmlContent .= "    </div>\n";
 
+// ── Pay For a TV ────────────────────────────────────────────────────────
+// Some smart TVs cannot render the hotspot login page at all. The customer
+// opens this page on their phone instead and supplies the TV's MAC.
+// Attributes below use single quotes on purpose: this whole page is built as a
+// double-quoted PHP string, so single-quoted HTML avoids a layer of escaping.
+// This card sits ABOVE the account-login form on purpose: a customer whose TV
+// cannot load the page needs this path first, not below two login forms.
+$htmlContent .= "    <div class=\"container mx-auto px-4 mb-4\">\n";
+$htmlContent .= "        <div class=\"max-w-md mx-auto rounded-2xl overflow-hidden\" style=\"background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(8px);\">\n";
+$htmlContent .= "            <div class=\"px-5 py-4\">\n";
+$htmlContent .= "                <p style='color:#fff;font-size:14px;font-weight:700;margin:0 0 6px;'>TV not showing the login page?</p>\n";
+$htmlContent .= "                <p style='color:rgba(255,255,255,0.55);font-size:12.5px;line-height:1.6;margin:0 0 12px;'>Smart TVs usually cannot open the hotspot sign-in page. Enter your TV's MAC address, choose a package and pay &mdash; we will connect the TV for you.</p>\n";
+$htmlContent .= "                <button type=\"button\" onclick=\"openTvModal()\" class=\"btn-3d btn-3d-blue w-full flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white outline-none\">\n";
+$htmlContent .= "                    <i class=\"fas fa-tv\"></i> Pay For a TV\n";
+$htmlContent .= "                </button>\n";
+$htmlContent .= "            </div>\n";
+$htmlContent .= "        </div>\n";
+$htmlContent .= "    </div>\n";
+
 $htmlContent .= "    <div class=\"container mx-auto px-4 mb-4\">\n";
 $htmlContent .= "        <div class=\"max-w-md mx-auto bg-white rounded-lg overflow-hidden md:max-w-lg\">\n";
 $htmlContent .= "            <div class=\"md:flex\">\n";
@@ -1032,23 +1051,11 @@ $htmlContent .= "    }\n";
 $htmlContent .= "}\n";
 $htmlContent .= "</script>\n";
 
-// ── Pay For a TV ────────────────────────────────────────────────────────
-// Some smart TVs cannot render the hotspot login page at all. The customer
-// opens this page on their phone instead and supplies the TV's MAC.
-// Attributes below use single quotes on purpose: this whole page is built as a
-// double-quoted PHP string, so single-quoted HTML avoids a layer of escaping.
-$htmlContent .= "    <div class=\"container mx-auto px-4 mb-4\">\n";
-$htmlContent .= "        <div class=\"max-w-md mx-auto rounded-2xl overflow-hidden\" style=\"background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(8px);\">\n";
-$htmlContent .= "            <div class=\"px-5 py-4\">\n";
-$htmlContent .= "                <p style='color:#fff;font-size:14px;font-weight:700;margin:0 0 6px;'>TV not showing the login page?</p>\n";
-$htmlContent .= "                <p style='color:rgba(255,255,255,0.55);font-size:12.5px;line-height:1.6;margin:0 0 12px;'>Smart TVs usually cannot open the hotspot sign-in page. Enter your TV's MAC address, choose a package and pay &mdash; we will connect the TV for you.</p>\n";
-$htmlContent .= "                <button type=\"button\" onclick=\"openTvModal()\" class=\"btn-3d btn-3d-blue w-full flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white outline-none\">\n";
-$htmlContent .= "                    <i class=\"fas fa-tv\"></i> Pay For a TV\n";
-$htmlContent .= "                </button>\n";
-$htmlContent .= "            </div>\n";
-$htmlContent .= "        </div>\n";
-$htmlContent .= "    </div>\n";
-
+// ── Pay For a TV (modal) ────────────────────────────────────────────────
+// The trigger card was moved up, above the "Already Have an Active Package?"
+// form, so a customer whose TV cannot load the page meets it first.
+// The modal stays here on purpose: it is position:fixed, so where it sits in the
+// DOM makes no difference to where it appears.
 $htmlContent .= "    <div id='tv-modal' style='display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.65);overflow-y:auto;padding:16px;'>\n";
 $htmlContent .= "        <div style='max-width:460px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 60px -20px rgba(0,0,0,.5);'>\n";
 $htmlContent .= "            <div style='padding:14px 18px;border-bottom:1px solid #eef2f7;display:flex;align-items:center;justify-content:space-between;'>\n";

@@ -58,6 +58,19 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.40] - 2026-09-23
+
+---
+
+### CHANGED: "Pay For a TV" moved above the account login form
+
+**`system/plugin/download.php`**
+
+- The trigger card now sits directly under the package cards, **above** the "Already Have an Active Package?" form and the user-login form.
+- Previously it sat below both login forms and the device-info card — so a customer whose TV cannot display the page had to scroll past two forms that do not apply to them before finding the one path built for their problem. The people who need it are exactly the people those forms cannot help.
+- Only the trigger card moved. The modal itself was left where it was: it is `position:fixed`, so its position in the DOM has no effect on where it appears, and moving it would have been risk without benefit.
+- The card keeps its place in the page flow, so nothing else shifted.
+
 ## [2.2.39] - 2026-09-22
 
 ---
