@@ -2,6 +2,37 @@
 
  # CHANGELOG
 
+## [2.2.38] - 2026-09-22
+
+---
+
+### FIXED: A `/24` assumption rejected a perfectly valid device address
+
+**`system/plugin/download.php`**
+
+2.2.37 added validation that discarded any candidate address ending in `.0` or `.255`, on the assumption that the hotspot subnet was a `/24`. On this router it is **not** — `10.0.2.255` is an ordinary host address there, and it is genuinely the address of the device being bound.
+
+The router was reporting the truth. The check was wrong. Evidence it was wrong, in hindsight: a binding was written at that address in 2.2.35 and the device connected and was later disconnected on expiry — it worked.
+
+### FIXED: The last-octet guess is gone
+
+- Candidates are now rejected only if they **cannot be a host under any subnet**: unparseable, `0.0.0.0`, or inside the multicast range `224.0.0.0/4`.
+- That check is subnet-independent, so it cannot repeat this mistake on a `/16`, `/23`, or anything else.
+- The router remains the authority on where the device is. The hotspot host table is consulted first and its answer is taken as given.
+- The error message now says "not a valid device address" rather than "not a usable network address", which was the wording that encoded the bad assumption.
+
+### REGRESSION, now corrected: 2.2.37 refused to bind where 2.2.36 had succeeded
+
+- 2.2.36 bound the device and warned that shaping had been skipped. The customer was **online**, just unshaped.
+- 2.2.37 made the same address fatal and **aborted the bind entirely** — so a paying customer ended up with nothing at all. Strictly worse than the bug it was trying to fix.
+- Worth recording as the lesson: tightening validation on a path that has already taken payment can lose the transaction. Failing soft with a visible warning is usually the safer default, and is what 2.2.36 had. This release keeps validation, but only where a value is genuinely impossible rather than merely unexpected.
+
+> **Stale state:** the binding from the earlier test still points at `10.0.2.255`, and the address was never actually invalid. Remove it before retesting so the new run writes a clean entry:
+> ```
+> /ip hotspot ip-binding remove [find mac-address="62:9B:F1:3F:B2:DD"]
+> ```
+> Any "2 mins test" package bought during the failed attempts will have expired by now, so a fresh purchase is needed to exercise the flow again.
+
 ## [2.2.37] - 2026-09-22
 
 ---

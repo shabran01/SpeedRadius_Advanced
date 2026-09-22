@@ -434,7 +434,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             // optional source
         }
 
-        // Take the first candidate that is a real host address.
+        // Take the first candidate that is a valid host address.
+        //
+        // NOTE: deliberately NO network/broadcast heuristic here. An earlier version
+        // rejected anything ending in .0 or .255 on the assumption of a /24 subnet,
+        // which wrongly refused 10.0.2.255 - an entirely ordinary host address on this
+        // router's hotspot subnet. The router is authoritative about where the device
+        // is, so its answer is taken as given. Only values that can never be a host
+        // are discarded.
         $ip       = '';
         $rejected = [];
         foreach ($ipCandidates as $candidate) {
@@ -445,8 +452,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $rejected[] = $candidate;
                 continue;
             }
-            $lastOctet = (int)substr($candidate, strrpos($candidate, '.') + 1);
-            if ($lastOctet === 0 || $lastOctet === 255) {
+            // 0.0.0.0 and the multicast range are never a device's address. This is
+            // subnet-independent, unlike the last-octet guess it replaces.
+            $asLong = ip2long($candidate);
+            if ($candidate === '0.0.0.0' || $asLong === false || $asLong >= ip2long('224.0.0.0')) {
                 $rejected[] = $candidate;
                 continue;
             }
@@ -456,11 +465,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         if ($ip === '') {
             $detail = $rejected
-                ? ' The router reported ' . implode(', ', array_unique($rejected)) . ', which is not a usable device address.'
+                ? ' The router reported ' . implode(', ', array_unique($rejected)) . ', which is not a valid device address.'
                 : '';
             echo json_encode([
                 'status'  => 'error',
-                'message' => 'We could not find a usable network address for this device.' . $detail . ' Make sure the device is connected to the WiFi, wait about 30 seconds, then try again.'
+                'message' => 'We could not find this device on the network.' . $detail . ' Make sure the device is connected to the WiFi, wait about 30 seconds, then try again.'
             ]);
             exit;
         }
