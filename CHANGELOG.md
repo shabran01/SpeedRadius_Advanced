@@ -2,6 +2,48 @@
 
  # CHANGELOG
 
+## [2.2.29] - 2026-09-22
+
+---
+
+### FIXED: Batch Loop Could Skip or Re-Process Customers
+
+**`system/controllers/plan.php`**
+
+- The batch query used `LIMIT 10 OFFSET n` with **no `ORDER BY`**. An unordered result set gives MySQL no obligation to return the same rows for the same offset on the next request, so customers could be silently skipped or synced twice — a class of bug that is nearly impossible to diagnose from the UI because the totals still look plausible.
+- Added `->order_by_asc('id')`, so each batch is a deterministic slice of a stable order.
+- `offset` is now clamped with `max(0, intval(...))`. It arrives from the client, and a negative value produced an invalid `OFFSET -1` that failed the query outright.
+
+### FIXED: Runaway AJAX Loop When a Batch Returned Nothing
+
+**`system/controllers/plan.php`, `ui/ui/plan-sync.tpl`**
+
+- If a batch returned zero rows while `hasMore` was still true, the client would re-request the same offset *forever*, every 500 ms, hammering the router and the database.
+- The server now requires `$processed > 0` before reporting `hasMore`, and the client independently treats `stats.processed === 0` as terminal, stopping with an explanatory message instead of looping.
+
+### FIXED: Progress Bar Could Exceed 100% or End the Run Early
+
+**`ui/ui/plan-sync.tpl`**
+
+- `totalUsers` was re-read from the server on **every** batch and written to the progress denominator. If the filtered set shrank mid-run (a customer expired or was disabled while a long sync was in flight), `totalProcessed / totalUsers` could exceed 100% or the `offset + limit < total` test could terminate the run with customers still pending.
+- The total is now taken once, from the first batch, and used only for display. The percentage is clamped with `Math.min(100, ...)` as a second guard.
+
+### FIXED: "Sync completed successfully!" Was Shown Even When Everything Failed
+
+**`ui/ui/plan-sync.tpl`**
+
+- `completeSyncProcess()` unconditionally applied `alert-success` and the text *"Sync completed successfully!"*. Combined with a run where every customer errored, the operator was told the sync worked.
+- It now reports the real outcome in four states: **nothing to sync** (neutral), **all succeeded** (green), **finished with errors** (amber, with the failure count), and **nothing succeeded** (red, *"Sync failed - no customer was updated"*).
+
+### CHANGED: Confirm Dialog Now Warns That Sync Is Destructive
+
+**`ui/ui/plan-sync.tpl`**
+
+- The confirmation only said *"This may take several minutes"*. The device `add_customer()` methods are remove-then-re-add, so a full sync **disconnects every hotspot customer and resets their on-router usage counters to zero**.
+- The dialog now states this explicitly, so the operation is not started casually during peak hours.
+
+> **Not changed:** `sync_customer()` exists in both device classes but is not a safe substitute. `MikrotikPppoe::sync_customer()` simply calls `add_customer()`, and `MikrotikHotspot::sync_customer()` only sets the profile — it never pushes password, `limit-uptime` or `limit-bytes`. Adopting it would silently stop syncing most of a hotspot user's configuration.
+
 ## [2.2.28] - 2026-09-22
 
 ---

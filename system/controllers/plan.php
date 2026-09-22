@@ -116,7 +116,8 @@ switch ($action) {
         }
 
         set_time_limit(120);
-        $offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
+        // Clamp: the value comes from the client, and a negative OFFSET is a MySQL syntax error.
+        $offset = max(0, isset($_GET['offset']) ? intval($_GET['offset']) : 0);
         $limit = 10;
 
         $tursQuery = ORM::for_table('tbl_user_recharges')
@@ -127,7 +128,10 @@ switch ($action) {
         if ($filterType !== '') {
             $tursQuery->where('type', $filterType);
         }
-        $turs = $tursQuery->limit($limit)->offset($offset)->find_many();
+        // A stable order is mandatory here: LIMIT/OFFSET over an unordered result set gives
+        // no guarantee that successive batches return distinct rows, which would silently
+        // skip customers or process others twice.
+        $turs = $tursQuery->order_by_asc('id')->limit($limit)->offset($offset)->find_many();
 
         $results = [];
         $success = 0;
@@ -192,14 +196,17 @@ switch ($action) {
             $totalCountQuery->where('type', $filterType);
         }
         $totalUsers = $totalCountQuery->count();
-        $hasMore = ($offset + $limit) < $totalUsers;
+        $processed = count($turs);
+        // If a batch returns nothing there is nothing left to advance through, and repeating
+        // the same offset would loop forever on the client.
+        $hasMore = $processed > 0 && ($offset + $limit) < $totalUsers;
 
         header('Content-Type: application/json');
         echo json_encode([
             'success' => true,
             'results' => $results,
             'stats' => [
-                'processed' => count($turs),
+                'processed' => $processed,
                 'success' => $success,
                 'errors' => $errors,
                 'offset' => $offset,

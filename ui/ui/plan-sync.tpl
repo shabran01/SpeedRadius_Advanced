@@ -104,8 +104,8 @@
                         </div>
                         
                         <div id="syncComplete" style="display:none;">
-                            <div class="alert alert-success">
-                                <i class="fa fa-check-circle"></i> <strong>Sync completed!</strong>
+                            <div class="alert alert-success" id="syncCompleteBox">
+                                <i class="fa fa-check-circle" id="syncCompleteIcon"></i> <strong id="syncCompleteTitle">Sync completed!</strong>
                                 <div id="finalStats"></div>
                             </div>
                             <a href="{$_url}plan/list" class="btn btn-primary">
@@ -163,7 +163,9 @@ $(document).ready(function() {
         selectedType = $('#typeSelect').length ? $('#typeSelect').val() : selectedType;
         let scopeLabel = selectedRouter ? 'router [' + selectedRouter + ']' : 'ALL routers';
         let typeLabel = selectedType ? selectedType + ' users only' : 'all service types';
-        let confirmMsg = 'Sync ' + typeLabel + ' on ' + scopeLabel + ' to Mikrotik? This may take several minutes.';
+        let confirmMsg = 'Sync ' + typeLabel + ' on ' + scopeLabel + ' to Mikrotik? This may take several minutes.\n\n' +
+            'WARNING: this removes and recreates each user on the router. Hotspot customers will be ' +
+            'disconnected and their on-router usage counters reset to zero.';
         if (!confirm(confirmMsg)) {
             console.log('User cancelled sync');
             return;
@@ -192,8 +194,9 @@ $(document).ready(function() {
             success: function(response) {
                 console.log('AJAX success:', response);
                 if (response.success) {
-                    // Sync totalUsers from server (handles router filter applied after page load)
-                    totalUsers = response.stats.total;
+                    // Only trust the server's total on the very first batch. Re-reading it every
+                    // round let a mid-run shrink push the bar past 100% or end the run early.
+                    if (offset === 0) { totalUsers = response.stats.total; }
                     $('#totalUsersLabel').text(totalUsers);
 
                     // Update statistics
@@ -206,7 +209,7 @@ $(document).ready(function() {
                     $('#errorCount').text(totalErrors);
                     
                     // Update progress bar
-                    let percentage = totalUsers > 0 ? Math.round((totalProcessed / totalUsers) * 100) : 100;
+                    let percentage = totalUsers > 0 ? Math.min(100, Math.round((totalProcessed / totalUsers) * 100)) : 100;
                     $('#progressBar').css('width', percentage + '%');
                     $('#progressText').text(percentage + '%');
                     
@@ -240,6 +243,13 @@ $(document).ready(function() {
                     // Auto-scroll to bottom
                     $('#syncResults').scrollTop($('#syncResults')[0].scrollHeight);
                     
+                    // Safety net: a batch that processed nothing while more were expected would
+                    // otherwise re-request the same offset forever.
+                    if (response.stats.processed === 0) {
+                        showError('Stopped: the server returned no rows for this batch. The filter may have changed - reload the page and try again.');
+                        return;
+                    }
+
                     // Check if more batches to process
                     if (response.stats.hasMore) {
                         offset += response.stats.processed;
@@ -285,15 +295,44 @@ $(document).ready(function() {
         isSyncing = false;
         $('#routerSelect, #typeSelect').prop('disabled', false);
         $('#progressBar').removeClass('active');
-        $('#statusMessage').html(
-            '<i class="fa fa-check-circle"></i> Sync completed successfully!'
-        ).removeClass('alert-info').addClass('alert-success');
         
         let statsHtml = '<ul>' +
             '<li>Total Processed: ' + totalProcessed + '</li>' +
             '<li>Successful: ' + totalSuccess + '</li>' +
             '<li>Errors: ' + totalErrors + '</li>' +
             '</ul>';
+
+        // Report the real outcome. This used to claim success unconditionally, even when
+        // every single customer had failed.
+        let box = $('#syncCompleteBox');
+        let msg = $('#statusMessage');
+        box.removeClass('alert-success alert-warning alert-danger alert-info');
+
+        if (totalProcessed === 0) {
+            box.addClass('alert-info');
+            $('#syncCompleteIcon').attr('class', 'fa fa-info-circle');
+            $('#syncCompleteTitle').text('Nothing to sync - no matching active customers.');
+            msg.html('<i class="fa fa-info-circle"></i> No matching active customers to sync.')
+                .removeClass('alert-info alert-success alert-warning alert-danger').addClass('alert-info');
+        } else if (totalSuccess === 0) {
+            box.addClass('alert-danger');
+            $('#syncCompleteIcon').attr('class', 'fa fa-times-circle');
+            $('#syncCompleteTitle').text('Sync failed - no customer was updated.');
+            msg.html('<i class="fa fa-times-circle"></i> Sync failed - every customer was skipped or errored.')
+                .removeClass('alert-info alert-success alert-warning').addClass('alert-danger');
+        } else if (totalErrors === 0) {
+            box.addClass('alert-success');
+            $('#syncCompleteIcon').attr('class', 'fa fa-check-circle');
+            $('#syncCompleteTitle').text('Sync completed!');
+            msg.html('<i class="fa fa-check-circle"></i> Sync completed successfully!')
+                .removeClass('alert-info alert-danger alert-warning').addClass('alert-success');
+        } else {
+            box.addClass('alert-warning');
+            $('#syncCompleteIcon').attr('class', 'fa fa-exclamation-triangle');
+            $('#syncCompleteTitle').text('Sync finished with errors.');
+            msg.html('<i class="fa fa-exclamation-triangle"></i> Sync finished, but ' + totalErrors + ' customer(s) failed.')
+                .removeClass('alert-info alert-success alert-danger').addClass('alert-warning');
+        }
         
         $('#finalStats').html(statsHtml);
         $('#syncComplete').show();
@@ -302,6 +341,7 @@ $(document).ready(function() {
     function showError(message) {
         isSyncing = false;
         $('#routerSelect, #typeSelect').prop('disabled', false);
+        $('#progressBar').removeClass('active');
         $('#statusMessage').html(
             '<i class="fa fa-exclamation-triangle"></i> ' + message
         ).removeClass('alert-info').addClass('alert-danger');
