@@ -58,6 +58,25 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.32] - 2026-09-22
+
+---
+
+### CHANGED: Customer Profile Card Now Uses the Same Value Chips as the Package Card
+
+**`ui/ui/customers-view.tpl`**
+
+- The left-hand profile card was a wall of plain black right-aligned text with a single green pill on Status. It now uses the identical chip system introduced on the package card in 2.2.31, so the two cards read as one design:
+  - **Status** and **Auto Renewal** → green/red pills
+  - **Service Type** → blue chip
+  - **Balance** → amber chip (money, matching how Expires On is treated on the package card)
+  - **Username**, **Phone Number**, **Email**, **Account Type**, **PPPOE Username**, **PPPOE Remote IP** → slate monospace chips, marking them as identifiers you would copy out rather than prose
+  - **City**, **Created On**, **Last Login** stay plain — dates and place names do not benefit from being boxed
+- Every label gained a small icon in a fixed 14px slot, matching the package card. The icons are deliberately low-contrast (`#cbd5e1`) so they aid scanning without competing with the values.
+- **Status moved off `bg-green` / `bg-red` onto `sr-chip-ok` / `sr-chip-bad`.** Those two classes existed only for this one pill; using the shared chip classes means one colour definition drives both cards instead of two that could drift apart. The old rules are left in place since other markup may still use them.
+- Monospace chips are capped at `max-width: 60%` with `min-width: 0` and an ellipsis, so a long email address truncates cleanly instead of forcing the row wide. `min-width: 0` matters specifically because a flex item defaults to `min-width: auto` and would otherwise refuse to shrink, defeating the ellipsis.
+- **Auto Renewal** displayed a bare lowercase `yes` / `no`; it now shows `Yes` / `No` via `Lang::T()`, consistent with how the package card renders Active.
+
 ## [2.2.31] - 2026-09-22
 
 ---
