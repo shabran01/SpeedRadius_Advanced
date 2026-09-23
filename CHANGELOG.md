@@ -2,6 +2,35 @@
 
  # CHANGELOG
 
+## [2.2.41] - 2026-09-23
+
+---
+
+### FIXED: The "Done" button on the TV form did nothing
+
+**`system/plugin/download.php`**
+
+After a successful TV purchase, the customer's final action was a **dead button**. Tapping "Done" produced no response at all, on a form they had just paid on.
+
+**Cause:** "Done" was not a separate button. It was the submit button (`#tv-submit`) relabelled, and the success path set:
+
+```js
+btn.textContent = 'Done';
+btn.style.background = '#16a34a';
+btn.disabled = true;      // inert, and no handler was ever attached
+```
+
+So it was styled to look like an active control while being disabled and wired to nothing. It was treated as a status label rather than a button.
+
+### FIXED: "Done" now closes the form
+
+- Clicking it closes the modal and clears the **Device MAC** and **Device Name** fields so a second TV starts from a blank form, while keeping the package and phone number so buying for another device stays quick.
+- The button resets to "Bind & Pay" for the next use, so the modal is left in a clean state rather than needing a page reload.
+
+> **Why this one mattered more than a cosmetic bug:** the dead button appeared on the **success** path, so it hit every completed TV purchase. A customer tapping "Done" and getting nothing has good reason to think the purchase did not go through — and to start over and **pay a second time**. A broken control at the end of a payment flow is a prompt to re-buy, not just an annoyance.
+>
+> This is the second time in this feature that one button was reused for several roles without giving each state a real action — the same mistake produced the disabled "Try Again" in 2.2.33 that risked a double charge. Worth watching for whenever a single control is relabelled mid-flow: every state it can be in needs a defined handler.
+
 ## [2.2.40] - 2026-09-23
 
 ---
