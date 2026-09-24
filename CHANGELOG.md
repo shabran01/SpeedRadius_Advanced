@@ -2,6 +2,52 @@
 
  # CHANGELOG
 
+## [2.2.42] - 2026-09-24
+
+---
+
+### ADDED: "Reconnect with M-Pesa Code" on the hotspot page
+
+**`system/plugin/download.php`**
+
+Customers who had already paid had only one way back in: enter the M-Pesa phone number. That button now has a companion that takes the **M-Pesa transaction code** instead.
+
+The code is the safer of the two, because it identifies **one payment** and a payment belongs to **one device** — so the page can tell whose device is asking.
+
+| Checked | Behaviour |
+|---|---|
+| Code to payment | matched on `gateway_trx_id` |
+| Device | the payment must belong to the device making the request (matched on MAC) |
+| Code entered on a second device | rejected — *"already active on another device"* |
+| Package expired | rejected |
+| On success | activated on the router, then the page logs that device in |
+
+This posts to `index.php?_route=plugin/CreateHotspotuser&type=mpesa_reconnect` — the same plugin the page already uses for Buy, Verify and Voucher.
+
+### FIXED: One phone number, two devices — the wrong one was reconnected
+
+**`system/plugin/download.php`**
+
+A single M-Pesa number is often shared by a whole household, so one phone can legitimately sit on more than one account. The phone reconnect looked the account up with:
+
+```sql
+SELECT username FROM tbl_customers WHERE phonenumber = ? LIMIT 1
+```
+
+`LIMIT 1` takes **whichever row the database returns first**. With two accounts on one number that is an arbitrary choice, so a customer who paid for a second device could have the **first** device reconnected instead. Nothing in the old flow could detect that, and no error was shown.
+
+The lookup now collects **all** accounts for the number and acts on the count:
+
+- **1 match** — reconnects as before.
+- **0 matches** — unchanged message asking them to buy a package.
+- **2 or more** — refuses, and points the customer at the M-Pesa code option, which can tell the accounts apart.
+
+> **Why refuse instead of picking one:** connecting a customer to the wrong device is worse than asking them for one more detail. The wrong device goes online on someone else's package, the device they actually paid for stays offline, and the customer has no way to tell what happened.
+
+### FIXED: Retired the old M-Pesa reconnect handler
+
+The page's first M-Pesa handler set `tbl_user_recharges.status` to `on` by username alone. It had **no device check** and never touched the router, so it could report success while changing nothing — and once the button above exists, it would have been a way around the new per-device check. It now fails closed.
+
 ## [2.2.41] - 2026-09-23
 
 ---

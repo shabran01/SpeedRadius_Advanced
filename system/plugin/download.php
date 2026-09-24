@@ -30,6 +30,16 @@ if ($mysqli->connect_error) {
 // Detects: "UG6PQAGHDN" OR "MpesatillStk - UG6PQAGHDN"
 // ────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'mpesa_reconnect') {
+    // RETIRED in v2.2.42. The download page now posts this action to
+    // index.php?_route=plugin/CreateHotspotuser&type=mpesa_reconnect, which
+    // checks the code against the requesting device's MAC. Leaving this older
+    // handler live would be a way around that check, so it fails closed here and
+    // the body below is unreachable.
+    header('Content-Type: application/json');
+    echo json_encode(['Resultcode' => '2', 'Message' => 'Please use the updated Reconnect with M-Pesa Code button.']);
+    exit;
+}
+if (false) { // dead body retained for reference
     header('Content-Type: application/json');
     
     $rawInput = trim($_POST['mpesa_code'] ?? '');
@@ -195,18 +205,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             exit;
         }
         
-        // Find customer by phone
-        $cust = $mysqli->prepare("SELECT username FROM tbl_customers WHERE phonenumber = ? LIMIT 1");
+        // A single M-Pesa number is commonly shared by a whole household, so one
+        // phone can legitimately sit on more than one account. This used to end in
+        // LIMIT 1, which grabbed an arbitrary row and reconnected the WRONG device:
+        // the customer paid for their second TV and the first one was switched on.
+        $cust = $mysqli->prepare("SELECT username FROM tbl_customers WHERE phonenumber = ? ORDER BY id ASC");
         $cust->bind_param("s", $phone);
         $cust->execute();
-        $customer = $cust->get_result()->fetch_assoc();
+        $custRes = $cust->get_result();
+        $matches = [];
+        while ($row = $custRes->fetch_assoc()) {
+            $matches[] = $row['username'];
+        }
         
-        if (!$customer) {
+        if (count($matches) === 0) {
             echo json_encode(['Resultcode' => '2', 'Message' => 'No account found for ' . $rawPhone . '. Please buy a package first.']);
             exit;
         }
+
+        if (count($matches) > 1) {
+            // Refuse rather than guess. Only the M-Pesa code identifies the exact
+            // payment, so it is the only safe way to tell these accounts apart.
+            echo json_encode([
+                'Resultcode' => '2',
+                'Message' => 'This number is linked to ' . count($matches) . ' accounts, so we cannot tell which device you are on. Please use "Reconnect with M-Pesa Code" instead.'
+            ]);
+            exit;
+        }
         
-        $username = $customer['username'];
+        $username = $matches[0];
         
         // Check for active plan (not expired) OR recently expired (within 24hrs)
         $sess = $mysqli->prepare("SELECT * FROM tbl_user_recharges WHERE username = ? AND expiration > DATE_SUB(NOW(), INTERVAL 24 HOUR) ORDER BY expiration DESC LIMIT 1");
@@ -913,6 +940,12 @@ $htmlContent .= "                        <svg class=\"w-5 h-5 mr-2\" fill=\"none
 $htmlContent .= "                            <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z\"></path>\n";
 $htmlContent .= "                        </svg>\n";
 $htmlContent .= "                        Reconnect with Phone Number\n";
+$htmlContent .= "                    </button>\n";
+$htmlContent .= "                    <button type=\"button\" class=\"btn-3d btn-3d-blue flex items-center justify-center gap-2 rounded-lg px-8 py-3 text-center text-sm font-semibold text-white outline-none md:text-base\" onclick=\"reconnectWithMpesa()\">\n";
+$htmlContent .= "                        <svg class=\"w-5 h-5 mr-2\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\">\n";
+$htmlContent .= "                            <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z\"></path>\n";
+$htmlContent .= "                        </svg>\n";
+$htmlContent .= "                        Reconnect with M-Pesa Code\n";
 $htmlContent .= "                    </button>\n";
 $htmlContent .= "                    <button type=\"button\" class=\"btn-3d btn-3d-green flex items-center justify-center gap-2 rounded-lg px-8 py-3 text-center text-sm font-semibold text-white outline-none md:text-base\" onclick=\"document.getElementById('submitBtn').click()\">\n";
 $htmlContent .= "                        Already Have an Active Package?\n";
@@ -1861,16 +1894,14 @@ $htmlContent .= "            var accountId = getCookie('accountId') || generateA
 $htmlContent .= "            setCookie('accountId', accountId, 7);\n";
 $htmlContent .= "            \n";
 $htmlContent .= "            // POST to the server — CORS headers are set\n";
-$htmlContent .= "            var formData = new FormData();\n";
-$htmlContent .= "            formData.append('action', 'mpesa_reconnect');\n";
-$htmlContent .= "            formData.append('mpesa_code', mpesaCode);\n";
-$htmlContent .= "            formData.append('mac', macAddr);\n";
-$htmlContent .= "            formData.append('ip', ipAddr);\n";
-$htmlContent .= "            formData.append('account_id', accountId);\n";
-$htmlContent .= "            \n";
-$htmlContent .= "            return fetch('" . APP_URL . "/system/plugin/download.php', {\n";
+$htmlContent .= "            // Posts to the CreateHotspotuser plugin \u2014 the same endpoint this page\n";
+$htmlContent .= "            // already uses for Buy / Verify / Voucher. That handler is the one that\n";
+$htmlContent .= "            // checks the code against THIS device's MAC, so one code cannot be\n";
+$htmlContent .= "            // reused to switch a second device on.\n";
+$htmlContent .= "            return fetch('" . APP_URL . "/index.php?_route=plugin/CreateHotspotuser&type=mpesa_reconnect', {\n";
 $htmlContent .= "                method: 'POST',\n";
-$htmlContent .= "                body: formData,\n";
+$htmlContent .= "                headers: {'Content-Type': 'application/json'},\n";
+$htmlContent .= "                body: JSON.stringify({mpesa_code: mpesaCode, mac: macAddr, ip: ipAddr, account_id: accountId}),\n";
 $htmlContent .= "            })\n";
 $htmlContent .= "            .then(response => {\n";
 $htmlContent .= "                if (!response.ok) throw new Error('Network response was not ok');\n";
