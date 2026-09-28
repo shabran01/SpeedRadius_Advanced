@@ -58,6 +58,20 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.44] - 2026-09-28
+
+---
+
+### REMOVED: Duplicate `mikrotik_import.php777`
+
+**`system/plugin/mikrotik_import.php777`**
+
+An old copy of `mikrotik_import.php` that had been left sitting in the plugin folder. The live file is `mikrotik_import.php`; this one was never loaded, because `init.php` includes plugins with `glob(... '*.php')` and `.php777` does not match that pattern.
+
+It was not entirely harmless, though. The file lived inside the web-accessible plugin directory, so it could be requested directly and served as plain text, exposing the plugin's source to anyone who guessed the filename.
+
+Removed through git rather than deleted locally — a working-tree deletion alone would have been undone by the next `git pull`.
+
 ## [2.2.43] - 2026-09-28
 
 ---
