@@ -12,6 +12,10 @@ function mikrotik_import_ui()
     $ui->assign('_system_menu', 'settings');
     $admin = Admin::_info();
     $ui->assign('_admin', $admin);
+    // The form needs a router to import from. Without this the dropdown
+    // rendered with no options at all, so the page could not be used.
+    $routers = ORM::for_table('tbl_routers')->find_many();
+    $ui->assign('routers', $routers);
     $ui->display('mikrotik_import.tpl');
 }
 

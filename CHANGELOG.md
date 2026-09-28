@@ -2,6 +2,46 @@
 
  # CHANGELOG
 
+## [2.2.43] - 2026-09-28
+
+---
+
+### CHANGED: Modern UI for Mikrotik Import
+
+**`system/plugin/ui/mikrotik_import.tpl`**, **`system/plugin/ui/mikrotik_import_start.tpl`**, **`system/plugin/mikrotik_import.php`**
+
+Both import pages used the old Bootstrap panel layout — a plain list of instructions, two bare radio buttons and a green submit button. They are now card-based, in the same visual language as the rest of the modernised admin screens, and follow the panel's dark mode.
+
+**Import page**
+
+- Two cards: what the import does, and what to import.
+- The **Hotspot / PPPOE** choice is now a pair of selectable tiles that highlight when chosen, instead of two unlabelled radio buttons.
+- Each tile states what it imports, so the choice no longer needs prior knowledge of the plugin.
+- The router dropdown shows **name and IP address** together.
+- The instructions now say the three things that surprise people: existing entries are **skipped, never overwritten**; active packages are not imported; and imported packages get a placeholder price of **10000** that has to be set afterwards.
+- If no routers are configured, the page says so, links straight to **Add a router**, and disables the submit button instead of silently failing.
+
+**Result page**
+
+- Rebuilt as a results card with a count badge, so a long import is readable at a glance.
+- Scrolls inside a fixed height instead of stretching the page.
+- Shows an explicit empty state when nothing was imported.
+- The leftover form posting to `settings/app-post` was removed — it was a copy-paste artifact with nothing to submit. Replaced with a **Back to Import** button.
+
+### FIXED: The router dropdown contained no routers
+
+**`system/plugin/mikrotik_import.php`**
+
+`mikrotik_import_ui()` never supplied the router list, and the template had no loop to render one:
+
+```html
+<select id="server" required name="server" class="form-control">
+    <option value=''>{Lang::T('Select Routers')}</option>
+</select>
+```
+
+With `required` on a select whose only option has an empty value, browsers refuse to submit — so the page could not start an import at all. The function now loads `tbl_routers` and assigns it, and the template renders the list the way `ip_bindings.tpl` and `dhcp_leases.tpl` already do.
+
 ## [2.2.42] - 2026-09-24
 
 ---
