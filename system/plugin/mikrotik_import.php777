@@ -58,18 +58,10 @@ function mikrotik_import_mikrotik_hotspot_package($router, $ip, $user, $pass)
         if (strlen($rateLimit) > 1) {
             // Create Bandwidth profile
             $rate = explode("/", $rateLimit);
-            if (count($rate) >= 2) {
-                $unit_up = preg_replace("/[^a-zA-Z]+/", "", $rate[0]) . "bps";
-                $unit_down = preg_replace("/[^a-zA-Z]+/", "", $rate[1]) . "bps";
-                $rate_up = (int) preg_replace("/[^0-9]+/", "", $rate[0]);
-                $rate_down = (int) preg_replace("/[^0-9]+/", "", $rate[1]);
-            } else {
-                $unit_up = 'bps';
-                $unit_down = 'bps';
-                $rate_up = 0;
-                $rate_down = 0;
-            }
-            if ($rate_up > 0 || $rate_down > 0) {
+            $unit_up = preg_replace("/[^a-zA-Z]+/", "", $rate[0]) . "bps";
+            $unit_down = preg_replace("/[^a-zA-Z]+/", "", $rate[1]) . "bps";
+            $rate_up = preg_replace("/[^0-9]+/", "", $rate[0]);
+            $rate_down = preg_replace("/[^0-9]+/", "", $rate[1]);
             $bw_name = str_replace("/", "_", $rateLimit);
             $bw = ORM::for_table('tbl_bandwidth')->where('name_bw', $bw_name)->find_one();
             if (!$bw) {
@@ -111,7 +103,6 @@ function mikrotik_import_mikrotik_hotspot_package($router, $ip, $user, $pass)
             }else{
                 $results[] = "Packages Exists: $name";
             }
-            } // end if ($rate_up > 0 || $rate_down > 0)
         }
     }
     // Import user
@@ -132,48 +123,9 @@ function mikrotik_import_mikrotik_hotspot_package($router, $ip, $user, $pass)
                 $d->fullname = $username;
                 $d->address = '';
                 $d->email = ($u->getProperty('email'))?$u->getProperty('email'):'';
-                // Extract phone, expiration, bandwidth from comment field
-                $comment = $u->getProperty('comment');
-                $phone = '';
-                $expirationDate = null;
-                if (!empty($comment)) {
-                    if (preg_match('/(?:\+?254|0)[17]\d{8}/', $comment, $m)) {
-                        $phone = $m[0];
-                    }
-                    // Extract "Expires on: DATE" pattern
-                    if (preg_match('/Expires\s+on:\s*(.+?)(?:\||$)/i', $comment, $em)) {
-                        $expirationDate = trim($em[1]);
-                    }
-                }
-                $d->phonenumber = $phone;
-                $d->service_type = 'Hotspot';
+                $d->phonenumber = '';
                 if ($d->save()) {
-                    $customerId = $d->id();
                     $results[] = "$username added successfully";
-                    // Create recharge if expiration date was found and user has a profile
-                    if ($expirationDate) {
-                        $profileName = $u->getProperty('profile');
-                        $plan = ORM::for_table('tbl_plans')->where('name_plan', $profileName)->find_one();
-                        if ($plan) {
-                            $expTs = strtotime($expirationDate);
-                            if ($expTs && $expTs > time()) {
-                                $r = ORM::for_table('tbl_user_recharges')->create();
-                                $r->customer_id = $customerId;
-                                $r->username = $username;
-                                $r->plan_id = $plan['id'];
-                                $r->namebp = $plan['name_plan'];
-                                $r->method = 'Mikrotik Import';
-                                $r->type = 'Hotspot';
-                                $r->status = 'on';
-                                $r->expiration = date('Y-m-d', $expTs);
-                                $r->time = date('H:i:s', $expTs);
-                                $r->recharged_on = date('Y-m-d H:i:s');
-                                $r->routers = $router;
-                                $r->save();
-                                $results[] = "  └ Recharge set: expires " . date('Y-m-d H:i:s', $expTs);
-                            }
-                        }
-                    }
                 }else{
                     $results[] = "$username Failed to be added";
                 }
@@ -202,18 +154,10 @@ function mikrotik_import_mikrotik_ppoe_package($router, $ip, $user, $pass)
         if (strlen($rateLimit) > 1) {
             // Create Bandwidth profile
             $rate = explode("/", $rateLimit);
-            if (count($rate) >= 2) {
-                $unit_up = preg_replace("/[^a-zA-Z]+/", "", $rate[0]) . "bps";
-                $unit_down = preg_replace("/[^a-zA-Z]+/", "", $rate[1]) . "bps";
-                $rate_up = (int) preg_replace("/[^0-9]+/", "", $rate[0]);
-                $rate_down = (int) preg_replace("/[^0-9]+/", "", $rate[1]);
-            } else {
-                $unit_up = 'bps';
-                $unit_down = 'bps';
-                $rate_up = 0;
-                $rate_down = 0;
-            }
-            if ($rate_up > 0 || $rate_down > 0) {
+            $unit_up = preg_replace("/[^a-zA-Z]+/", "", $rate[0]) . "bps";
+            $unit_down = preg_replace("/[^a-zA-Z]+/", "", $rate[1]) . "bps";
+            $rate_up = preg_replace("/[^0-9]+/", "", $rate[0]);
+            $rate_down = preg_replace("/[^0-9]+/", "", $rate[1]);
             $bw_name = str_replace("/", "_", $rateLimit);
             $bw = ORM::for_table('tbl_bandwidth')->where('name_bw', $bw_name)->find_one();
             if (!$bw) {
@@ -254,7 +198,6 @@ function mikrotik_import_mikrotik_ppoe_package($router, $ip, $user, $pass)
             }else{
                 $results[] = "Packages Exists: $name";
             }
-            } // end if ($rate_up > 0 || $rate_down > 0)
         }
     }
     // Import user
@@ -275,54 +218,9 @@ function mikrotik_import_mikrotik_ppoe_package($router, $ip, $user, $pass)
                 $d->fullname = $username;
                 $d->address = '';
                 $d->email = '';
-                // Extract phone, expiration, bandwidth from comment field
-                $comment = $u->getProperty('comment');
-                $phone = '';
-                $expirationDate = null;
-                if (!empty($comment)) {
-                    if (preg_match('/(?:\+?254|0)[17]\d{8}/', $comment, $m)) {
-                        $phone = $m[0];
-                    }
-                    // Extract "Expires on: DATE" pattern
-                    if (preg_match('/Expires\s+on:\s*(.+?)(?:\||$)/i', $comment, $em)) {
-                        $expirationDate = trim($em[1]);
-                    }
-                }
-                $d->phonenumber = $phone;
-                $d->service_type = 'PPPoE';
-                $d->pppoe_username = $username;
-                $d->pppoe_password = $u->getProperty('password');
-                $remoteAddr = $u->getProperty('remote-address');
-                if (!empty($remoteAddr)) {
-                    $d->pppoe_ip = $remoteAddr;
-                }
+                $d->phonenumber = '';
                 if ($d->save()) {
-                    $customerId = $d->id();
                     $results[] = "$username added successfully";
-                    // Create recharge if expiration date was found and user has a profile
-                    if ($expirationDate) {
-                        $profileName = $u->getProperty('profile');
-                        $plan = ORM::for_table('tbl_plans')->where('name_plan', $profileName)->find_one();
-                        if ($plan) {
-                            $expTs = strtotime($expirationDate);
-                            if ($expTs && $expTs > time()) {
-                                $r = ORM::for_table('tbl_user_recharges')->create();
-                                $r->customer_id = $customerId;
-                                $r->username = $username;
-                                $r->plan_id = $plan['id'];
-                                $r->namebp = $plan['name_plan'];
-                                $r->method = 'Mikrotik Import';
-                                $r->type = 'PPPoE';
-                                $r->status = 'on';
-                                $r->expiration = date('Y-m-d', $expTs);
-                                $r->time = date('H:i:s', $expTs);
-                                $r->recharged_on = date('Y-m-d H:i:s');
-                                $r->routers = $router;
-                                $r->save();
-                                $results[] = "  └ Recharge set: expires " . date('Y-m-d H:i:s', $expTs);
-                            }
-                        }
-                    }
                 }else{
                     $results[] = "$username Failed to be added";
                 }

@@ -1657,5 +1657,6 @@
     "Back_to_Filters": "Back to Filters",
     "Turn_Off": "Turn Off",
     "Turn_On": "Turn On",
-    "Status_unavailable": "Status unavailable"
+    "Status_unavailable": "Status unavailable",
+    "DISABLED": "DISABLED"
 }
