@@ -58,6 +58,30 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.45] - 2026-09-28
+
+---
+
+### REMOVED: Five more stale file copies
+
+**`system/plugin/download.php997766`**, **`system/plugin/download.php..sai`**, **`system/plugin/system_info.php0000olld`**, **`system/plugin/ui/mikrotik_monitor.tpl999`**, **`system/plugin/ui/mikrotik_monitor.tplneww`**
+
+The remaining duplicates of the same kind as `mikrotik_import.php777` removed in v2.2.44: old copies left in the plugin folder, side by side with the live files.
+
+| File | What it was |
+|---|---|
+| `download.php997766` | A complete older copy of the hotspot payment page |
+| `download.php..sai` | A second older copy of the same page |
+| `system_info.php0000olld` | An older copy of the System Info plugin |
+| `ui/mikrotik_monitor.tpl999` | An older copy of the monitor template |
+| `ui/mikrotik_monitor.tplneww` | Another older copy of the monitor template |
+
+None of them was ever loaded — `init.php` globs `system/plugin/*.php`, and none of these names end in `.php`. Before removing them, every one was searched for across the repo: no matches. The live monitor template is `mikrotik_monitor.tpl`, which is what `mikrotik_monitor.php` loads.
+
+> **The two `download.php` copies were the ones worth removing.** They sat in the web-accessible plugin folder, and because their filenames do not end in `.php`, the `<Files *.php>` deny rule in `system/.htaccess` does not match them — so they could be requested directly and served as plain text. That exposed an earlier revision of the page, including its payment and M-Pesa handling, to anyone who guessed the filename.
+
+Removed through git, so `git pull` deletes them on the server rather than restoring them.
+
 ## [2.2.44] - 2026-09-28
 
 ---
