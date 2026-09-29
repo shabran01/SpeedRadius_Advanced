@@ -58,6 +58,25 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.53] - 2026-09-29
+
+---
+
+### CHANGED: Modern UI for the Activation / by-date report
+
+**`ui/ui/reports-activation.tpl`**
+
+`reports/by-date` (shared with `reports/activation`) received a cleaner, scoped restyle:
+
+- The full-width indigo gradient header was replaced with a white card, a slim gradient accent strip and an icon tile — the search box now sits on a clean surface instead of inside the gradient.
+- Row hover no longer shifts the row (`transform: translateY(-1px)` plus a drop shadow caused visible jitter); it is now a simple background tint.
+- The `fadeIn` animation that re-fired on every table row on page load was removed.
+- A count pill ("N records on this page") and an empty state ("No transactions found") were added.
+- Invoice, username, type and router cells are styled as monospace / pills / chips; Created and Expires use emerald and amber with status dots.
+- Pagination is restyled to match, and the page follows the panel's dark mode.
+
+**A specificity bug was caught during preview:** the cell classes (`ra-created`, `ra-expires`, `ra-invoice`) were being overridden by the table's `td` colour rule, so the status colours never actually showed. The selectors are now scoped as `.ra-table td.ra-*`.
+
 ## [2.2.52] - 2026-09-29
 
 ---
