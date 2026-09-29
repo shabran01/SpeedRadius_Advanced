@@ -58,6 +58,39 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.46] - 2026-09-29
+
+---
+
+### FIXED: A new voucher changed the customer's account number every time
+
+**`system/plugin/CreateHotspotUser.php`**
+
+Redeeming a voucher created a **brand new customer account on every redemption**, even for a customer who already had one — so their account number changed each time they bought a voucher.
+
+Every voucher is created with `user = '0'` (`system/controllers/plan.php`), meaning *not yet assigned*. The redemption path then decided whether the browser's account number could be reused with:
+
+```php
+if ($user && (int) $voucher['user'] !== (int) $user['id']) {
+    $user = null;
+}
+```
+
+For a new voucher that is `0 !== <customer id>`, which is **always true**. The existing customer was therefore always discarded, and the code below generated a fresh random account number:
+
+```php
+if (!$user) {
+    $accountId = generateUniqueHotspotAccountId();
+```
+
+The rejection is still wanted — it stops a voucher already assigned to one customer from attaching to a different one. It just should not fire for an *unassigned* voucher:
+
+```php
+if ($user && (int) $voucher['user'] > 0 && (int) $voucher['user'] !== (int) $user['id']) {
+```
+
+A returning customer now keeps their account number, so their package history and expiry date stay on the same account.
+
 ## [2.2.45] - 2026-09-28
 
 ---

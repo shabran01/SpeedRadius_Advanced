@@ -134,9 +134,12 @@ function ReconnectVoucher() {
     }
 
     $user = ORM::for_table('tbl_customers')->where('username', $accountId)->find_one();
-    if ($user && (int) $voucher['user'] !== (int) $user['id']) {
-        // An unused voucher must not attach to an existing customer just
-        // because the browser supplied a colliding account number.
+    // A voucher can be assigned to a customer, and only that customer may
+    // redeem it. Every voucher is created with user = '0' though
+    // (see plan.php), and no real customer id is ever 0 — so testing against 0
+    // discarded the returning customer on EVERY redemption and handed them a
+    // brand new account number each time they bought a voucher.
+    if ($user && (int) $voucher['user'] > 0 && (int) $voucher['user'] !== (int) $user['id']) {
         $user = null;
     }
     if (!$user) {
