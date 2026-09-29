@@ -459,8 +459,14 @@ function InitiateStkpush($phone, $planId, $accountId, $routerId)
         $d->payment_method = $gateway;
         $d->payment_channel = $gateway;
         $d->created_date = date('Y-m-d H:i:s');
-        $d->paid_date = date('Y-m-d H:i:s');
-        $d->expired_date = date('Y-m-d H:i:s');
+        // An STK push is only live for a short window — the same five minutes the
+        // BankStkPush gateway uses. This used to write the creation time into
+        // expired_date, so the audit page showed Created and Expired as the same
+        // moment and the window looked like zero.
+        $d->expired_date = date('Y-m-d H:i:s', strtotime('+5 minutes'));
+        // paid_date is deliberately left unset. The gateway stamps it when the
+        // payment actually succeeds; writing it here made UNPAID and CANCELED
+        // rows show a "Paid" time in the audit table.
         $d->pg_url_payment = $url;
         $d->status = 1;
         $d->save();
@@ -686,7 +692,12 @@ function mpesa_reconnect() {
         
         // If expiry_date is null or invalid, calculate it from transaction time and plan duration
         if (!$expiry_time || $current_session->expiry_date === null) {
-            $transaction_time = strtotime($transaction->paid_date);
+            // paid_date is only set once the gateway confirms payment, so a row
+            // that was never stamped can have it empty. strtotime('') returns
+            // false, which would compute an expiry in 1970 and reject a customer
+            // who had genuinely paid. Fall back to when the request was created.
+            $base = !empty($transaction->paid_date) ? $transaction->paid_date : $transaction->created_date;
+            $transaction_time = strtotime($base);
             $plan_duration_mins = intval($plan->validity);
             $expiry_time = $transaction_time + ($plan_duration_mins * 60);
         }

@@ -2,6 +2,49 @@
 
  # CHANGELOG
 
+## [2.2.52] - 2026-09-29
+
+---
+
+### FIXED: Payment audit showed Created, Expired and Paid as the same moment
+
+**`system/plugin/CreateHotspotUser.php`**
+
+On `paymentgateway/audit`, every STK push row displayed an identical Created / Expired / Paid time — and rows marked **UNPAID** or **CANCELED** still showed a "Paid" time. Both came from the same three lines, which stamped a pending record as though it had already finished:
+
+```php
+$d->created_date = date('Y-m-d H:i:s');
+$d->paid_date    = date('Y-m-d H:i:s');   // not paid yet
+$d->expired_date = date('Y-m-d H:i:s');   // a window of zero
+$d->status = 1;                           // ...while status says pending
+```
+
+**Expired** now uses the same five-minute window as the `BankStkPush` gateway:
+
+```php
+$d->expired_date = date('Y-m-d H:i:s', strtotime('+5 minutes'));
+```
+
+**Paid** is left unset. The gateway writes it when the payment actually succeeds, and the audit template already renders an empty cell when it is null — so UNPAID and CANCELED rows now show nothing there, which is what the column is for.
+
+### FIXED: A paid customer could have been refused as "Expired Package"
+
+With `paid_date` no longer pre-filled, one dependent calculation had to be made safe. The M-Pesa reconnect path uses it as the fallback base when a recharge has no expiry date:
+
+```php
+$transaction_time = strtotime($transaction->paid_date);
+```
+
+`strtotime('')` returns `false`, so an unstamped row would have produced an expiry in 1970 and rejected a customer who had genuinely paid. It now falls back to `created_date`:
+
+```php
+$base = !empty($transaction->paid_date) ? $transaction->paid_date : $transaction->created_date;
+```
+
+Existing rows already carry a `paid_date`, so their behaviour is unchanged.
+
+**Deliberately not changed:** the balance and plan transfer entries in `home.php` and `order.php` set all three timestamps to now as well, but they are created with `status = 2` — completed instantly — so equal timestamps are correct there. The `BankStkPush` gateway already used `+5 minutes`.
+
 ## [2.2.51] - 2026-09-29
 
 ---
