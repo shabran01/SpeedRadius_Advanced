@@ -58,6 +58,35 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.51] - 2026-09-29
+
+---
+
+### ADDED: Read-only report for C2B timestamp drift
+
+**`system/report_c2b_timezone.php`**
+
+A measuring tool for the timestamps written before v2.2.48, so the size of the problem is known before anyone decides whether to correct the history.
+
+**Why it needs an external reference.** `tbl_payment_gateway.paid_date` cannot detect the offset — it was written by the same code path and carries the same error. Comparing it with the recharge row proves nothing: both agree, and both are wrong. The only trustworthy clock is `tbl_mpesa_transactions.TransTime`, taken straight from the Safaricom C2B payload as East Africa Time.
+
+The report joins `tbl_user_recharges` to `tbl_mpesa_transactions` on the transaction code, compares the recorded time against Safaricom's, and prints:
+
+- how many C2B recharges matched and how many were comparable
+- the offset distribution, bucketed to 15 minutes
+- how many sit 2.5 hours or more early — those customers were cut off early by the same margin
+- the 15 most recent rows, side by side
+
+**It runs SELECTs only.** No writes, no arguments, no side effects.
+
+It lives under `system/`, where `.htaccess` denies `*.php` except a short allowlist, so it is CLI-only and unreachable over the web:
+
+```bash
+cd /var/www/html/isp/system && php report_c2b_timezone.php
+```
+
+This tool measures. It does not correct anything — that remains a separate decision.
+
 ## [2.2.50] - 2026-09-29
 
 ---
