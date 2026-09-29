@@ -58,6 +58,27 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.47] - 2026-09-29
+
+---
+
+### CHANGED: Hid "Reconnect with Phone Number" on the hotspot page
+
+**`system/plugin/download.php`**
+
+The button is commented out rather than deleted, so bringing it back is a matter of uncommenting six lines.
+
+It was unreliable in two ways, both rooted in how accounts are stored:
+
+- Voucher accounts keep their **account code in the `phonenumber` field**, so a real phone number never matched them — those customers were told "No account found".
+- When one M-Pesa number is shared by a household, the lookup matched more than one account. The handler now refuses rather than guessing, which still left the customer stuck either way.
+
+**"Reconnect with M-Pesa Code"** covers both cases: the transaction code identifies a single payment, so it resolves to a single device without ambiguity.
+
+The page now shows **Redeem Voucher**, **Reconnect with M-Pesa Code**, and **Already Have an Active Package?**
+
+The `reconnect_phone` POST handler is untouched, so restoring the button restores the previous behaviour exactly.
+
 ## [2.2.46] - 2026-09-29
 
 ---
