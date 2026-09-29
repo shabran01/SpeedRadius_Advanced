@@ -17,6 +17,12 @@
 .btn-back { display:inline-flex; align-items:center; gap:.45rem; padding:.55rem .95rem; border:1.5px solid #e2e8f0; border-radius:10px; font-size:.8rem; font-weight:600; color:#475569; background:#fff; cursor:pointer; text-decoration:none; transition:all .15s; }
 .btn-back:hover { background:#f8fafc; }
 .total-box { background:linear-gradient(135deg,#ecfdf5,#d1fae5); border:1px solid #a7f3d0; border-radius:16px; padding:1.25rem 1.75rem; }
+/* Username links through to the customer account. Note the brace spacing used
+   throughout this stylesheet: Smarty treats an opening brace as the start of a
+   tag unless the following character is a space, so every rule keeps a space
+   after its brace. */
+.pv-user { font-weight:600; color:#4338ca; text-decoration:none; border-bottom:1px solid rgba(165,180,252,.6); }
+.pv-user:hover { color:#312e81; border-bottom-color:#4338ca; }
 </style>
 
 <div class="pv-body">
@@ -79,7 +85,7 @@
             <tbody>
               {foreach $d as $ds}
               <tr>
-                <td style="font-weight:600; color:#1e293b;">{$ds['username']}</td>
+                <td><a href="{$_url}customers/viewu/{$ds['username']}" class="pv-user" title="{Lang::T('Open account')}">{$ds['username']}</a></td>
                 <td><span style="display:inline-flex; padding:.2rem .55rem; border-radius:9999px; font-size:.72rem; font-weight:600; background:#eef2ff; color:#4338ca;">{$ds['type']}</span></td>
                 <td>{$ds['plan_name']}</td>
                 <td class="text-right" style="font-weight:600; color:#047857;">{Lang::moneyFormat($ds['price'])}</td>

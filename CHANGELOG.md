@@ -2,6 +2,24 @@
 
  # CHANGELOG
 
+## [2.2.55] - 2026-09-29
+
+---
+
+### CHANGED: Username on the period report now opens the account
+
+**`ui/ui/reports-period-view.tpl`**
+
+The Username column on `reports/period-view` was plain text, so going from a row in the report to the customer's account meant searching for the name by hand. It is now a link:
+
+```smarty
+<a href="{$_url}customers/viewu/{$ds['username']}" class="pv-user" title="{Lang::T('Open account')}">{$ds['username']}</a>
+```
+
+Styled to sit with the rest of the page — indigo (`#4338ca`) with a soft underline at rest, darkening on hover — and using the same `customers/viewu/` route as `plan.tpl`, `dashboard.tpl` and the payment gateway audit.
+
+> **A near-miss worth recording.** The comment written alongside the CSS first read *"Smarty treats "{" as a tag start..."* — and a literal brace followed by a quote is precisely what Smarty tries to parse as a tag, so it would have broken compilation exactly like v2.2.53 did. Caught by scanning the file for every `{` **not** followed by whitespace, then reworded so the comment carries no braces at all. That scan is now the last check before shipping any template containing CSS.
+
 ## [2.2.54] - 2026-09-29
 
 ---
