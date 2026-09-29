@@ -130,6 +130,24 @@ if (!empty($notif_file) && file_exists($notif_file)) {
 }
 $_notifmsg_default = json_decode(file_get_contents($UPLOAD_PATH . DIRECTORY_SEPARATOR . 'notifications.default.json'), true);
 
+// Apply the configured timezone BEFORE the plugins are loaded.
+// Plugin files run code at include time — c2b.php handles the M-Pesa C2B
+// callback and exits right there — so until this point their date() calls fell
+// back to PHP's default timezone (usually UTC). That is why a C2B payment could
+// be stamped hours away from a payment made any other way. The appconfig load
+// and the canonical date_default_timezone_set() call still happen below.
+try {
+    $tzSetting = ORM::for_table('tbl_appconfig')->where('setting', 'timezone')->find_one();
+    $tzValue = ($tzSetting && !empty($tzSetting['value']))
+        ? $tzSetting['value']
+        : (isset($config['timezone']) ? $config['timezone'] : '');
+    if (!empty($tzValue)) {
+        date_default_timezone_set($tzValue);
+    }
+} catch (Throwable $e) {
+    // ignore; the timezone is applied again after the appconfig load below
+}
+
 //register all plugin
 foreach (glob(File::pathFixer($PLUGIN_PATH . DIRECTORY_SEPARATOR . '*.php')) as $filename) {
     try {

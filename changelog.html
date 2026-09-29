@@ -58,6 +58,40 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.48] - 2026-09-29
+
+---
+
+### FIXED: M-Pesa C2B payments were timestamped in the wrong timezone
+
+**`init.php`**
+
+A C2B payment showed a "Created On" time hours away from when the customer actually paid — `05:22` for a payment made at `08:22`, for instance. Other payment routes were correct, so the same customer could have one right time and one wrong one.
+
+**The cause: the timezone was applied after the plugins were loaded.** `init.php` ran in this order:
+
+```php
+foreach (glob(... '*.php') as $filename) { include $filename; }   // line 134
+$result = ORM::for_table('tbl_appconfig')->find_many();           // line 145
+date_default_timezone_set($config['timezone']);                   // line 155
+```
+
+Plugin files **run code at include time**. `system/plugin/c2b.php` is one of them: it reads `$_SERVER['REQUEST_URI']`, sees `kind=confirmation`, runs `ConfirmationURL()` — which calls `Package::rechargeUser()` — and then `exit`s. That all happens at line 134, so line 155 is never reached on that request.
+
+`Package::rechargeUser()` therefore wrote the timestamps using PHP's default timezone instead of the configured one:
+
+```php
+$date_only = date("Y-m-d");
+$d->recharged_on   = $date_only;
+$d->recharged_time = $time_only;
+```
+
+On a server whose PHP default is UTC, that records an `Africa/Nairobi` payment three hours early. Payments taken through the normal routes finish the bootstrap first, so they were always right — which is why the fault appeared to affect only some payments.
+
+**The fix** reads the configured timezone from `tbl_appconfig` and applies it *before* the plugin glob, so include-time handlers get the right timezone. It is wrapped in `try`/`catch`, and the existing `date_default_timezone_set()` at the end of the bootstrap is left in place — so it does nothing if the value is unavailable.
+
+**Recharges already recorded are not corrected.** C2B rows written before this fix remain hours out, and their expiry date with them.
+
 ## [2.2.47] - 2026-09-29
 
 ---
