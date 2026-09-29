@@ -314,7 +314,7 @@ function generate_mpesa_transactions_pdf($transactions) {
                 This report contains <strong>' . number_format($total_transactions) . '</strong> M-Pesa transactions with a total value of <strong>KES ' . number_format($total_amount, 2) . '</strong>
             </div>
             <div class="footer-text" style="margin-top: 10px;">
-                Generated on ' . date('l, F j, Y \a\t g:i A') . ' | All amounts are in Kenya Shillings (KES)
+                Generated on ' . date('l, F j, Y \a\t H:i') . ' | All amounts are in Kenya Shillings (KES)
             </div>
         </div>';
         
@@ -369,7 +369,7 @@ function generate_mpesa_transactions_pdf($transactions) {
                 This report contains <strong>' . number_format($total_transactions) . '</strong> M-Pesa transactions with a total value of <strong>KES ' . number_format($total_amount, 2) . '</strong>
             </div>
             <div class="footer-text" style="margin-top: 10px;">
-                Generated on ' . date('l, F j, Y \a\t g:i A') . ' | All amounts are in Kenya Shillings (KES)
+                Generated on ' . date('l, F j, Y \a\t H:i') . ' | All amounts are in Kenya Shillings (KES)
             </div>
         </div>';
         

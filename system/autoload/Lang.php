@@ -86,17 +86,17 @@ class Lang
         if (strtotime($date) < strtotime("2000-01-01 00:00:00")) {
             return "";
         } else {
-            return date($config['date_format'] . ' h:i A', strtotime($date));
+            return date($config['date_format'] . ' H:i', strtotime($date));
         }
     }
 
     public static function dateAndTimeFormat($date, $time)
     {
         global $config;
-        // 12-hour clock with AM/PM, matching dateTimeFormat() above. This used
-        // to be 'H:i', which rendered a 24-hour time with no AM/PM — so 05:22 in
-        // the morning and 17:22 in the evening were easy to misread.
-        return date($config['date_format'] . ' h:i A', strtotime("$date $time"));
+        // 24-hour, matching dateTimeFormat() above. The two formatters used to
+        // disagree — one 12-hour with AM/PM, the other 24-hour — so the same
+        // page could show "05:22 PM" in one row and "05:22" in the next.
+        return date($config['date_format'] . ' H:i', strtotime("$date $time"));
     }
 
     public static function timeElapsed($datetime, $full = false)

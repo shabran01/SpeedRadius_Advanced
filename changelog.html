@@ -58,6 +58,29 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.50] - 2026-09-29
+
+---
+
+### CHANGED: The system now uses a 24-hour clock end to end
+
+**`system/autoload/Lang.php`**, **`system/plugin/mpesa_transactions_pdf.php`**, **`system/plugin/system_info.php`**
+
+v2.2.49 added AM/PM to the Created On / Expires On columns. On reflection a 24-hour clock already answers the question on its own — `05:22` and `17:22` cannot be confused — so the system is now 24-hour throughout instead.
+
+The real problem was that there were **two** date formatters, and they disagreed:
+
+| Method | Was | Used by |
+|---|---|---|
+| `Lang::dateTimeFormat()` | `h:i A` | customer created / last login, accounts table, customers list, logs, notes, vouchers, payment audit, portal inbox |
+| `Lang::dateAndTimeFormat()` | `H:i`, briefly `h:i A` | Created On / Expires On, invoices |
+
+That is why one page could show `05:22 PM` in one row and `05:22` in the row beneath it. Both now use `H:i`.
+
+Two smaller 12-hour sites were aligned as well: the "Generated on" footer of the M-Pesa transactions PDF, and the System Time / Database Time rows on the System Info page.
+
+Everything changed here is display only — no stored timestamps were modified.
+
 ## [2.2.49] - 2026-09-29
 
 ---

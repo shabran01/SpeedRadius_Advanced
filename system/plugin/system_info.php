@@ -312,8 +312,8 @@ function system_info_getSystemInfo()
         'Remote Port' => $_SERVER['REMOTE_PORT'],
         'Database Server' => $serverInfo,
         'Database Name' => $databaseName,
-        'System Time' => date("F j, Y g:i a"),
-        'Database Time' => date("F j, Y g:i a", strtotime($currentTime)),
+        'System Time' => date("F j, Y H:i"),
+        'Database Time' => date("F j, Y H:i", strtotime($currentTime)),
         'Shell Exec Enabled' => $shellExecEnabled ? 'Yes' : 'No',
         'Server Uptime' => system_info_get_uptime(),
         // Add more system information here
