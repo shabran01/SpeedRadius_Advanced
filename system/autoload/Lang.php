@@ -93,7 +93,10 @@ class Lang
     public static function dateAndTimeFormat($date, $time)
     {
         global $config;
-        return date($config['date_format'] . ' H:i', strtotime("$date $time"));
+        // 12-hour clock with AM/PM, matching dateTimeFormat() above. This used
+        // to be 'H:i', which rendered a 24-hour time with no AM/PM — so 05:22 in
+        // the morning and 17:22 in the evening were easy to misread.
+        return date($config['date_format'] . ' h:i A', strtotime("$date $time"));
     }
 
     public static function timeElapsed($datetime, $full = false)

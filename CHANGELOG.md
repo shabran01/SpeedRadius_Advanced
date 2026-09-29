@@ -2,6 +2,26 @@
 
  # CHANGELOG
 
+## [2.2.49] - 2026-09-29
+
+---
+
+### CHANGED: Times now show AM/PM instead of a 24-hour clock
+
+**`system/autoload/Lang.php`**
+
+Every "Created On" / "Expires On" value came from `Lang::dateAndTimeFormat()`, which formatted the time as `H:i` — 24-hour, with no AM/PM. Only the digits separated `05:22` in the morning from `17:22` in the evening, which is easy to misread at a glance.
+
+```php
+return date($config['date_format'] . ' h:i A', strtotime("$date $time"));
+```
+
+`h:i A` now renders `29 Sep 2026 05:22 AM`.
+
+The sibling method `dateTimeFormat()` already used `h:i A`, so the two now agree instead of disagreeing.
+
+Because the formatter is shared, this applies everywhere it is used: the admin customer page, dashboard tooltips, the customer portal, activation lists, invoices and print views — and the date placeholders in SMS and invoice text (`[[date]]`, `[[trx_date]]`, `[[expired_date]]`, and the "service has been extended until" message).
+
 ## [2.2.48] - 2026-09-29
 
 ---
