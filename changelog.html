@@ -58,6 +58,40 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.54] - 2026-09-29
+
+---
+
+### FIXED: v2.2.53 broke the report page — Smarty syntax error
+
+**`ui/ui/reports-activation.tpl`**
+
+Deploying v2.2.53 made `reports/by-date` and `reports/activation` fail with:
+
+```
+Syntax error in template "reports-activation.tpl" on line 5
+".ra-wrap{max-width:1280px;margin:0 auto;padding:18px}" - Unexpected ":", expected one of: "}"
+```
+
+**The cause was mine.** Smarty treats `{` as the start of a tag *unless the next character is whitespace*. The original stylesheet put the brace at the end of a line, so every `{` was followed by a newline and Smarty ignored it:
+
+```css
+.reports-container {
+    background: #ffffff;
+```
+
+The rewrite used compact CSS, which puts `{` mid-line:
+
+```css
+.ra-wrap{max-width:1280px;margin:0 auto;padding:18px}
+```
+
+So Smarty tried to parse `{max-width:1280px;...}` as a template tag and failed on the `:`.
+
+**The fix** wraps the entire stylesheet in `{literal}...{/literal}`, which is the correct way to carry raw CSS containing braces inside a Smarty template. The CSS itself is untouched, so the design renders exactly as previewed.
+
+> **Worth remembering:** minified CSS is not safe in a `.tpl` unless it is inside `{literal}`. Writing the brace at line-end happens to work, which is why the original file never hit this.
+
 ## [2.2.53] - 2026-09-29
 
 ---

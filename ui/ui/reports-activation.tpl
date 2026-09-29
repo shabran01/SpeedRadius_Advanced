@@ -1,6 +1,7 @@
 {include file="sections/header.tpl"}
 
 <style>
+{literal}
 /* ── Activation / by-date report — modern clean UI (.ra-*) ────────────── */
 .ra-wrap{max-width:1280px;margin:0 auto;padding:18px}
 .ra-card{background:#fff;border:1px solid #e6e9ef;border-radius:16px;overflow:hidden;
@@ -105,6 +106,7 @@
   .ra-search{max-width:none}
   .ra-btn span{display:none}
 }
+{/literal}
 </style>
 
 <div class="ra-wrap">
