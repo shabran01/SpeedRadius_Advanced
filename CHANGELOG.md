@@ -2,6 +2,31 @@
 
  # CHANGELOG
 
+## [2.2.56] - 2026-10-03
+
+---
+
+### FIXED: A TV lost its speed limit if its IP address changed
+
+**`system/plugin/download.php`**, **`system/cron.php`**
+
+The Pay For a TV flow writes two entries on the router, and they were anchored to different things:
+
+| Entry | Keyed to |
+|---|---|
+| `/ip hotspot ip-binding` — skips the login page | MAC **and** address |
+| `/queue simple "SR-tv-<mac>"` — the speed limit | **address only**, as `target=<ip>/32` |
+
+A simple queue matches a bare address with no MAC fallback. So when DHCP handed the TV a different address, the queue stopped matching and the device ran **unshaped at full speed**. Nothing flagged it: the binding was still listed, the package was still active, and the panel looked healthy. At best the customer got more speed than they paid for; at worst the bypass went stale too and the TV fell back to a login page it cannot type into.
+
+**The fix** reserves the address when the TV is bound:
+
+- `tv_bind` now keeps the DHCP lease ID it was already fetching and discarding, calls `/ip dhcp-server/lease/make-static`, then re-reads the lease by MAC — `make-static` can replace the entry, so the ID may differ — and tags it `SR-pin|<mac>`. The outcome is reported as `lease_pinned` / `pin_note` in the JSON response.
+- `cron_cleanup_tv_bindings()` releases that reservation at expiry, so pinned leases do not accumulate. It removes a lease **only** when the comment starts with `SR-pin|`, so a device an admin pinned by hand is never touched.
+- A pinning failure is not fatal — the device is online and shaped by that point — so it is reported rather than allowed to fail the bind.
+
+**Known gap:** a TV with a hand-set address outside the DHCP pool has no lease to pin, and is reported as such (`lease_pinned: false`). Fixing that requires the cron to re-resolve addresses, which is not implemented.
+
 ## [2.2.55] - 2026-09-29
 
 ---

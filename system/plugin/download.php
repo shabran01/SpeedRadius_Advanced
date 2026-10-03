@@ -432,6 +432,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         // lease alone and happily wrote a binding pointing at a broadcast address
         // (10.0.2.255). It looked completely healthy and did nothing.
         $ipCandidates = [];
+        // The DHCP lease ID, kept so the address can be reserved for this device
+        // once the bind succeeds. Losing that address is what breaks the speed
+        // queue, which targets a bare IP with no MAC fallback.
+        $leaseId = '';
 
         // 1) The hotspot's own host table - the address the device is really using.
         try {
@@ -455,6 +459,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             foreach ($client->sendSync($leaseReq) as $lease) {
                 if ($lease->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
                     $ipCandidates[] = trim((string)$lease->getProperty('address'));
+                    if ($leaseId === '') {
+                        $leaseId = (string)$lease->getProperty('.id');
+                    }
                 }
             }
         } catch (\Throwable $e) {
@@ -693,6 +700,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
         }
 
+        // ── Reserve the device's address on the DHCP server ───────────────────
+        // The bypass binding and the speed queue both point at an IP, and a simple
+        // queue matches a bare address with no MAC fallback. So if DHCP hands the
+        // TV a different address later, the queue stops matching and the device
+        // runs unshaped while the admin panel still looks perfectly healthy.
+        // Pinning the lease means the address cannot change.
+        //
+        // Not fatal if it fails: the device is already online and shaped by now,
+        // so this is reported rather than allowed to fail the bind.
+        $pinNote = '';
+        if ($leaseId === '') {
+            $pinNote = 'Address not reserved: no DHCP lease found (the device may use a fixed IP).';
+        } else {
+            try {
+                $msReq = new \PEAR2\Net\RouterOS\Request('/ip/dhcp-server/lease/make-static');
+                $msReq->setArgument('.id', $leaseId);
+                $msResp = $client->sendSync($msReq);
+                if ($msResp->getType() === \PEAR2\Net\RouterOS\Response::TYPE_FATAL) {
+                    $pinNote = 'Address not reserved: ' . $msResp->getProperty('message');
+                } else {
+                    // make-static can replace the entry, so the ID may differ now.
+                    // Re-read it by MAC and tag it, so the expiry cleanup only ever
+                    // removes leases this flow created and never one pinned by hand.
+                    $tagReq = new \PEAR2\Net\RouterOS\Request('/ip/dhcp-server/lease/print');
+                    $tagReq->setArgument('.proplist', '.id');
+                    $tagReq->setQuery(\PEAR2\Net\RouterOS\Query::where('mac-address', $mac));
+                    foreach ($client->sendSync($tagReq) as $tRow) {
+                        if ($tRow->getType() === \PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                            $tagSet = new \PEAR2\Net\RouterOS\Request('/ip/dhcp-server/lease/set');
+                            $tagSet->setArgument('.id', (string)$tRow->getProperty('.id'));
+                            $tagSet->setArgument('comment', 'SR-pin|' . $mac);
+                            $client->sendSync($tagSet);
+                            break;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                $pinNote = 'Address not reserved: ' . $e->getMessage();
+            }
+        }
+
         // Report the profile state too, so a silent MAC-login misconfiguration is
         // visible during testing instead of showing up as "customer paid, TV dead".
         // Only meaningful for the MAC-login binding type - a bypassed device never
@@ -709,6 +757,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'mac_login_enabled' => $macLoginOn,
             'max_limit'         => $maxLimit,
             'shape_warning'     => $shapeWarning,
+            'lease_pinned'      => ($pinNote === ''),
+            'pin_note'          => $pinNote,
             'message'           => 'Done! Your device should now connect without the login page.'
         ]);
     } catch (\Throwable $e) {

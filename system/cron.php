@@ -375,6 +375,26 @@ function cron_cleanup_tv_bindings($client, $router_name)
                         break;
                     }
                 }
+
+                // Release the address reserved when this TV was bound. Only leases
+                // this flow created are removed - the SR-pin| marker is what marks
+                // them, so a lease an admin pinned by hand is left untouched.
+                $lq = new PEAR2\Net\RouterOS\Request('/ip/dhcp-server/lease/print');
+                $lq->setArgument('.proplist', '.id,comment');
+                $lq->setQuery(PEAR2\Net\RouterOS\Query::where('mac-address', $mac));
+                foreach ($client->sendSync($lq) as $lrow) {
+                    if ($lrow->getType() !== PEAR2\Net\RouterOS\Response::TYPE_DATA) {
+                        continue;
+                    }
+                    if (strpos((string)$lrow->getProperty('comment'), 'SR-pin|') !== 0) {
+                        continue; // not one of ours
+                    }
+                    $lr = new PEAR2\Net\RouterOS\Request('/ip/dhcp-server/lease/remove');
+                    $lr->setArgument('numbers', (string)$lrow->getProperty('.id'));
+                    $client->sendSync($lr);
+                    echo "[TVBind] Released reserved address for {$mac}\n";
+                    break;
+                }
             }
         }
     } catch (\Throwable $e) {
