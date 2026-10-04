@@ -2,6 +2,42 @@
 
  # CHANGELOG
 
+## [2.2.57] - 2026-10-04
+
+---
+
+### FIXED: PDF export failed with "HTML code size is larger than pcre.backtrack_limit"
+
+**`init.php`**
+
+Exporting a period report to PDF threw:
+
+```
+The HTML code size is larger than pcre.backtrack_limit 1000000.
+You should use WriteHTML() with smaller string lengths.
+```
+
+**The cause.** `export.php` builds the entire report as one HTML string — a `<tr>` per transaction — and hands it to mPDF in a single `WriteHTML()` call. mPDF guards its parser against large input (`Mpdf.php`):
+
+```php
+$limit = ini_get('pcre.backtrack_limit');
+if (strlen($html) > (int) $limit) {
+    throw new \Mpdf\MpdfException(...);
+}
+```
+
+PHP's default `pcre.backtrack_limit` is **1,000,000 characters**. A month of transactions sails past that, so the guard tripped and the export died instead of producing a PDF.
+
+**The fix** raises the limit in the bootstrap:
+
+```php
+@ini_set('pcre.backtrack_limit', '10000000');
+```
+
+**Why the bootstrap and not the caller.** There are six `WriteHTML()` calls across three files — `export.php` (period and by-date), `expenditure.php`, and `mpesa_transactions_pdf.php` — and four of them pass a single large string. Setting it once covers all of them, and anything added later, instead of four separate patches.
+
+**It raises the ceiling rather than removing it.** At 10,000,000 characters a report needs roughly ten times the data that broke it before it fails again. If reports ever grow past that, the structural fix is to write the rows in batches — which `mpesa_transactions_pdf.php` already does for its large datasets, and which mPDF's own error message recommends.
+
 ## [2.2.56] - 2026-10-03
 
 ---

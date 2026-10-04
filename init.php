@@ -172,6 +172,13 @@ if (empty($http_proxy) && !empty($config['http_proxy'])) {
 }
 date_default_timezone_set($config['timezone']);
 
+// mPDF refuses to parse an HTML string longer than pcre.backtrack_limit — 1,000,000
+// by default — and throws "The HTML code size is larger than pcre.backtrack_limit".
+// A busy month of transactions passes that easily, which is what broke the period
+// and by-date PDF exports. Raised here rather than in each caller because mPDF is
+// used from several entry points (export, expenditure, mpesa transaction reports).
+@ini_set('pcre.backtrack_limit', '10000000');
+
 if ((!empty($radius_user) && $config['radius_enable']) || _post('radius_enable')) {
     if (!empty($radius_password)) {
         // compability for old version
