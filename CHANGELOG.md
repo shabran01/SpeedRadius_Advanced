@@ -2,6 +2,41 @@
 
  # CHANGELOG
 
+## [2.2.58] - 2026-10-10
+
+---
+
+### CHANGED: Invoice page (`plan/view/<id>`) rebuilt — responsive, typographic, print-safe
+
+**`ui/ui/invoice.tpl`**
+
+The invoice / receipt page (`/?_route=plan/view/<id>`) has been rewritten from scratch. The old stylesheet was the 2019 "gradient purple" look: four gradient button variants, five near-duplicate greens, three greys doing one job, inline styles that overrode its own rules, a duplicated `@media print` block, and body text at 10–12px.
+
+**What was actually broken**
+
+| Problem | Effect |
+|---|---|
+| `min-height: 297mm` on the card | On a phone the page rendered a 1123px-tall empty white card — nearly two screens of blank space under the content |
+| `.invoice-watermark` was `position: absolute`, but its parent `.invoice-body` had no `position: relative` | The offset parent became the viewport, so the rotated "PAID" watermark was clipped by the card or drifted off it entirely |
+| Only one breakpoint, `max-width: 768px` | Nothing tuned for 360–414px phones, and `col-md-*` (which only activates at ≥992px) left the header blocks stacked and right-aligned between 768–991px |
+| Buttons at `padding: 6px 14px` / `font-size: 10px` | Roughly 26px tall — below the 44px touch-target minimum |
+| A4 millimetre units used on screen | Print geometry leaked into the browser layout |
+| Zero `font-family` declarations | The page had no typography of its own; it only inherited the theme |
+
+**What changed**
+
+- **Responsive.** Breakpoints at **640px**, **991px**, **1024px** and **400px**. Single column on phones, two-column detail grid from 640px, wider gutters from 1024px. Buttons are `min-height: 44px` and go full-width below 640px.
+- **Typography.** A real system font stack (`-apple-system` → `Segoe UI` → `Roboto` → `Noto Sans`) scoped to `.sr-inv`, with a deliberate scale: 17px company name, 26→30px amount using `tabular-nums`, 13.5px buttons, 13px rows, 11.5px uppercase section labels.
+- **mm only in print.** All screen sizing is `px`. `@page { size: A4 }` and the A4 geometry now live exclusively inside `@media print`, which also hides `.main-header`, `.main-sidebar`, `.content-header`, `.main-footer` and `.sr-no-print`, and zeroes `.content-wrapper`'s margin so the invoice starts at the page origin.
+- **Watermark fixed.** `.sr-inv-body` is now `position: relative`, so the mark centres on the card instead of the viewport. It is suppressed in print.
+- **Design.** Flat surfaces, a single indigo accent (`#4f46e5`), one neutral ramp, no gradients beyond the header's flat fill, 14px/10px radii, and a shadow soft enough to survive dark mode.
+- **Dark-mode proof.** Every text element sets its own colour, so the theme's `dark-mode` / `modern-skin-dark` skins cannot bleed into the card. The card stays light on purpose — it mirrors the printed document.
+- **Cleanups.** Removed every inline `style="…"` override (the markup used to contradict its own stylesheet), removed the duplicated print rules, renamed everything into a collision-free `sr-*` namespace, moved the hidden textarea from Bootstrap's `.hidden` to the native `hidden` attribute, and added `rel="noopener"` to the outbound WhatsApp link.
+- **Safety.** The whole stylesheet is wrapped in `{literal}`, so minifying it later cannot reproduce the v2.2.53 Smarty break.
+- The "Download Text" form now posts `nux=text`, which stops `plan/print` reading an undefined `$_POST['nux']` on every download.
+
+No controller, query or output behaviour changed — same data, same buttons, same targets.
+
 ## [2.2.57] - 2026-10-04
 
 ---

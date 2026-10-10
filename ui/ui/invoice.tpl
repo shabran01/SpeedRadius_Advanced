@@ -1,546 +1,845 @@
 {include file="sections/header.tpl"}
 
 {if !$in}
-    <div class="alert alert-danger">
-        <h4>Error: Invoice data not found</h4>
-        <p>The invoice data could not be loaded. Please check if the invoice ID is correct.</p>
-        <a href="{$_url}plan/list" class="btn btn-primary">Back to Plan List</a>
+
+    <div class="sr-inv">
+        <div class="sr-alert">
+            <h4>Invoice not found</h4>
+            <p>The invoice data could not be loaded. Please check that the invoice ID is correct.</p>
+            <a href="{$_url}plan/list" class="sr-btn sr-btn--primary">Back to Plan List</a>
+        </div>
     </div>
+
 {else}
 
 <style>
-.modern-invoice {
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    overflow: hidden;
-    margin: 10px auto;
-    max-width: 210mm; /* A4 width */
-    min-height: 297mm; /* A4 height */
+{literal}
+/* =====================================================================
+   SpeedRadius invoice — screen + print.
+
+   Conventions:
+   - Screen sizes are px. Millimetres appear only inside @media print.
+   - Every rule is scoped under .sr-inv so nothing leaks into the theme.
+   - Every text element sets its own colour, so the dark-mode skin cannot
+     bleed into the card.
+   - The card stays light on purpose: it mirrors the printed invoice.
+   ===================================================================== */
+
+.sr-inv {
+    --accent: #4f46e5;
+    --accent-dark: #4338ca;
+    --accent-soft: #eef2ff;
+    --accent-line: #dfe3fb;
+    --ink: #0f172a;
+    --ink-2: #475569;
+    --ink-3: #94a3b8;
+    --line: #e2e8f0;
+    --line-2: #f1f5f9;
+    --surface: #f8fafc;
+    --ok: #059669;
+    --ok-soft: #ecfdf5;
+    --r-lg: 14px;
+    --r-md: 10px;
+    --r-sm: 8px;
+
+    padding: 0 0 32px;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
 }
 
-.invoice-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 15px;
+.sr-inv *,
+.sr-inv *::before,
+.sr-inv *::after {
+    box-sizing: border-box;
+}
+
+/* The plain-text invoice is posted to plan/print; keep it out of the way. */
+.sr-inv textarea[hidden] {
+    display: none;
+}
+
+/* ---------- Card ---------- */
+
+.sr-inv-card {
     position: relative;
+    overflow: hidden;
+    max-width: 840px;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+        0 14px 34px -14px rgba(15, 23, 42, 0.14);
 }
 
-.invoice-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255,255,255,0.05);
+/* ---------- Header ---------- */
+
+.sr-inv-head {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 18px;
+    background: var(--accent);
+    color: #fff;
 }
 
-.company-logo {
-    width: 45px;
-    height: 45px;
-    background: rgba(255,255,255,0.2);
-    border-radius: 50%;
+.sr-inv-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.sr-inv-logo {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 8px;
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255,255,255,0.3);
-}
-
-.invoice-title {
+    width: 44px;
+    height: 44px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
     font-size: 16px;
-    font-weight: 300;
-    margin: 0;
-    letter-spacing: 0.5px;
-}
-
-.invoice-id {
-    font-size: 13px;
-    opacity: 0.9;
-    font-weight: 500;
-    margin-top: 4px;
-}
-
-.invoice-body {
-    padding: 18px;
-}
-
-.info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 18px;
-}
-
-.info-section h4 {
-    color: #667eea;
-    font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 12px;
-    border-bottom: 1px solid #f0f0f0;
-    padding-bottom: 6px;
 }
 
-.info-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 8px 0;
-    border-bottom: 1px solid #f8f9fa;
-    min-height: 30px;
+.sr-inv-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
-.info-item:last-child {
-    border-bottom: none;
-}
-
-.info-label {
+.sr-inv-co-name {
+    margin: 0;
+    color: #fff;
+    font-size: 17px;
     font-weight: 600;
-    color: #495057;
-    font-size: 12px;
-    flex: 0 0 40%;
-    margin-right: 12px;
+    letter-spacing: -0.01em;
     line-height: 1.3;
 }
 
-.info-value {
-    color: #212529;
-    font-weight: 500;
-    text-align: right;
-    font-size: 12px;
-    flex: 1;
-    line-height: 1.3;
-    word-break: break-word;
+.sr-inv-co-meta {
+    margin-top: 3px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 12.5px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
 }
 
-.status-badge {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-    padding: 4px 10px;
-    border-radius: 15px;
+.sr-inv-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.sr-inv-meta-k {
+    color: rgba(255, 255, 255, 0.75);
     font-size: 11px;
     font-weight: 600;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
 }
 
-.amount-section {
-    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-    border-radius: 8px;
-    padding: 18px;
-    margin: 18px 0;
-    border-left: 4px solid #667eea;
-}
-
-.amount-label {
-    font-size: 14px;
-    color: #495057;
+.sr-inv-meta-id {
+    margin-top: 2px;
+    color: #fff;
+    font-size: 15px;
     font-weight: 600;
-    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
 }
 
-.amount-value {
-    font-size: 24px;
-    font-weight: 700;
-    color: #667eea;
-    margin: 0;
-}
-
-.customer-section {
+.sr-inv-badge {
+    display: inline-block;
+    flex: 0 0 auto;
+    padding: 5px 12px;
+    border-radius: 999px;
     background: #fff;
-    border: 1px solid #f0f0f0;
-    border-radius: 8px;
-    padding: 18px;
-    margin: 18px 0;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid #f0f0f0;
-}
-
-.btn-modern {
-    padding: 6px 14px;
-    border-radius: 15px;
-    border: none;
-    font-weight: 600;
+    color: var(--ok);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
-    font-size: 10px;
-    transition: all 0.3s ease;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+    white-space: nowrap;
 }
 
-.btn-primary-modern {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
+/* ---------- Body ---------- */
+
+.sr-inv-body {
+    position: relative;
+    padding: 18px;
 }
 
-.btn-success-modern {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-}
-
-.btn-info-modern {
-    background: linear-gradient(135deg, #17a2b8, #007bff);
-    color: white;
-}
-
-.btn-default-modern {
-    background: #f8f9fa;
-    color: #495057;
-    border: 2px solid #dee2e6;
-}
-
-.btn-modern:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    color: white;
-    text-decoration: none;
-}
-
-.footer-note {
-    background: #f8f9fa;
-    padding: 20px;
-    text-align: center;
-    color: #6c757d;
-    font-style: italic;
-    border-radius: 0 0 15px 15px;
-    margin-top: 20px;
-}
-
-@media (max-width: 768px) {
-    .info-grid {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-    
-    .action-buttons {
-        flex-direction: column;
-    }
-    
-    .btn-modern {
-        width: 100%;
-        justify-content: center;
-    }
-}
-
-@media print {
-    body {
-        margin: 0;
-        padding: 0;
-        font-size: 12px;
-        line-height: 1.3;
-        -webkit-print-color-adjust: exact;
-        color-adjust: exact;
-    }
-    
-    .modern-invoice {
-        width: 100%;
-        max-width: 210mm;
-        min-height: auto;
-        margin: 0;
-        padding: 0;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
-        border-radius: 8px;
-        page-break-after: avoid;
-    }
-    
-    .invoice-header {
-        padding: 12px;
-        break-inside: avoid;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        color: white !important;
-    }
-    
-    .company-logo {
-        background: rgba(255,255,255,0.2) !important;
-        border: 2px solid rgba(255,255,255,0.3) !important;
-        width: 40px;
-        height: 40px;
-        font-size: 16px;
-    }
-    
-    .status-badge {
-        background: linear-gradient(135deg, #28a745, #20c997) !important;
-        color: white !important;
-    }
-    
-    .amount-section {
-        background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
-        border-left: 3px solid #667eea !important;
-        padding: 15px;
-        margin: 15px 0;
-    }
-    
-    .amount-value {
-        color: #667eea !important;
-        font-size: 20px;
-    }
-    
-    .info-section h4 {
-        color: #667eea !important;
-        border-bottom: 1px solid #f0f0f0 !important;
-        font-size: 10px !important;
-    }
-    
-    .customer-section {
-        border: 1px solid #f0f0f0 !important;
-        background: #fff !important;
-        padding: 15px;
-        margin: 15px 0;
-    }
-    
-    .invoice-body {
-        padding: 15px;
-    }
-    
-    .info-grid {
-        gap: 15px;
-        margin-bottom: 15px;
-    }
-    
-    .info-item {
-        padding: 6px 0;
-        min-height: 24px;
-        border-bottom: 1px solid #f8f9fa !important;
-    }
-    
-    .info-label {
-        font-size: 10px;
-        color: #495057 !important;
-    }
-    
-    .info-value {
-        font-size: 10px;
-        color: #212529 !important;
-    }
-    
-    .customer-section {
-        padding: 15px;
-        margin: 15px 0;
-    }
-    
-    .amount-section {
-        padding: 15px;
-        margin: 15px 0;
-    }
-    
-    .action-buttons {
-        display: none;
-    }
-    
-    .download-section {
-        display: none;
-    }
-    
-    .company-logo {
-        width: 40px;
-        height: 40px;
-        font-size: 16px;
-    }
-    
-    .invoice-title {
-        font-size: 14px;
-        color: white !important;
-    }
-    
-    .amount-value {
-        font-size: 20px;
-    }
-    
-    .footer-note {
-        padding: 12px;
-        margin-top: 12px;
-        background: #f8f9fa !important;
-        color: #6c757d !important;
-    }
-}
-
-.invoice-watermark {
+.sr-inv-mark {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    font-size: 100px;
-    color: rgba(0,0,0,0.03);
-    font-weight: 900;
-    z-index: 1;
+    z-index: 0;
+    transform: translate(-50%, -50%) rotate(-32deg);
+    color: rgba(15, 23, 42, 0.035);
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
     pointer-events: none;
+    user-select: none;
 }
+
+.sr-inv-stack {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* ---------- Sections ---------- */
+
+.sr-inv-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+}
+
+.sr-inv-sec {
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: #fff;
+}
+
+.sr-inv-sec-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line-2);
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.sr-inv-sec-title i {
+    font-size: 12px;
+}
+
+/* ---------- Key / value rows ---------- */
+
+.sr-inv-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+}
+
+.sr-inv-row + .sr-inv-row {
+    border-top: 1px solid var(--line-2);
+}
+
+.sr-inv-k {
+    flex: 0 0 42%;
+    color: var(--ink-2);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.sr-inv-v {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+/* ---------- Amount ---------- */
+
+.sr-inv-amount {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 18px;
+    border: 1px solid var(--accent-line);
+    border-radius: var(--r-md);
+    background: var(--accent-soft);
+}
+
+.sr-inv-amount-k {
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.sr-inv-amount-v {
+    color: var(--accent);
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Buttons ---------- */
+
+.sr-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 18px;
+    border: 1px solid transparent;
+    border-radius: var(--r-sm);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.sr-btn:hover,
+.sr-btn:focus {
+    text-decoration: none;
+}
+
+.sr-btn--primary {
+    background: var(--accent);
+    color: #fff;
+}
+
+.sr-btn--primary:hover,
+.sr-btn--primary:focus {
+    background: var(--accent-dark);
+    color: #fff;
+}
+
+.sr-btn--ok {
+    background: var(--ok);
+    color: #fff;
+}
+
+.sr-btn--ok:hover,
+.sr-btn--ok:focus {
+    background: #047857;
+    color: #fff;
+}
+
+.sr-btn--ghost {
+    background: #fff;
+    border-color: var(--line);
+    color: var(--ink-2);
+}
+
+.sr-btn--ghost:hover,
+.sr-btn--ghost:focus {
+    background: var(--line-2);
+    border-color: #cbd5e1;
+    color: var(--ink);
+}
+
+.sr-inv-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ---------- Download panel ---------- */
+
+.sr-inv-dl {
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface);
+}
+
+.sr-inv-dl-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 12px;
+    color: var(--ink-2);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.sr-inv-dl-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sr-inv-dl-grid form {
+    display: flex;
+    margin: 0;
+}
+
+.sr-inv-dl-grid .sr-btn {
+    flex: 1 1 auto;
+}
+
+/* The nux:// scheme only works inside the Android app, i.e. narrow screens. */
+.sr-inv-nux {
+    display: none;
+}
+
+/* ---------- Footer note ---------- */
+
+.sr-inv-note {
+    padding: 14px 18px;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-2);
+    font-size: 12.5px;
+    text-align: center;
+}
+
+/* ---------- Error state ---------- */
+
+.sr-alert {
+    max-width: 560px;
+    margin: 24px auto;
+    padding: 20px;
+    border: 1px solid #fecaca;
+    border-radius: var(--r-md);
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.sr-alert h4 {
+    margin: 0 0 8px;
+    color: #991b1b;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.sr-alert p {
+    margin: 0 0 16px;
+    color: #b91c1c;
+}
+
+/* =====================================================================
+   Tablet and up
+   ===================================================================== */
+
+@media (min-width: 640px) {
+
+    .sr-inv-head {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 22px 26px;
+    }
+
+    .sr-inv-meta {
+        flex: 0 0 auto;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+        padding-top: 0;
+        border-top: 0;
+    }
+
+    .sr-inv-body {
+        padding: 26px;
+    }
+
+    .sr-inv-stack {
+        gap: 16px;
+    }
+
+    .sr-inv-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .sr-inv-amount {
+        padding: 18px 22px;
+    }
+
+    .sr-inv-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .sr-btn {
+        flex: 0 0 auto;
+    }
+
+    .sr-inv-dl-grid {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .sr-inv-dl-grid form {
+        flex: 1 1 160px;
+    }
+
+    .sr-inv-mark {
+        font-size: 96px;
+    }
+}
+
+/* Matches the original hidden-md hidden-lg behaviour of the NuxPrint link. */
+@media (max-width: 991px) {
+    .sr-inv-nux {
+        display: inline-flex;
+    }
+}
+
+/* =====================================================================
+   Desktop
+   ===================================================================== */
+
+@media (min-width: 1024px) {
+
+    .sr-inv-body {
+        padding: 30px;
+    }
+
+    .sr-inv-mark {
+        font-size: 118px;
+    }
+
+    .sr-inv-amount-v {
+        font-size: 30px;
+    }
+}
+
+/* =====================================================================
+   Small phones
+   ===================================================================== */
+
+@media (max-width: 400px) {
+
+    .sr-inv-head,
+    .sr-inv-body {
+        padding: 16px;
+    }
+
+    .sr-inv-row {
+        gap: 8px;
+    }
+
+    .sr-inv-k {
+        flex-basis: 38%;
+    }
+
+    .sr-inv-amount-v {
+        font-size: 22px;
+    }
+}
+
+/* =====================================================================
+   Print — A4. This is the only place millimetres are used.
+   ===================================================================== */
+
+@media print {
+
+    @page {
+        size: A4;
+        margin: 12mm;
+    }
+
+    body {
+        background: #fff !important;
+    }
+
+    .main-header,
+    .main-sidebar,
+    .content-header,
+    .main-footer,
+    .sr-no-print {
+        display: none !important;
+    }
+
+    .content-wrapper {
+        margin: 0 !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        background: #fff !important;
+    }
+
+    .sr-inv {
+        padding: 0;
+        font-size: 11.5px;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .sr-inv-card {
+        max-width: none;
+        margin: 0;
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .sr-inv-head {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 0 0 14px;
+        background: #fff !important;
+        color: var(--ink) !important;
+        border-bottom: 2px solid var(--accent) !important;
+    }
+
+    .sr-inv-logo {
+        width: 38px;
+        height: 38px;
+        background: var(--accent-soft) !important;
+        border-color: var(--accent-line) !important;
+        color: var(--accent) !important;
+    }
+
+    .sr-inv-co-name {
+        color: var(--ink) !important;
+    }
+
+    .sr-inv-co-meta {
+        color: var(--ink-2) !important;
+    }
+
+    .sr-inv-meta {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 5px;
+        padding-top: 0;
+        border-top: 0;
+    }
+
+    .sr-inv-meta-k {
+        color: var(--ink-3) !important;
+    }
+
+    .sr-inv-meta-id {
+        color: var(--ink) !important;
+    }
+
+    .sr-inv-badge {
+        background: var(--ok-soft) !important;
+        color: var(--ok) !important;
+        border: 1px solid #a7f3d0;
+    }
+
+    .sr-inv-body {
+        padding: 16px 0 0;
+    }
+
+    .sr-inv-mark {
+        display: none !important;
+    }
+
+    .sr-inv-stack {
+        gap: 12px;
+    }
+
+    .sr-inv-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .sr-inv-sec {
+        padding: 12px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .sr-inv-amount {
+        padding: 12px 14px;
+        background: var(--accent-soft) !important;
+        border-color: var(--accent-line) !important;
+    }
+
+    .sr-inv-amount-v {
+        font-size: 20px;
+    }
+
+    .sr-inv-note {
+        padding: 10px 12px;
+        background: var(--surface) !important;
+        border-top: 1px solid var(--line) !important;
+    }
+}
+{/literal}
 </style>
 
-<div class="row">
-    <div class="col-md-8 col-md-offset-2">
-        <div class="modern-invoice">
-            <!-- Invoice Header with Logo -->
-            <div class="invoice-header">
-                <div class="row">
-                    <div class="col-md-8">
-                        <div class="company-logo">
-                            {if $_c.logo}
-                                <img src="{$UPLOAD_PATH}/{$_c.logo}" alt="Logo" style="max-width: 40px; max-height: 40px; border-radius: 50%;">
-                            {else}
-                                {$_c.CompanyName|substr:0:1}
-                            {/if}
-                        </div>
-                        <h1 class="invoice-title" style="font-size: 15px;">{$_c.CompanyName}</h1>
-                        <div style="opacity: 0.9; margin-top: 8px; font-size: 12px;">
-                            <div>{$_c.address}</div>
-                            <div>{$_c.phone}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 text-right">
-                        <h2 class="invoice-title" style="font-size: 15px;">INVOICE</h2>
-                        <div class="invoice-id" style="font-size: 12px;">{$in.invoice}</div>
-                        <div class="status-badge" style="margin-top: 10px;">PAID</div>
+<div class="sr-inv">
+    <div class="sr-inv-card">
+
+        <div class="sr-inv-head">
+            <div class="sr-inv-brand">
+                <div class="sr-inv-logo">
+                    {if $_c.logo}
+                        <img src="{$UPLOAD_PATH}/{$_c.logo}" alt="{$_c.CompanyName|escape:'html'}">
+                    {else}
+                        {$_c.CompanyName|substr:0:1}
+                    {/if}
+                </div>
+                <div>
+                    <h1 class="sr-inv-co-name">{$_c.CompanyName}</h1>
+                    <div class="sr-inv-co-meta">
+                        {if $_c.address}<div>{$_c.address}</div>{/if}
+                        {if $_c.phone}<div>{$_c.phone}</div>{/if}
                     </div>
                 </div>
             </div>
 
-            <!-- Invoice Body -->
-            <div class="invoice-body">
-                <div class="invoice-watermark">PAID</div>
-                
-                <!-- Information Grid -->
-                <div class="info-grid">
-                    <div class="info-section">
-                        <h4><i class="fa fa-calendar"></i> Transaction Details</h4>
-                        <div class="info-item">
-                            <span class="info-label">Date:</span>
-                            <span class="info-value">{Lang::dateAndTimeFormat($in.recharged_on, $in.recharged_time)}</span>
+            <div class="sr-inv-meta">
+                <div>
+                    <div class="sr-inv-meta-k">Invoice</div>
+                    <div class="sr-inv-meta-id">{$in.invoice}</div>
+                </div>
+                <div class="sr-inv-badge">Paid</div>
+            </div>
+        </div>
+
+        <div class="sr-inv-body">
+            <div class="sr-inv-mark" aria-hidden="true">PAID</div>
+
+            <div class="sr-inv-stack">
+
+                <div class="sr-inv-grid">
+                    <div class="sr-inv-sec">
+                        <h2 class="sr-inv-sec-title"><i class="fa fa-calendar"></i> Transaction Details</h2>
+                        <div class="sr-inv-row">
+                            <span class="sr-inv-k">Date</span>
+                            <span class="sr-inv-v">{Lang::dateAndTimeFormat($in.recharged_on, $in.recharged_time)}</span>
                         </div>
-                        <div class="info-item">
-                            <span class="info-label">Sales Person:</span>
-                            <span class="info-value">{if $in.admin_id > 0}{$_admin.fullname}{else}System{/if}</span>
+                        <div class="sr-inv-row">
+                            <span class="sr-inv-k">Sales Person</span>
+                            <span class="sr-inv-v">{if $in.admin_id > 0}{$_admin.fullname}{else}System{/if}</span>
                         </div>
-                        <div class="info-item">
-                            <span class="info-label">Payment Method:</span>
-                            <span class="info-value">{$in.method}</span>
+                        <div class="sr-inv-row">
+                            <span class="sr-inv-k">Payment Method</span>
+                            <span class="sr-inv-v">{$in.method}</span>
                         </div>
                     </div>
 
-                    <div class="info-section">
-                        <h4><i class="fa fa-cog"></i> Service Details</h4>
-                        <div class="info-item">
-                            <span class="info-label">Service Type:</span>
-                            <span class="info-value">{$in.type}</span>
+                    <div class="sr-inv-sec">
+                        <h2 class="sr-inv-sec-title"><i class="fa fa-cog"></i> Service Details</h2>
+                        <div class="sr-inv-row">
+                            <span class="sr-inv-k">Service Type</span>
+                            <span class="sr-inv-v">{$in.type}</span>
                         </div>
-                        <div class="info-item">
-                            <span class="info-label">Plan Name:</span>
-                            <span class="info-value">{$in.plan_name}</span>
+                        <div class="sr-inv-row">
+                            <span class="sr-inv-k">Plan Name</span>
+                            <span class="sr-inv-v">{$in.plan_name}</span>
                         </div>
                         {if $in.type != 'Balance'}
-                        <div class="info-item">
-                            <span class="info-label">Expires On:</span>
-                            <span class="info-value">{Lang::dateAndTimeFormat($in.expiration, $in.time)}</span>
+                        <div class="sr-inv-row">
+                            <span class="sr-inv-k">Expires On</span>
+                            <span class="sr-inv-v">{Lang::dateAndTimeFormat($in.expiration, $in.time)}</span>
                         </div>
                         {/if}
                     </div>
                 </div>
 
-                <!-- Customer Information -->
-                <div class="customer-section">
-                    <h4 style="color: #667eea; margin-bottom: 15px; font-size: 12px;"><i class="fa fa-user"></i> Customer Information</h4>
-                    <div class="info-grid">
+                <div class="sr-inv-sec">
+                    <h2 class="sr-inv-sec-title"><i class="fa fa-user"></i> Customer Information</h2>
+                    <div class="sr-inv-grid">
                         <div>
-                            <div class="info-item">
-                                <span class="info-label">Full Name:</span>
-                                <span class="info-value">{if $customer}{$customer.fullname}{else}N/A{/if}</span>
+                            <div class="sr-inv-row">
+                                <span class="sr-inv-k">Full Name</span>
+                                <span class="sr-inv-v">{if $customer}{$customer.fullname}{else}N/A{/if}</span>
                             </div>
-                            <div class="info-item">
-                                <span class="info-label">Username:</span>
-                                <span class="info-value">{$in.username}</span>
+                            <div class="sr-inv-row">
+                                <span class="sr-inv-k">Username</span>
+                                <span class="sr-inv-v">{$in.username}</span>
                             </div>
                         </div>
                         <div>
-                            <div class="info-item">
-                                <span class="info-label">Password:</span>
-                                <span class="info-value">**********</span>
+                            <div class="sr-inv-row">
+                                <span class="sr-inv-k">Password</span>
+                                <span class="sr-inv-v">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span>
                             </div>
                             {if $customer && $customer.phonenumber}
-                            <div class="info-item">
-                                <span class="info-label">Phone:</span>
-                                <span class="info-value">{$customer.phonenumber}</span>
+                            <div class="sr-inv-row">
+                                <span class="sr-inv-k">Phone</span>
+                                <span class="sr-inv-v">{$customer.phonenumber}</span>
                             </div>
                             {/if}
                         </div>
                     </div>
                 </div>
 
-                <!-- Amount Section -->
-                <div class="amount-section">
-                    <div class="text-center">
-                        <div class="amount-label">Total Amount</div>
-                        <div class="amount-value">{Lang::moneyFormat($in.price)}</div>
-                    </div>
+                <div class="sr-inv-amount">
+                    <span class="sr-inv-amount-k">Total Amount</span>
+                    <span class="sr-inv-amount-v">{Lang::moneyFormat($in.price)}</span>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="action-buttons">
-                    <a href="{$_url}plan/list" class="btn-modern btn-default-modern">
+                <div class="sr-inv-actions sr-no-print">
+                    <a href="{$_url}plan/list" class="sr-btn sr-btn--ghost">
                         <i class="fa fa-arrow-left"></i> {Lang::T('Finish')}
                     </a>
-                    
-                    <a href="https://api.whatsapp.com/send/?text={$whatsapp}" target="_blank" class="btn-modern btn-success-modern">
+                    <a href="https://api.whatsapp.com/send/?text={$whatsapp}" target="_blank" rel="noopener" class="sr-btn sr-btn--ok">
                         <i class="fa fa-whatsapp"></i> WhatsApp
                     </a>
-                    
-                    <a href="{$_url}plan/view/{$in.id}/send" class="btn-modern btn-info-modern">
-                        <i class="fa fa-envelope"></i> {Lang::T("Resend")}
+                    <a href="{$_url}plan/view/{$in.id}/send" class="sr-btn sr-btn--primary">
+                        <i class="fa fa-paper-plane"></i> {Lang::T("Resend")}
                     </a>
                 </div>
 
-                <!-- Download Invoice Section -->
-                <div class="download-section" style="margin-top: 18px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 3px solid #667eea;">
-                    <h5 style="color: #667eea; margin-bottom: 12px; font-weight: 600; font-size: 12px;">
-                        <i class="fa fa-download"></i> Download Invoice
-                    </h5>
-                    <div class="action-buttons" style="margin-top: 0; padding-top: 0; border-top: none;">
-                        <a href="{$_url}plan/print/{$in.id}" target="_blank" class="btn-modern btn-primary-modern">
-                            <i class="fa fa-file-pdf-o"></i> Download PDF
+                <div class="sr-inv-dl sr-no-print">
+                    <h2 class="sr-inv-dl-title"><i class="fa fa-download"></i> Download Invoice</h2>
+                    <div class="sr-inv-dl-grid">
+                        <a href="{$_url}plan/print/{$in.id}" target="_blank" rel="noopener" class="sr-btn sr-btn--primary">
+                            <i class="fa fa-file-pdf-o"></i> PDF
                         </a>
-
-                        <form method="post" action="{$_url}plan/print" target="_blank" style="display: inline;">
-                            <textarea class="hidden" name="content">{$invoice}</textarea>
+                        <form method="post" action="{$_url}plan/print" target="_blank">
+                            <textarea name="content" hidden>{$invoice}</textarea>
                             <input type="hidden" name="id" value="{$in.id}">
-                            <button type="submit" class="btn-modern btn-info-modern">
-                                <i class="fa fa-file-text-o"></i> Download Text
+                            <input type="hidden" name="nux" value="text">
+                            <button type="submit" class="sr-btn sr-btn--ghost">
+                                <i class="fa fa-file-text-o"></i> Text
                             </button>
                         </form>
-
-                        <a href="{$_url}plan/print/{$in.id}?format=html" target="_blank" class="btn-modern btn-success-modern">
-                            <i class="fa fa-file-code-o"></i> Download HTML
+                        <a href="{$_url}plan/print/{$in.id}?format=html" target="_blank" rel="noopener" class="sr-btn sr-btn--ghost">
+                            <i class="fa fa-file-code-o"></i> HTML
                         </a>
-
-                        <a href="nux://print?text={$invoice|escape:'url'}" class="btn-modern btn-default-modern hidden-md hidden-lg">
+                        <a href="nux://print?text={$invoice|escape:'url'}" class="sr-btn sr-btn--ghost sr-inv-nux">
                             <i class="fa fa-mobile"></i> NuxPrint
                         </a>
                     </div>
                 </div>
-            </div>
 
-            <!-- Footer Note -->
-            {if $_c.note}
-            <div class="footer-note">
-                <i class="fa fa-info-circle"></i> {$_c.note}
             </div>
-            {/if}
         </div>
+
+        {if $_c.note}
+        <div class="sr-inv-note">
+            <i class="fa fa-info-circle"></i> {$_c.note}
+        </div>
+        {/if}
+
     </div>
 </div>
 
