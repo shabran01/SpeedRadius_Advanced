@@ -72,6 +72,32 @@
     display: none;
 }
 
+/* ---------- Neutralise the theme's blanket min-height ---------- */
+
+/* ui/ui/styles/modern-AdminLTE.min.css ships
+
+       html, h6, h5, h4, h3, h2, h1, ..., button, body { min-height: 100% }
+
+   Against these auto-height cards that inflates every heading until it
+   fills its parent box. A heading inside a 267px section grew to 233px,
+   which pushed the section's own rows out of the section and on top of
+   the next section's content.
+
+   Specificity note: .sr-inv h1 (0,1,1) beats the theme's bare h1 (0,0,1),
+   so this wins no matter which stylesheet order the theme uses.
+
+   `button` is deliberately NOT reset here: .sr-btn sets its own
+   min-height for the 44px touch target and already outranks the theme's
+   element selector. */
+.sr-inv h1,
+.sr-inv h2,
+.sr-inv h3,
+.sr-inv h4,
+.sr-inv h5,
+.sr-inv h6 {
+    min-height: 0;
+}
+
 /* Min-width guards: stop long values from pushing siblings out of the box. */
 .sr-inv-brand > div:last-child,
 .sr-inv-meta > div {
@@ -201,21 +227,6 @@
 .sr-inv-body {
     position: relative;
     padding: 20px;
-}
-
-.sr-inv-mark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    z-index: 0;
-    transform: translate(-50%, -50%) rotate(-30deg);
-    color: rgba(79, 70, 229, 0.05);
-    font-size: 72px;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    white-space: nowrap;
-    pointer-events: none;
-    user-select: none;
 }
 
 .sr-inv-stack {
@@ -561,10 +572,6 @@
     .sr-inv-dl-grid form {
         flex: 1 1 150px;
     }
-
-    .sr-inv-mark {
-        font-size: 104px;
-    }
 }
 
 /* Matches the original hidden-md hidden-lg behaviour of the NuxPrint link. */
@@ -582,10 +589,6 @@
 
     .sr-inv-body {
         padding: 32px;
-    }
-
-    .sr-inv-mark {
-        font-size: 124px;
     }
 
     .sr-inv-amount-v {
@@ -695,10 +698,6 @@
         padding: 16px 0 0;
     }
 
-    .sr-inv-mark {
-        display: none !important;
-    }
-
     .sr-inv-stack {
         gap: 12px;
     }
@@ -802,8 +801,6 @@
         </div>
 
         <div class="sr-inv-body">
-            <div class="sr-inv-mark" aria-hidden="true">PAID</div>
-
             <div class="sr-inv-stack">
 
                 <div class="sr-inv-grid">

@@ -2,6 +2,51 @@
 
  # CHANGELOG
 
+## [2.2.60] - 2026-10-10
+
+---
+
+### FIXED: invoice sections overlapped each other — the theme's blanket `min-height: 100%` on headings
+
+**`ui/ui/invoice.tpl`**
+
+**Symptom.** Each card's heading was pushed down and the card's own rows spilled out of the bottom of the card and landed on top of the next card. Rows from "Transaction Details" rendered over the "Service Details" heading, and rows from "Service Details" rendered over "Customer Information".
+
+**Root cause.** `ui/ui/styles/modern-AdminLTE.min.css` ships a blanket rule:
+
+```css
+html, h6, h5, h4, h3, h2, h1, input:not(#filterNavigateMenu), textarea:not(...),
+optgroup:not(...), select:not(...), .select2-selection:not(...),
+article, aside, details, figcaption, figure, footer, hgroup, main, menu,
+section, summary, button, body {
+    min-height: 100%;
+}
+```
+
+`h2.sr-inv-sec-title` set no `min-height` of its own, so it picked this up and was inflated to fill its parent card — measured at **233px for an 11.5px heading**. Because the card's height is content-driven, the heading consumed the whole box and the three detail rows were laid out *below* the card's bottom edge, overlapping the next card.
+
+**Measured before / after** (real theme shell, 360px viewport):
+
+| | heading | card | card `scrollHeight` |
+|---|---|---|---|
+| before | 233px | 267px | 446px — overflows by 179px |
+| after | 37px | 267px | 265px — fits |
+
+**The fix.** A scoped reset — `min-height: 0` on `.sr-inv h1` through `.sr-inv h6`. Specificity `.sr-inv h1` (0,1,1) beats the theme's bare `h1` (0,0,1) whatever the stylesheet order.
+
+`button` is deliberately **not** in the reset: `.sr-btn` sets its own `min-height: 46px` for the touch target and already outranks the theme's element selector — verified still 46px after the change.
+
+**Also removed:** the rotated "PAID" watermark. It was the last remaining text-over-text on the page (5% opacity, laid across the detail rows). The PAID badge already carries the status.
+
+**Verified in a faithful theme shell** — `bootstrap` + `modern-AdminLTE` + `fix-panels` + `compact-button` + Tailwind's CDN Preflight, inside the real `.wrapper` / `.main-sidebar` / `.content-wrapper` / `.content-header` structure:
+
+- Zero text-vs-text overlaps at **360 / 414 / 600 / 768 / 1440** (previously 19 overlapping pairs at 360px).
+- Zero elements whose content overflows their own box, at every width.
+- No horizontal overflow at any width.
+- Card heights now track their content: 267/265, 243/241, 221/219, 201/199.
+
+**Note on method.** The v2.2.58/2.2.59 previews rendered the template against its own stylesheet only, so this cascade collision was invisible to them. Any future invoice work must be checked against the real theme CSS, not an isolated preview.
+
 ## [2.2.59] - 2026-10-10
 
 ---
