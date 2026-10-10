@@ -18,37 +18,47 @@
    SpeedRadius invoice — screen + print.
 
    Conventions:
+   - Mobile first: the base rules are the phone layout, media queries
+     only add width for larger screens.
    - Screen sizes are px. Millimetres appear only inside @media print.
    - Every rule is scoped under .sr-inv so nothing leaks into the theme.
    - Every text element sets its own colour, so the dark-mode skin cannot
-     bleed into the card.
-   - The card stays light on purpose: it mirrors the printed invoice.
+     bleed into the card. The card stays light on purpose: it mirrors the
+     printed invoice.
+   - Rows stack label-over-value on phones so long values can never be
+     squeezed into a two-line wrap mid-token.
    ===================================================================== */
 
 .sr-inv {
     --accent: #4f46e5;
-    --accent-dark: #4338ca;
+    --accent-2: #7c3aed;
+    --accent-dark: #3730a3;
     --accent-soft: #eef2ff;
-    --accent-line: #dfe3fb;
-    --ink: #0f172a;
+    --accent-soft-2: #f5f3ff;
+    --accent-line: #dcdffb;
+    --cyan: #0891b2;
+    --cyan-soft: #ecfeff;
+    --ink: #0b1220;
     --ink-2: #475569;
-    --ink-3: #94a3b8;
-    --line: #e2e8f0;
+    --ink-3: #8b97a8;
+    --line: #e5e9f0;
     --line-2: #f1f5f9;
     --surface: #f8fafc;
     --ok: #059669;
     --ok-soft: #ecfdf5;
-    --r-lg: 14px;
-    --r-md: 10px;
-    --r-sm: 8px;
+    --r-lg: 16px;
+    --r-md: 12px;
+    --r-sm: 9px;
+    --gap: 16px;
 
-    padding: 0 0 32px;
+    padding: 0 0 28px;
     color: var(--ink);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
         "Helvetica Neue", Arial, "Noto Sans", sans-serif;
     font-size: 14px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
 }
 
 .sr-inv *,
@@ -62,18 +72,24 @@
     display: none;
 }
 
+/* Min-width guards: stop long values from pushing siblings out of the box. */
+.sr-inv-brand > div:last-child,
+.sr-inv-meta > div {
+    min-width: 0;
+}
+
 /* ---------- Card ---------- */
 
 .sr-inv-card {
     position: relative;
     overflow: hidden;
-    max-width: 840px;
+    max-width: 820px;
     margin: 0 auto;
     background: #fff;
     border: 1px solid var(--line);
     border-radius: var(--r-lg);
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
-        0 14px 34px -14px rgba(15, 23, 42, 0.14);
+    box-shadow: 0 1px 2px rgba(11, 18, 32, 0.04),
+        0 18px 40px -20px rgba(11, 18, 32, 0.22);
 }
 
 /* ---------- Header ---------- */
@@ -82,15 +98,18 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding: 18px;
-    background: var(--accent);
+    padding: 20px;
+    background-color: var(--accent);
+    background-image:
+        radial-gradient(130% 110% at 100% 0%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 58%),
+        linear-gradient(135deg, #4f46e5 0%, #6d28d9 58%, #7c3aed 100%);
     color: #fff;
 }
 
 .sr-inv-brand {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 13px;
     min-width: 0;
 }
 
@@ -99,14 +118,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: 46px;
+    height: 46px;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.34);
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.18);
     color: #fff;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 700;
     text-transform: uppercase;
 }
@@ -120,65 +139,68 @@
 .sr-inv-co-name {
     margin: 0;
     color: #fff;
-    font-size: 17px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    line-height: 1.3;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
 }
 
 .sr-inv-co-meta {
-    margin-top: 3px;
-    color: rgba(255, 255, 255, 0.82);
+    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.85);
     font-size: 12.5px;
-    line-height: 1.45;
-    overflow-wrap: anywhere;
+    line-height: 1.5;
+    overflow-wrap: break-word;
 }
 
 .sr-inv-meta {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding-top: 14px;
-    border-top: 1px solid rgba(255, 255, 255, 0.22);
+    gap: 14px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.24);
 }
 
 .sr-inv-meta-k {
-    color: rgba(255, 255, 255, 0.75);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
 }
 
 .sr-inv-meta-id {
-    margin-top: 2px;
+    margin-top: 3px;
     color: #fff;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: -0.01em;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 }
 
 .sr-inv-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     flex: 0 0 auto;
-    padding: 5px 12px;
+    padding: 6px 13px;
     border-radius: 999px;
     background: #fff;
     color: var(--ok);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     white-space: nowrap;
+    box-shadow: 0 3px 10px -2px rgba(5, 150, 105, 0.35);
 }
 
 /* ---------- Body ---------- */
 
 .sr-inv-body {
     position: relative;
-    padding: 18px;
+    padding: 20px;
 }
 
 .sr-inv-mark {
@@ -186,11 +208,11 @@
     top: 50%;
     left: 50%;
     z-index: 0;
-    transform: translate(-50%, -50%) rotate(-32deg);
-    color: rgba(15, 23, 42, 0.035);
-    font-size: 64px;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    color: rgba(79, 70, 229, 0.05);
+    font-size: 72px;
     font-weight: 800;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     white-space: nowrap;
     pointer-events: none;
     user-select: none;
@@ -201,7 +223,7 @@
     z-index: 1;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--gap);
 }
 
 /* ---------- Sections ---------- */
@@ -209,7 +231,7 @@
 .sr-inv-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: var(--gap);
 }
 
 .sr-inv-sec {
@@ -222,29 +244,44 @@
 .sr-inv-sec-title {
     display: flex;
     align-items: center;
-    gap: 7px;
-    margin: 0 0 10px;
-    padding-bottom: 10px;
+    gap: 10px;
+    margin: 0 0 12px;
+    padding-bottom: 12px;
     border-bottom: 1px solid var(--line-2);
-    color: var(--accent);
+    color: var(--ink);
     font-size: 11.5px;
     font-weight: 700;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
 .sr-inv-sec-title i {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    color: var(--accent);
     font-size: 12px;
 }
 
-/* ---------- Key / value rows ---------- */
+.sr-inv-sec--s .sr-inv-sec-title i {
+    background: var(--accent-soft-2);
+    color: var(--accent-2);
+}
+
+.sr-inv-sec--c .sr-inv-sec-title i {
+    background: var(--cyan-soft);
+    color: var(--cyan);
+}
+
+/* ---------- Key / value rows (phone: stacked) ---------- */
 
 .sr-inv-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 7px 0;
+    padding: 10px 0;
 }
 
 .sr-inv-row + .sr-inv-row {
@@ -252,20 +289,21 @@
 }
 
 .sr-inv-k {
-    flex: 0 0 42%;
-    color: var(--ink-2);
-    font-size: 13px;
-    font-weight: 500;
+    display: block;
+    color: var(--ink-3);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .sr-inv-v {
-    flex: 1 1 auto;
-    min-width: 0;
+    display: block;
+    margin-top: 4px;
     color: var(--ink);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    text-align: right;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 }
 
 /* ---------- Amount ---------- */
@@ -275,25 +313,25 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 16px 18px;
+    padding: 18px 20px;
     border: 1px solid var(--accent-line);
     border-radius: var(--r-md);
-    background: var(--accent-soft);
+    background-image: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 55%, #ecfeff 100%);
 }
 
 .sr-inv-amount-k {
-    color: var(--accent);
-    font-size: 11.5px;
-    font-weight: 700;
-    letter-spacing: 0.07em;
+    color: var(--accent-dark);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
 }
 
 .sr-inv-amount-v {
-    color: var(--accent);
+    color: var(--accent-dark);
     font-size: 26px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    font-weight: 800;
+    letter-spacing: -0.025em;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
@@ -305,8 +343,8 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-height: 44px;
-    padding: 10px 18px;
+    min-height: 46px;
+    padding: 11px 18px;
     border: 1px solid transparent;
     border-radius: var(--r-sm);
     font-family: inherit;
@@ -316,8 +354,8 @@
     text-align: center;
     text-decoration: none;
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease,
-        color 0.15s ease;
+    transition: background-color 0.16s ease, border-color 0.16s ease,
+        color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .sr-btn:hover,
@@ -326,24 +364,26 @@
 }
 
 .sr-btn--primary {
-    background: var(--accent);
+    background-image: linear-gradient(135deg, #4f46e5, #7c3aed);
     color: #fff;
+    box-shadow: 0 8px 18px -10px rgba(79, 70, 229, 0.75);
 }
 
 .sr-btn--primary:hover,
 .sr-btn--primary:focus {
-    background: var(--accent-dark);
+    background-image: linear-gradient(135deg, #4338ca, #6d28d9);
     color: #fff;
 }
 
 .sr-btn--ok {
-    background: var(--ok);
+    background-image: linear-gradient(135deg, #10b981, #059669);
     color: #fff;
+    box-shadow: 0 8px 18px -10px rgba(5, 150, 105, 0.75);
 }
 
 .sr-btn--ok:hover,
 .sr-btn--ok:focus {
-    background: #047857;
+    background-image: linear-gradient(135deg, #059669, #047857);
     color: #fff;
 }
 
@@ -378,12 +418,12 @@
 .sr-inv-dl-title {
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 10px;
     margin: 0 0 12px;
     color: var(--ink-2);
     font-size: 11.5px;
     font-weight: 700;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
@@ -410,7 +450,7 @@
 /* ---------- Footer note ---------- */
 
 .sr-inv-note {
-    padding: 14px 18px;
+    padding: 15px 20px;
     border-top: 1px solid var(--line);
     background: var(--surface);
     color: var(--ink-2);
@@ -443,43 +483,65 @@
 }
 
 /* =====================================================================
+   Large phones and up — rows go inline
+   ===================================================================== */
+
+@media (min-width: 560px) {
+
+    .sr-inv-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 9px 0;
+    }
+
+    .sr-inv-k {
+        flex: 0 1 auto;
+        font-size: 12.5px;
+        font-weight: 600;
+        letter-spacing: normal;
+        text-transform: none;
+    }
+
+    .sr-inv-v {
+        flex: 0 1 auto;
+        min-width: 0;
+        margin-top: 0;
+        font-size: 13.5px;
+        text-align: right;
+    }
+}
+
+/* =====================================================================
    Tablet and up
    ===================================================================== */
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
 
     .sr-inv-head {
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
-        gap: 24px;
-        padding: 22px 26px;
+        gap: 28px;
+        padding: 24px 28px;
     }
 
     .sr-inv-meta {
         flex: 0 0 auto;
         flex-direction: column;
         align-items: flex-end;
-        gap: 6px;
+        gap: 8px;
         padding-top: 0;
         border-top: 0;
     }
 
     .sr-inv-body {
-        padding: 26px;
-    }
-
-    .sr-inv-stack {
-        gap: 16px;
+        padding: 28px;
     }
 
     .sr-inv-grid {
         grid-template-columns: 1fr 1fr;
-        gap: 16px;
-    }
-
-    .sr-inv-amount {
-        padding: 18px 22px;
     }
 
     .sr-inv-actions {
@@ -487,8 +549,8 @@
         flex-wrap: wrap;
     }
 
-    .sr-btn {
-        flex: 0 0 auto;
+    .sr-inv-actions .sr-btn {
+        flex: 1 1 auto;
     }
 
     .sr-inv-dl-grid {
@@ -497,11 +559,11 @@
     }
 
     .sr-inv-dl-grid form {
-        flex: 1 1 160px;
+        flex: 1 1 150px;
     }
 
     .sr-inv-mark {
-        font-size: 96px;
+        font-size: 104px;
     }
 }
 
@@ -519,39 +581,15 @@
 @media (min-width: 1024px) {
 
     .sr-inv-body {
-        padding: 30px;
+        padding: 32px;
     }
 
     .sr-inv-mark {
-        font-size: 118px;
+        font-size: 124px;
     }
 
     .sr-inv-amount-v {
         font-size: 30px;
-    }
-}
-
-/* =====================================================================
-   Small phones
-   ===================================================================== */
-
-@media (max-width: 400px) {
-
-    .sr-inv-head,
-    .sr-inv-body {
-        padding: 16px;
-    }
-
-    .sr-inv-row {
-        gap: 8px;
-    }
-
-    .sr-inv-k {
-        flex-basis: 38%;
-    }
-
-    .sr-inv-amount-v {
-        font-size: 22px;
     }
 }
 
@@ -607,14 +645,15 @@
         justify-content: space-between;
         gap: 16px;
         padding: 0 0 14px;
-        background: #fff !important;
+        background-color: #fff !important;
+        background-image: none !important;
         color: var(--ink) !important;
         border-bottom: 2px solid var(--accent) !important;
     }
 
     .sr-inv-logo {
-        width: 38px;
-        height: 38px;
+        width: 40px;
+        height: 40px;
         background: var(--accent-soft) !important;
         border-color: var(--accent-line) !important;
         color: var(--accent) !important;
@@ -622,6 +661,7 @@
 
     .sr-inv-co-name {
         color: var(--ink) !important;
+        font-size: 16px;
     }
 
     .sr-inv-co-meta {
@@ -648,6 +688,7 @@
         background: var(--ok-soft) !important;
         color: var(--ok) !important;
         border: 1px solid #a7f3d0;
+        box-shadow: none !important;
     }
 
     .sr-inv-body {
@@ -673,9 +714,47 @@
         page-break-inside: avoid;
     }
 
+    .sr-inv-sec-title {
+        margin-bottom: 10px;
+        padding-bottom: 9px;
+        font-size: 10.5px;
+    }
+
+    .sr-inv-sec-title i {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+    }
+
+    /* Force inline rows: the print area is under every screen breakpoint. */
+    .sr-inv-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 7px 0;
+    }
+
+    .sr-inv-k {
+        flex: 0 1 auto;
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: normal;
+        text-transform: none;
+    }
+
+    .sr-inv-v {
+        flex: 0 1 auto;
+        min-width: 0;
+        margin-top: 0;
+        font-size: 10.5px;
+        text-align: right;
+    }
+
     .sr-inv-amount {
         padding: 12px 14px;
-        background: var(--accent-soft) !important;
+        background-image: none !important;
+        background-color: var(--accent-soft) !important;
         border-color: var(--accent-line) !important;
     }
 
@@ -718,7 +797,7 @@
                     <div class="sr-inv-meta-k">Invoice</div>
                     <div class="sr-inv-meta-id">{$in.invoice}</div>
                 </div>
-                <div class="sr-inv-badge">Paid</div>
+                <div class="sr-inv-badge"><i class="fa fa-check-circle"></i> Paid</div>
             </div>
         </div>
 
@@ -728,7 +807,7 @@
             <div class="sr-inv-stack">
 
                 <div class="sr-inv-grid">
-                    <div class="sr-inv-sec">
+                    <div class="sr-inv-sec sr-inv-sec--t">
                         <h2 class="sr-inv-sec-title"><i class="fa fa-calendar"></i> Transaction Details</h2>
                         <div class="sr-inv-row">
                             <span class="sr-inv-k">Date</span>
@@ -744,7 +823,7 @@
                         </div>
                     </div>
 
-                    <div class="sr-inv-sec">
+                    <div class="sr-inv-sec sr-inv-sec--s">
                         <h2 class="sr-inv-sec-title"><i class="fa fa-cog"></i> Service Details</h2>
                         <div class="sr-inv-row">
                             <span class="sr-inv-k">Service Type</span>
@@ -763,7 +842,7 @@
                     </div>
                 </div>
 
-                <div class="sr-inv-sec">
+                <div class="sr-inv-sec sr-inv-sec--c">
                     <h2 class="sr-inv-sec-title"><i class="fa fa-user"></i> Customer Information</h2>
                     <div class="sr-inv-grid">
                         <div>

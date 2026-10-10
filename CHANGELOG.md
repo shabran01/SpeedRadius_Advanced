@@ -2,6 +2,41 @@
 
  # CHANGELOG
 
+## [2.2.59] - 2026-10-10
+
+---
+
+### FIXED: invoice page spacing, cramped rows and long-value wrapping — plus a cooler palette
+
+**`ui/ui/invoice.tpl`**
+
+Follow-up to 2.2.58, after reviewing the live page at phone width.
+
+**What was wrong**
+
+| Problem | Effect |
+|---|---|
+| Rows used a fixed `flex: 0 0 42%` label column | On a phone the value only had ~58% of the card, so long values wrapped mid-token — `Mpesa C2B - UITK67 - 254723640 700`, phone numbers split in half between digits |
+| `overflow-wrap: anywhere` on values | Break-insertion was permitted anywhere in the string, so the browser preferred splitting a number over moving it to the next line |
+| No `min-width: 0` on the header's flex children | A long company name, address or invoice number could push the PAID badge out past the card edge |
+| Single flat accent colour | No visual hierarchy between the three information blocks |
+
+**What changed**
+
+- **Rows now stack on phones.** Below 560px every row is a small uppercase label with its value on its own line underneath — the standard receipt pattern. A value can no longer be squeezed into a two-line wrap mid-token. Verified: at 360px every row measures 61–62px (one label line + one value line) and **no value wraps at all**.
+- **`overflow-wrap: break-word`** instead of `anywhere`, on values, the invoice id and the company meta block. The browser now wraps at a space whenever it can and only breaks inside a token as a last resort, so `254723640700` moves to the next line whole instead of being cut in half.
+- **`min-width: 0` guards** added to the header's brand and meta flex children, so an over-long company name, address or invoice number can never push the PAID badge outside the card.
+- **Cooler palette.** The header is a layered indigo → violet gradient with a soft radial highlight; the amount block carries an indigo → violet → cyan tint with `#3730a3` text; primary and WhatsApp buttons get gentle gradients with matching shadows; the PAID badge is white on emerald with a check icon.
+- **Section icons became colour chips.** Each section title now has a 24px rounded chip behind its icon — indigo for Transaction Details, violet for Service Details, cyan for Customer Information — which makes the three blocks immediately distinguishable.
+- **One spacing rhythm.** A single `--gap` token (16px) drives every inter-block gap and rows use consistent 9–10px vertical padding. Verified: stack gaps measure exactly 16px at 360, 560, 768 and 1280.
+- Mobile-first ordering: the base rules are now the phone layout and media queries only add width (`560px` inline rows, `768px` two-column grid and row buttons, `1024px` wider gutters).
+
+**Verified before release**
+
+- No horizontal overflow at **360 / 414 / 560 / 768 / 1024 / 1280** — `documentElement.scrollWidth` equals `clientWidth` at every one.
+- Zero label/value overlaps, zero clipped elements at any width, and every `.sr-btn` renders at 46px (above the 44px touch-target minimum).
+- Print media re-checked: header gradient removed, `.sr-no-print` hidden, rows forced inline, grid held at two columns, header padding collapsed to `0 0 14px`.
+
 ## [2.2.58] - 2026-10-10
 
 ---
