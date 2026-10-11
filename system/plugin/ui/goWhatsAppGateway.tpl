@@ -3,6 +3,22 @@
 <style>
 {literal}
     .gwa-wrap { max-width:1040px; margin:0 auto; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+
+    /* ---- Theme hardening ------------------------------------------------
+       modern-AdminLTE.min.css ships a blanket `min-height: 100%` on
+       html, h1-h6, section, article, aside, button, body, input, textarea
+       and select. Inside a grid item .gwa-panel is stretched to the row
+       height, so every heading in it was inflated until it filled the
+       panel — pushing the fields down and making blocks collide.
+       .gwa-wrap h3 (0,1,1) outranks the theme's bare h3 (0,0,1).
+       .gwa-btn must also out-declare `button { min-height: 100% }`, which
+       it does by class, so it gets an explicit height for the touch target. */
+    .gwa-wrap h1, .gwa-wrap h2, .gwa-wrap h3,
+    .gwa-wrap h4, .gwa-wrap h5, .gwa-wrap h6 { min-height:0; }
+    .gwa-btn { min-height:44px; }
+
+    /* Stop long URLs / API keys / request bodies from forcing a scrollbar. */
+    .gwa-panel, .gwa-field, .gwa-stat, .gwa-note { min-width:0; overflow-wrap:break-word; }
     .gwa-hero { position:relative; overflow:hidden; border-radius:18px; padding:24px 26px; margin-bottom:18px; color:#fff;
         background:linear-gradient(120deg,#0b1f33 0%,#123c52 55%,#0e7a5f 130%); box-shadow:0 10px 30px rgba(10,30,50,.25); }
     .gwa-hero:after { content:""; position:absolute; right:-60px; top:-60px; width:220px; height:220px; border-radius:50%;
@@ -15,7 +31,8 @@
     .gwa-dot.ok { background:#34d399; box-shadow:0 0 8px rgba(52,211,153,.9); animation:gwaPulse 1.8s infinite; }
     @keyframes gwaPulse { 0%{box-shadow:0 0 0 0 rgba(52,211,153,.7)} 70%{box-shadow:0 0 0 9px rgba(52,211,153,0)} 100%{box-shadow:0 0 0 0 rgba(52,211,153,0)} }
     .gwa-grid { display:grid; grid-template-columns:1.55fr 1fr; gap:18px; }
-    @media (max-width:860px){ .gwa-grid { grid-template-columns:1fr; } }
+    .gwa-grid > * { min-width:0; }
+    @media (max-width:860px){ .gwa-grid { grid-template-columns:1fr; gap:14px; } }
     .gwa-panel { background:#fff; border-radius:16px; border:1px solid #e8eef4; box-shadow:0 4px 18px rgba(20,40,60,.06); padding:20px; margin-bottom:18px; }
     .gwa-panel h3 { margin:0 0 14px; font-size:15px; font-weight:800; color:#0f2b3d; }
     .gwa-panel h3 i { color:#10b981; margin-right:6px; }
@@ -35,12 +52,12 @@
     .b-o { background:#fff; color:#334e63; border:1.5px solid #dce6ec; } .b-o:hover{ background:#f4f8fa; }
     .gwa-qr { text-align:center; }
     .gwa-phone { position:relative; display:inline-block; padding:26px 14px 18px; border-radius:26px; background:#0f2b3d;
-        box-shadow:inset 0 0 0 3px #1d445c, 0 14px 34px rgba(15,43,61,.3); margin:4px 0 14px; }
+        box-shadow:inset 0 0 0 3px #1d445c, 0 14px 34px rgba(15,43,61,.3); margin:4px 0 14px; max-width:100%; }
     .gwa-phone:before { content:""; position:absolute; top:9px; left:50%; transform:translateX(-50%); width:52px; height:6px; border-radius:6px; background:#1d445c; }
-    .gwa-phone img { display:block; width:220px; height:220px; border-radius:10px; background:#fff; }
+    .gwa-phone img { display:block; width:100%; max-width:220px; height:auto; margin:0 auto; border-radius:10px; background:#fff; }
     .gwa-ring { display:inline-block; animation:gwaSpin 1.6s linear infinite; }
     @keyframes gwaSpin { 100%{ transform:rotate(360deg); } }
-    .gwa-bar { background:#e8eef4; border-radius:8px; height:6px; width:240px; margin:10px auto; overflow:hidden; }
+    .gwa-bar { background:#e8eef4; border-radius:8px; height:6px; width:100%; max-width:240px; margin:10px auto; overflow:hidden; }
     .gwa-bar > div { background:linear-gradient(90deg,#25d366,#0e7a5f); height:100%; width:100%; transition:width 1s linear; border-radius:8px; }
     .gwa-muted { color:#8ba0ae; font-size:12px; }
     .gwa-ok-hero { text-align:center; padding:10px 0 6px; }
@@ -49,9 +66,20 @@
     .gwa-note { font-size:12.5px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; padding:10px 13px; border-radius:12px; margin-bottom:16px; }
     .gwa-field { margin-bottom:12px; }
     .gwa-field label { display:block; font-size:12px; font-weight:700; color:#334e63; margin-bottom:5px; }
-    .gwa-field .hint { font-size:11px; color:#8ba0ae; margin-top:4px; }
-    .gwa-row { display:flex; gap:8px; }
-    .gwa-code { background:#0f2b3d; color:#d7f5e8; padding:14px 16px; border-radius:12px; font-size:12px; overflow-x:auto; margin:0; }
+    .gwa-field .hint { font-size:11px; color:#8ba0ae; margin-top:4px; overflow-wrap:break-word; }
+    .gwa-row { display:flex; flex-wrap:wrap; gap:8px; }
+    .gwa-row > * { flex:1 1 200px; min-width:0; }
+    .gwa-code { background:#0f2b3d; color:#d7f5e8; padding:14px 16px; border-radius:12px; font-size:12px; overflow-x:auto; margin:0; max-width:100%; }
+
+    /* Small phones: tighter chrome so nothing has to scroll sideways. */
+    @media (max-width:600px){
+        .gwa-hero { padding:18px; border-radius:14px; }
+        .gwa-hero h2 { font-size:19px; }
+        .gwa-panel { padding:15px; border-radius:13px; }
+        .gwa-phone { padding:20px 12px 14px; border-radius:22px; }
+        .gwa-code { font-size:11px; padding:12px 13px; }
+        .gwa-btn { font-size:12.5px; }
+    }
 {/literal}
 </style>
 
@@ -120,12 +148,13 @@
         <p class="gwa-muted" style="margin-top:10px;"><i class="fa fa-reply"></i> Response: <code>{literal}{"code":"SUCCESS","message":"Sent"}{/literal}</code></p>
         <hr style="margin:16px 0;border-color:#eef3f6;">
         <h3 style="margin-top:0;"><i class="fa fa-info-circle"></i> Docker Reference</h3>
-        <pre class="gwa-code">docker run -d --restart unless-stopped \
+        <pre class="gwa-code">docker run -d --name gowa --restart always \
   -p 127.0.0.1:3000:3000 \
-  -v gowam-data:/usr/app/gowam-rest/dbs \
-  -e AUTH_BASIC_USERNAME=you \
-  -e AUTH_BASIC_PASSWORD=secret \
-  dimaskiddo/go-whatsapp-multidevice-rest:latest</pre>
+  -v gowa-storages:/app/storages \
+  -v gowa-statics:/app/statics \
+  -e APP_BASIC_AUTH=you:secret \
+  aldinokemal2104/go-whatsapp-web-multidevice:v9.6.0 \
+  rest --os=Chrome</pre>
     </div>
 </div>
 

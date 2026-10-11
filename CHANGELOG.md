@@ -2,6 +2,37 @@
 
  # CHANGELOG
 
+## [2.2.63] - 2026-10-12
+
+---
+
+### FIXED: GoWhatsApp config page — panels collided and fields had no room to wrap
+
+**`system/plugin/ui/goWhatsAppGateway.tpl`**
+
+Same class of bug as the 2.2.60 invoice fix, and it hid for the same reason: the page was only ever checked against its own stylesheet.
+
+**The overlap.** `modern-AdminLTE.min.css` applies `min-height: 100%` to `html, h1–h6, section, article, aside, button, body, input, textarea, select`. The `.gwa-panel` blocks live in a CSS grid (`1.55fr 1fr`), so each panel is stretched to a **definite** height — which turns that inherited `min-height: 100%` on the panel's `<h3>` into "fill the whole panel". Every heading was inflated, pushing its fields down and making blocks collide. The Save button had the same problem: `<button class="gwa-btn">` declared padding and width but no `min-height`, so the theme's `button { min-height: 100% }` still applied to it.
+
+**The fix.** `.gwa-wrap h1–h6 { min-height: 0 }` — (0,1,1) beats the theme's bare `h3` (0,0,1) regardless of stylesheet order — and an explicit `.gwa-btn { min-height: 44px }` so the button keeps its touch target instead of stretching.
+
+**Layout.**
+
+- `.gwa-row` had **no `flex-wrap`**, so the paired fields (username/password) were squeezed into whatever space was left instead of dropping to their own line. It now wraps, with `flex: 1 1 200px` and `min-width: 0` per child.
+- `.gwa-grid > *` and the panels got `min-width: 0` plus `overflow-wrap: break-word`, so a long base URL, API key or request body can no longer force the page sideways.
+- The QR image was a hard `220×220` and the progress bar a hard `240px`; both are now fluid (`width: 100%; max-width: …`) so they scale instead of overflowing on narrow screens.
+- Added a **`max-width: 600px`** breakpoint (there was only one media query before, at 860px) tightening hero padding, panel padding, the phone frame and the code block.
+
+**Content.** The "Docker Reference" block still told you to run the **old** gateway:
+
+```
+-e AUTH_BASIC_USERNAME / AUTH_BASIC_PASSWORD
+-v gowam-data:/usr/app/gowam-rest/dbs
+dimaskiddo/go-whatsapp-multidevice-rest:latest
+```
+
+That is the API this plugin no longer speaks. It now shows the GOWA command with `rest --os=Chrome` and the `APP_BASIC_AUTH` variable.
+
 ## [2.2.62] - 2026-10-12
 
 ---
