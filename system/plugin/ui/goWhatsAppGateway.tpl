@@ -85,9 +85,9 @@
                 </div>
             </div>
             <div class="gwa-field">
-                <label>Device ID <span class="gwa-muted">(optional)</span></label>
-                <input type="text" name="gowhatsapp_device_id" class="form-control" value="{$gw_device_id}" placeholder="leave blank when only one device is registered">
-                <div class="hint">Sent as the <code>X-Device-Id</code> header. Only needed when the GoWhatsApp server holds more than one device — list them with <code>GET /app/devices</code>.</div>
+                <label>Device ID <span class="gwa-muted">(blank = auto-create)</span></label>
+                <input type="text" name="gowhatsapp_device_id" class="form-control" value="{$gw_device_id}" placeholder="speedradius">
+                <div class="hint">Sent as the <code>X-Device-Id</code> header. GOWA v8+ needs a device slot and has no implicit default, so if this is left blank the plugin reads <code>GET /app/devices</code> and creates one named <code>speedradius</code>.</div>
             </div>
             <div class="gwa-field">
                 <label>Enable as primary WhatsApp sender</label>

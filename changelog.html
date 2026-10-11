@@ -58,6 +58,36 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.62] - 2026-10-12
+
+---
+
+### FIXED: GOWA plugin assumed the device ID was optional — a freshly installed server refuses every call
+
+**`system/plugin/GoWhatsAppGateway.php`** — see the deploy note in 2.2.61, this file is gitignored
+**`system/plugin/ui/goWhatsAppGateway.tpl`**
+
+Testing against a freshly installed GOWA v9.6.0 surfaced this:
+
+```
+$ curl -u admin:password http://127.0.0.1:3000/app/status
+{"code":"DEVICE_ID_REQUIRED","message":"device_id is required via X-Device-Id header or device_id query"}
+```
+
+**Why the assumption was wrong.** GOWA's `openapi.yaml` documents the `X-Device-Id` header as *"Required when multiple devices are registered. If only one device is registered, it will be used as the default."* That reads as "optional", but it only describes the single-device case. A newly installed GOWA v8+ server has **zero** devices registered and no implicit default, so every device-scoped endpoint answers `DEVICE_ID_REQUIRED` until a slot exists. The plugin treated the header as optional and would have shown that raw API string on the dashboard instead of working.
+
+**The fix.** A new `gowhatsapp_ensure_device()` runs before every status check:
+
+1. If a Device ID is already configured, return it immediately — one config read, no HTTP.
+2. Otherwise `GET /app/devices` and adopt whatever the server already has.
+3. If the server has nothing, `POST /devices` with `{"device_id":"speedradius"}` and adopt the returned `results.id`.
+
+The chosen ID is written to `gowhatsapp_device_id`, so this happens once. `gowhatsapp_err()` also special-cases `DEVICE_ID_REQUIRED`, so if provisioning ever fails the admin sees *"No device is registered on the GoWhatsApp server and it could not be created automatically. Set a Device ID in this config."* rather than the raw API message.
+
+The response-shape handling is deliberately tolerant: `/app/devices` returns a list, but the code also accepts a single device object, and reads either `device` or `id` as the identifier.
+
+**Config form.** The Device ID field was labelled *"(optional)"* — now *"(blank = auto-create)"* with a hint explaining the auto-provisioning, because "optional" was actively misleading on a fresh install.
+
 ## [2.2.61] - 2026-10-12
 
 ---
