@@ -58,6 +58,54 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.61] - 2026-10-12
+
+---
+
+### CHANGED: GoWhatsApp gateway migrated to aldinokemal/go-whatsapp-web-multidevice (GOWA v9)
+
+**`system/plugin/GoWhatsAppGateway.php`** — see the deploy note, this file is gitignored
+**`system/plugin/ui/goWhatsAppGateway.tpl`**
+
+The plugin previously targeted `dimaskiddo/go-whatsapp-multidevice-rest`. It now speaks the GOWA API (`aldinokemal/go-whatsapp-web-multidevice`, v9.6.0), which differs in almost every respect.
+
+**Why the old plugin could not work against GOWA**
+
+| Old (dimaskiddo) | GOWA v9 |
+|---|---|
+| `GET /auth` → JWT, then `Authorization: Bearer <jwt>` | **HTTP Basic Auth on every request** — there is no token step |
+| `POST /send/text`, form fields `msisdn` + `message` | `POST /send/message`, **JSON** body `phone` + `message` |
+| `POST /login` (`output=json`) → `data.qrcode`, a data-URI | `GET /app/login` → `results.qr_link`, a **PNG URL**, plus `results.qr_duration` |
+| `POST /login/pair` → `data.paircode` | `GET /app/login-with-code?phone=` → `results.pair_code` |
+| `POST /logout` | `GET /app/logout` |
+| `{status:true, data:{…}}` | `{code, message, results}` — success is `code === "SUCCESS"` |
+| no device concept | **`X-Device-Id`** header (multi-device, v8+) |
+| `POST /send/image` field `msisdn` | `POST /send/image` field `phone` |
+
+**What changed**
+
+- **Auth.** `gowhatsapp_get_token()` and `gowhatsapp_request_auth()` are gone. `gowhatsapp_request()` sends `Authorization: Basic …` on every call and adds `X-Device-Id` when a device ID is configured. The now-unused `gowhatsapp_jwt` key is no longer written.
+- **Success / error handling.** New `gowhatsapp_ok()` checks `code === "SUCCESS"`. `gowhatsapp_err()` extracts the API's `message` and — importantly — detects an HTML response and says the base URL is probably not pointing at the API root.
+- **Sending.** `gowhatsapp_send_message()` posts JSON to `/send/message` and returns `results.message_id`.
+- **QR needed two fixes.** GOWA *errors* if `/app/login` is called on an already-paired device, so `gowhatsapp_get_qr()` now checks `/app/status` first. And because `qr_link` is built from GOWA's own host (`http://localhost:3000/statics/…` — unreachable from the browser, and embedding it would leak the Basic Auth credentials), a new route **`plugin/gowhatsapp_qr_image`** fetches the PNG server-side with auth and streams it. The template's existing `<img src="{$qrCode}">` now points at that proxy, so the template needed no structural change.
+- **New status source.** `gowhatsapp_status()` wraps `GET /app/status` (`is_connected`, `is_logged_in`, `jid`, `device_id`). "Linked" in the UI now means `is_logged_in`.
+- **Reconnect.** `gowhatsapp_connect()` reconnects instead of failing when the device is already linked.
+- **Config form.** The placeholder URL is now the GOWA root (`http://127.0.0.1:3000`) rather than the old `/api/v1/whatsapp` path, and there is a new optional **Device ID** field.
+- **Public API.** `gowhatsapp_api()` compares the key with `hash_equals()` rather than `!==`, so the check is constant-time.
+- **Logs.** `gowhatsapp_logs()` builds the filtered query twice instead of reusing one Idiorm object after `count()`.
+- `gowhatsapp()` reuses the `/app/status` response already fetched by `gowhatsapp_get_qr()` instead of calling it a second time.
+- The old `/auth` JWT flow is documented in the file header, along with the distinction from the unrelated `GoWAHA` plugin (`gowaha.php`), which speaks the WAHA API and uses `X-Api-Key`.
+
+**Deploy note — the PHP file is in `.gitignore`**
+
+`system/plugin/GoWhatsAppGateway.php` is listed under "Files with secrets" in `.gitignore`, so `git pull` will **not** deliver it — only the `.tpl` ships via git. Copy the PHP to each install by hand, for example:
+
+```bash
+scp system/plugin/GoWhatsAppGateway.php user@host:/var/www/html/isp/system/plugin/
+```
+
+The file holds no credentials: the only literals are the `ThisIsUsername` / `ThisIsPassword` placeholders, and the real values live in `tbl_appconfig`. Remove that line from `.gitignore` if you want it versioned.
+
 ## [2.2.60] - 2026-10-10
 
 ---

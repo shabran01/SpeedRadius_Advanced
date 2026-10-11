@@ -71,8 +71,8 @@
         <form method="post">
             <div class="gwa-field">
                 <label>API Base URL</label>
-                <input type="text" name="gowhatsapp_url" class="form-control" value="{$gw_url}" placeholder="https://wa-api.speedcomwifi.co.ke/api/v1/whatsapp">
-                <div class="hint">Include the full path <code>/api/v1/whatsapp</code> — no trailing slash.</div>
+                <input type="text" name="gowhatsapp_url" class="form-control" value="{$gw_url}" placeholder="http://127.0.0.1:3000">
+                <div class="hint">The GoWhatsApp (GOWA) root, for example <code>http://127.0.0.1:3000</code> — no trailing slash, and no <code>/api/v1/…</code> path unless you started the server with <code>APP_BASE_PATH</code>.</div>
             </div>
             <div class="gwa-row">
                 <div class="gwa-field" style="flex:1;">
@@ -83,6 +83,11 @@
                     <label>Basic Auth Password</label>
                     <input type="password" name="gowhatsapp_password" class="form-control" value="{$gw_password}" placeholder="ThisIsPassword">
                 </div>
+            </div>
+            <div class="gwa-field">
+                <label>Device ID <span class="gwa-muted">(optional)</span></label>
+                <input type="text" name="gowhatsapp_device_id" class="form-control" value="{$gw_device_id}" placeholder="leave blank when only one device is registered">
+                <div class="hint">Sent as the <code>X-Device-Id</code> header. Only needed when the GoWhatsApp server holds more than one device — list them with <code>GET /app/devices</code>.</div>
             </div>
             <div class="gwa-field">
                 <label>Enable as primary WhatsApp sender</label>
