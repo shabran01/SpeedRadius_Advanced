@@ -58,6 +58,44 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.70] - 2026-10-12
+
+---
+
+### FIXED: the pairing code appeared in a 5-second toast that vanished before you could type it
+
+**`system/plugin/GoWhatsAppGateway.php`** — **`system/plugin/ui/goWhatsAppGateway.tpl`**
+
+GOWA returns the pairing code once, and the plugin flashed it in a SweetAlert toast. `header.tpl` auto-dismisses those after 5000 ms, so by the time you picked up the phone the code was gone and there was no way to read it back.
+
+The code is now persisted in the plugin config (`gowhatsapp_pair_code`, `gowhatsapp_pair_code_at`, `gowhatsapp_pair_code_phone`) and rendered as a green panel directly under the pairing form, where it stays for 5 minutes or until the device reports `is_logged_in`. The panel has a **Copy code** button, so the code can be pasted instead of transcribed.
+
+`gowhatsapp_get_qr()` clears the stored code as soon as GOWA reports the device is linked, so a spent code is never shown again.
+
+## [2.2.69] - 2026-10-12
+
+---
+
+### FIXED: QR proxy now regenerates the image when the cached PNG has already expired
+
+**`system/plugin/GoWhatsAppGateway.php`**
+
+`qr_duration` is 30 seconds, so a cached `qr_link` is usually dead by the time the browser requests it through the proxy. The proxy received 404/410 and handed the failure straight to the `<img>`.
+
+`gowhatsapp_qr_image()` now calls `gowhatsapp_get_qr(true)` to regenerate the QR and retries the fetch once when the first attempt returns 404 or 410.
+
+## [2.2.68] - 2026-10-12
+
+---
+
+### FIXED: QR proxy returned a bare 404 with no explanation
+
+**`system/plugin/GoWhatsAppGateway.php`**
+
+When the proxied PNG could not be fetched, the route answered 404 and the browser showed only a broken image — no clue whether the cause was the URL, the credentials, the device ID or GOWA itself.
+
+The proxy now returns `text/plain` diagnostics: the fetch target, the upstream HTTP code, any cURL error and the first part of the response body. A failure now identifies its own cause.
+
 ## [2.2.67] - 2026-10-12
 
 ---

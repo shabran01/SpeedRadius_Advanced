@@ -64,6 +64,9 @@
     .gwa-ok-hero .big { width:74px; height:74px; margin:0 auto 14px; border-radius:50%; background:#e7f9ef; color:#059669;
         display:flex; align-items:center; justify-content:center; font-size:34px; box-shadow:0 0 0 9px #f0fbf5; }
     .gwa-note { font-size:12.5px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; padding:10px 13px; border-radius:12px; margin-bottom:16px; }
+    .gwa-pair { margin-top:14px; padding:14px; border-radius:12px; background:#e7f9ef; border:1px solid #a7f3d0; text-align:center; }
+    .gwa-pair-lbl { font-size:11.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:#059669; }
+    .gwa-pair-val { font-size:26px; font-weight:800; letter-spacing:.14em; color:#0f2b3d; margin:6px 0 4px; font-variant-numeric:tabular-nums; }
     .gwa-field { margin-bottom:12px; }
     .gwa-field label { display:block; font-size:12px; font-weight:700; color:#334e63; margin-bottom:5px; }
     .gwa-field .hint { font-size:11px; color:#8ba0ae; margin-top:4px; overflow-wrap:break-word; }
@@ -220,6 +223,17 @@
                 <input type="text" name="phone" class="form-control" placeholder="2547XXXXXXXX" style="flex:1;">
                 <button type="submit" class="gwa-btn b-dk" style="width:auto;margin:0;"><i class="fa fa-key"></i> Get Code</button>
             </form>
+
+            {if $pairCode}
+            <div class="gwa-pair">
+                <div class="gwa-pair-lbl">Your pairing code</div>
+                <div class="gwa-pair-val" id="pairCodeValue">{$pairCode}</div>
+                <div class="gwa-muted" style="margin-bottom:10px;">
+                    {if $pairPhone}for +{$pairPhone} — {/if}on the phone: <b>Linked devices</b> → <b>Link with phone number</b>
+                </div>
+                <button type="button" class="gwa-btn b-g" style="margin:0;" onclick="copyPairCode()"><i class="fa fa-copy"></i> Copy code</button>
+            </div>
+            {/if}
         </div>
         {/if}
     </div>
@@ -288,6 +302,22 @@ var ajaxUrl = "{$_url}";
 var connected = {if $connected}true{else}false{/if};
 
 {literal}
+function copyPairCode() {
+    var el = document.getElementById('pairCodeValue');
+    if (!el) return;
+    var t = el.textContent.replace(/\s+/g, '');
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(t);
+    } else {
+        var ta = document.createElement('textarea');
+        ta.value = t;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+    }
+}
+
 function quickSend() {
     var p = document.getElementById('qsPhone').value.trim();
     var m = document.getElementById('qsMsg').value.trim();

@@ -37,7 +37,7 @@
 // Shown on the config page so a stale (opcache-cached) build is visible at a
 // glance instead of failing silently as "Function not found".
 if (!defined('GOWHATSAPP_PLUGIN_VERSION')) {
-    define('GOWHATSAPP_PLUGIN_VERSION', '2.2.66');
+    define('GOWHATSAPP_PLUGIN_VERSION', '2.2.70');
 }
 
 register_menu("GoWhatsApp", true, "gowhatsapp", 'COMMUNICATION', 'fa fa-whatsapp', '', '', ['Admin', 'SuperAdmin']);
@@ -109,6 +109,21 @@ function gowhatsapp()
     $ui->assign('gwVersion', $info['version'] ?? '');
     $ui->assign('gwPluginVersion', GOWHATSAPP_PLUGIN_VERSION);
     $ui->assign('gwOs', $info['os'] ?? '');
+
+    // The pairing code stays on screen for 5 minutes. GOWA codes expire fast,
+    // and you need it readable while you type it into the phone.
+    $pairCode = '';
+    $pairPhone = '';
+    $pairAt = intval($config['gowhatsapp_pair_code_at'] ?? 0);
+    if (!$connected
+        && !empty($config['gowhatsapp_pair_code'])
+        && $pairAt > 0
+        && (time() - $pairAt) < 300) {
+        $pairCode = $config['gowhatsapp_pair_code'];
+        $pairPhone = $config['gowhatsapp_pair_code_phone'] ?? '';
+    }
+    $ui->assign('pairCode', $pairCode);
+    $ui->assign('pairPhone', $pairPhone);
     $ui->assign('_title', 'GoWhatsApp');
     $ui->assign('_system_menu', 'gowhatsapp');
     $ui->assign('_admin', $admin);
@@ -137,6 +152,9 @@ function gowhatsapp_config()
         gowhatsapp_save('gowhatsapp_qr_time', 0);
         gowhatsapp_save('gowhatsapp_connected_at', 0);
         gowhatsapp_save('gowhatsapp_device_ok_at', 0);
+        // A pairing code issued by the old server/device is meaningless now.
+        gowhatsapp_save('gowhatsapp_pair_code', '');
+        gowhatsapp_save('gowhatsapp_pair_code_at', 0);
 
         if (empty($url)) {
             r2(U . 'plugin/gowhatsapp_config', 'e', 'Base URL is required.');
@@ -212,8 +230,13 @@ function gowhatsapp_pair_code()
         $json = json_decode($resp['body'], true);
         $code = $json['results']['pair_code'] ?? '';
         if (!empty($code)) {
-            r2(U . 'plugin/gowhatsapp', 's', 'Pairing code: ' . $code
-                . ' — enter it on the phone under Linked devices → Link with phone number.');
+            // Persist the code rather than flashing it. A SweetAlert toast
+            // auto-dismisses after 5 seconds, which is useless when you have to
+            // read it off the screen while typing it into the phone.
+            gowhatsapp_save('gowhatsapp_pair_code', $code);
+            gowhatsapp_save('gowhatsapp_pair_code_at', time());
+            gowhatsapp_save('gowhatsapp_pair_code_phone', $phone);
+            r2(U . 'plugin/gowhatsapp', 's', 'Pairing code generated — it stays on the dashboard until it expires.');
         }
         r2(U . 'plugin/gowhatsapp', 's', 'Pairing requested — the code should appear on the phone shortly.');
     }
@@ -231,6 +254,8 @@ function gowhatsapp_logout()
     gowhatsapp_save('gowhatsapp_qr_link', '');
     gowhatsapp_save('gowhatsapp_qr_time', 0);
     gowhatsapp_save('gowhatsapp_connected_at', 0);
+    gowhatsapp_save('gowhatsapp_pair_code', '');
+    gowhatsapp_save('gowhatsapp_pair_code_at', 0);
 
     if (gowhatsapp_ok($resp['body'], $resp['http_code'])) {
         r2(U . 'plugin/gowhatsapp', 's', 'Logged out. Generate a new QR code to reconnect.');
@@ -844,6 +869,9 @@ function gowhatsapp_get_qr($force = false)
         gowhatsapp_save('gowhatsapp_connected_at', $now);
         gowhatsapp_save('gowhatsapp_qr_link', '');
         gowhatsapp_save('gowhatsapp_qr_time', 0);
+        // Linked — the pairing code is spent, stop showing it.
+        gowhatsapp_save('gowhatsapp_pair_code', '');
+        gowhatsapp_save('gowhatsapp_pair_code_at', 0);
         return ['connected' => true, 'qr' => '', 'status' => $st];
     }
     if (!$st['reachable']) {
