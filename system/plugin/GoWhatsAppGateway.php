@@ -124,10 +124,12 @@ function gowhatsapp_config()
         gowhatsapp_save('gowhatsapp_number', preg_replace('/[^0-9]/', '', _post('gowhatsapp_number', '')));
         gowhatsapp_save('gowhatsapp_api_key', _post('gowhatsapp_api_key', ''));
 
-        // Credentials changed -> drop any cached QR from the previous session.
+        // Credentials or device changed -> drop the cached QR, the connection
+        // trust window, and the device verification so the next call re-checks.
         gowhatsapp_save('gowhatsapp_qr_link', '');
         gowhatsapp_save('gowhatsapp_qr_time', 0);
         gowhatsapp_save('gowhatsapp_connected_at', 0);
+        gowhatsapp_save('gowhatsapp_device_ok_at', 0);
 
         if (empty($url)) {
             r2(U . 'plugin/gowhatsapp_config', 'e', 'Base URL is required.');
@@ -664,9 +666,19 @@ function gowhatsapp_ensure_device()
     global $config;
 
     $configured = trim($config['gowhatsapp_device_id'] ?? '');
-    if ($configured !== '') return $configured;
 
-    // 1. Does the server already know a device?
+    // A configured ID is NOT proof the device exists. Typing one into the config
+    // form does not create it, and a non-existent ID makes every call answer
+    // DEVICE_ID_REQUIRED. So verify against the server — but at most every five
+    // minutes, because this runs before every status check and every AJAX poll.
+    $verifiedAt = intval($config['gowhatsapp_device_ok_at'] ?? 0);
+    if ($configured !== '' && (time() - $verifiedAt) < 300) {
+        return $configured;
+    }
+
+    $wanted = $configured !== '' ? $configured : 'speedradius';
+
+    // 1. What does the server actually have?
     $resp = gowhatsapp_request('GET', '/app/devices', [], 8);
     $json = json_decode($resp['body'], true);
     $list = (is_array($json) && isset($json['results']) && is_array($json['results'])) ? $json['results'] : [];
@@ -676,21 +688,41 @@ function gowhatsapp_ensure_device()
         $list = [$list];
     }
 
+    $have = [];
     foreach ($list as $d) {
-        $cand = is_array($d) ? ($d['device'] ?? ($d['id'] ?? '')) : (string) $d;
-        if ($cand !== '') {
-            gowhatsapp_save('gowhatsapp_device_id', $cand);
-            return $cand;
-        }
+        $id = is_array($d) ? ($d['device'] ?? ($d['id'] ?? '')) : (string) $d;
+        if ($id !== '') $have[] = $id;
     }
 
-    // 2. Nothing registered — create the slot we will use from now on.
-    $resp = gowhatsapp_request('POST', '/devices', ['device_id' => 'speedradius'], 15, true);
+    // 2. Already there? Remember that and stop asking.
+    if (in_array($wanted, $have, true)) {
+        gowhatsapp_save('gowhatsapp_device_id', $wanted);
+        gowhatsapp_save('gowhatsapp_device_ok_at', time());
+        return $wanted;
+    }
+
+    // 3. Nothing configured but the server has something — adopt the first.
+    if ($configured === '' && !empty($have)) {
+        gowhatsapp_save('gowhatsapp_device_id', $have[0]);
+        gowhatsapp_save('gowhatsapp_device_ok_at', time());
+        return $have[0];
+    }
+
+    // 4. Create the slot we want.
+    $resp = gowhatsapp_request('POST', '/devices', ['device_id' => $wanted], 15, true);
     $json = json_decode($resp['body'], true);
-    $cand = (is_array($json) && isset($json['results']['id'])) ? $json['results']['id'] : '';
-    if ($cand !== '') {
-        gowhatsapp_save('gowhatsapp_device_id', $cand);
-        return $cand;
+    $created = (is_array($json) && isset($json['results']['id'])) ? $json['results']['id'] : '';
+    if ($created !== '') {
+        gowhatsapp_save('gowhatsapp_device_id', $created);
+        gowhatsapp_save('gowhatsapp_device_ok_at', time());
+        return $created;
+    }
+
+    // 5. Creation failed — fall back to whatever the server does have.
+    if (!empty($have)) {
+        gowhatsapp_save('gowhatsapp_device_id', $have[0]);
+        gowhatsapp_save('gowhatsapp_device_ok_at', time());
+        return $have[0];
     }
 
     return '';

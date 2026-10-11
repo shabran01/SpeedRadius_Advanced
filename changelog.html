@@ -58,6 +58,31 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.65] - 2026-10-12
+
+---
+
+### FIXED: a configured Device ID was trusted without checking it exists, so no QR was ever generated
+
+**`system/plugin/GoWhatsAppGateway.php`**
+
+First live run, and it reproduced a gap in the auto-provisioning added in 2.2.62. `gowhatsapp_ensure_device()` opened with:
+
+```php
+if ($configured !== '') return $configured;
+```
+
+So whenever a Device ID was present in the config it was returned immediately, **without ever asking the server whether that device existed**. Typing `speedradius` into the config form does not create it — the field is only a string. The plugin then sent `X-Device-Id: speedradius` on every call and GOWA answered `DEVICE_ID_REQUIRED` for all of them. The dashboard still loaded normally (`/health` needs no auth, so it showed *API Online*), but **Generate QR Code** and **Get Code** both produced nothing.
+
+**The fix.** `ensure_device()` now resolves against the server every time:
+
+1. `GET /app/devices` and collect the IDs the server actually has.
+2. Configured ID is in that list → use it.
+3. Nothing configured but the server has one → adopt the first.
+4. Configured ID missing → `POST /devices` with it, falling back to the server's first device if creation fails.
+
+To keep it cheap this runs at most once every five minutes, tracked in `gowhatsapp_device_ok_at`. That timestamp is reset whenever the config is saved, so changing the Device ID re-checks immediately instead of waiting out the window.
+
 ## [2.2.64] - 2026-10-12
 
 ---
