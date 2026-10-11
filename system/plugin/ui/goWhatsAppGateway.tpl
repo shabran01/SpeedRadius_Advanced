@@ -225,13 +225,26 @@
             </form>
 
             {if $pairCode}
-            <div class="gwa-pair">
+            <div class="gwa-pair" id="pairBox" data-expires="{$pairExpires}" data-ttl="{$pairTtl}">
                 <div class="gwa-pair-lbl">Your pairing code</div>
                 <div class="gwa-pair-val" id="pairCodeValue">{$pairCode}</div>
                 <div class="gwa-muted" style="margin-bottom:10px;">
                     {if $pairPhone}for +{$pairPhone} — {/if}on the phone: <b>Linked devices</b> → <b>Link with phone number</b>
                 </div>
-                <button type="button" class="gwa-btn b-g" style="margin:0;" onclick="copyPairCode()"><i class="fa fa-copy"></i> Copy code</button>
+                <div class="gwa-bar" style="max-width:none;"><div id="pairFill"></div></div>
+                <p class="gwa-muted" style="margin:8px 0 12px;">Type it on the phone within <b id="pairLeft">{$pairTtl}</b> seconds.</p>
+                <div id="pairExpired" class="gwa-note" style="display:none;margin:0 0 12px;text-align:left;">
+                    This code has expired. Press <b>Get a new code</b> and type the new one in straight away.
+                </div>
+                <button type="button" class="gwa-btn b-g" onclick="copyPairCode()"><i class="fa fa-copy"></i> Copy code</button>
+                <form action="{$_url}plugin/gowhatsapp_pair_code" method="post" style="margin:0;">
+                    <input type="hidden" name="phone" value="{$pairPhone}">
+                    <input type="hidden" name="force" value="1">
+                    <button type="submit" class="gwa-btn b-o"><i class="fa fa-refresh"></i> Get a new code</button>
+                </form>
+                <p class="gwa-muted" style="margin:10px 0 0;text-align:left;">
+                    If the phone says "Couldn't link device", either the code expired, or the number does not match the WhatsApp account on that phone.
+                </p>
             </div>
             {/if}
         </div>
@@ -253,6 +266,7 @@
             <a href="{$_url}plugin/gowhatsapp_logs" class="gwa-btn b-dk"><i class="fa fa-list"></i> Message Logs</a>
             {if !$connected}
                 <a href="{$_url}plugin/gowhatsapp_connect" class="gwa-btn b-g"><i class="fa fa-qrcode"></i> Generate QR Code</a>
+                <a href="{$_url}plugin/gowhatsapp_logout" class="gwa-btn b-o" onclick="return confirm('Clear the session stored on the server for this device? Use this when pairing or QR linking keeps failing.')"><i class="fa fa-undo"></i> Reset Device Session</a>
             {/if}
             <button class="gwa-btn b-o" onclick="checkStatus()"><i class="fa fa-refresh"></i> Refresh Status</button>
         </div>
@@ -316,6 +330,33 @@ function copyPairCode() {
         try { document.execCommand('copy'); } catch (e) {}
         document.body.removeChild(ta);
     }
+}
+
+// Count the pairing code down on screen. WhatsApp will not accept a code the
+// companion has already given up on, so "how long have I got" has to be visible.
+var pairTimer = null;
+function startPairCountdown() {
+    var box = document.getElementById('pairBox');
+    if (!box) return;
+    var exp = parseInt(box.getAttribute('data-expires'), 10) || 0;
+    var ttl = parseInt(box.getAttribute('data-ttl'), 10) || 60;
+    if (!exp) return;
+    var left = document.getElementById('pairLeft');
+    var fill = document.getElementById('pairFill');
+    var dead = document.getElementById('pairExpired');
+    if (pairTimer) clearInterval(pairTimer);
+    pairTimer = setInterval(function(){
+        var s = exp - Math.floor(Date.now() / 1000);
+        if (s <= 0) {
+            clearInterval(pairTimer);
+            if (left) left.textContent = '0';
+            if (fill) fill.style.width = '0%';
+            if (dead) dead.style.display = 'block';
+            return;
+        }
+        if (left) left.textContent = s;
+        if (fill) fill.style.width = Math.min(100, (s / ttl) * 100) + '%';
+    }, 1000);
 }
 
 function quickSend() {
@@ -388,6 +429,7 @@ if (!connected && document.getElementById('qrSection')) {
     startCountdown();
     startPolling();
 }
+if (document.getElementById('pairBox')) { startPairCountdown(); }
 {/literal}
 </script>
 

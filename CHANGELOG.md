@@ -2,6 +2,28 @@
 
  # CHANGELOG
 
+## [2.2.71] - 2026-10-12
+
+---
+
+### FIXED: the pairing code was invalidated by requesting it twice, so the phone reported "Couldn't link device"
+
+**`system/plugin/GoWhatsAppGateway.php`** — **`system/plugin/ui/goWhatsAppGateway.tpl`**
+
+WhatsApp keeps exactly **one** live pairing request per companion device. GOWA's `POST /app/login-with-code` maps straight onto `whatsmeow.PairPhone`, and every new call replaces the previous request — silently killing the code that came before it.
+
+The plugin re-requested a code on **every** "Get Code" click, so pressing the button a second time (or reloading the form) killed the code the user was in the middle of typing. The phone showed `Logging in…` and then `Couldn't link device`, while both the GOWA device and the dashboard looked perfectly healthy.
+
+What changed:
+
+- A code that is still inside its lifetime is **reused** and never replaced. A new one is requested only when the old one has expired, the phone number changed, or `Get a new code` (`force=1`) was pressed explicitly.
+- `login-with-code` is no longer called at all when GOWA already reports the device as linked.
+- `GOWHATSAPP_PAIR_TTL` (60 s) bounds the code's life in one place. The dashboard renders a **live countdown** with a progress bar and flips to an explicit *"This code has expired"* state, so the available window is visible instead of implied.
+- The panel now states the two real causes of a phone-side failure: an expired code, or a number that does not match the WhatsApp account on that phone.
+- New **Reset Device Session** action in the Actions panel (visible while unlinked) which calls `/app/logout` to clear a half-finished session from the GOWA device store while keeping the device slot.
+
+**After `git pull`:** hard-refresh the dashboard. Request a code once, then type it into the phone within 60 seconds.
+
 ## [2.2.70] - 2026-10-12
 
 ---
