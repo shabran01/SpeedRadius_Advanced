@@ -149,6 +149,18 @@ try {
 }
 
 //register all plugin
+// This server runs opcache.validate_timestamps=0, so a freshly deployed plugin
+// file keeps serving its stale opcodes until php-fpm restarts. Invalidate the
+// gateway plugin here so the next include recompiles it from disk — without
+// this, new routes like gowhatsapp_pair_code showed "Function not found" even
+// though the function existed in the file.
+if (function_exists('opcache_invalidate')) {
+    $__gwFile = File::pathFixer($PLUGIN_PATH . DIRECTORY_SEPARATOR . 'GoWhatsAppGateway.php');
+    if (is_file($__gwFile)) {
+        opcache_invalidate($__gwFile, true);
+    }
+}
+
 foreach (glob(File::pathFixer($PLUGIN_PATH . DIRECTORY_SEPARATOR . '*.php')) as $filename) {
     try {
         include $filename;

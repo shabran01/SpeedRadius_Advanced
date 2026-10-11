@@ -58,6 +58,22 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.66] - 2026-10-12
+
+---
+
+### FIXED: plugin was served stale by OpCache, so new routes showed "Function not found"
+
+**`init.php`** — **`system/plugin/GoWhatsAppGateway.php`** — **`system/plugin/ui/goWhatsAppGateway.tpl`**
+
+The server runs `opcache.validate_timestamps=0`, so a freshly deployed plugin file kept serving its previously-compiled opcodes until php-fpm restarted. Symptom: `Function not found` for `gowhatsapp_pair_code` and `gowhatsapp_qr_image`, even though both functions existed in the file on disk.
+
+`init.php` now calls `opcache_invalidate()` on the gateway plugin immediately before the plugin glob, so the next request recompiles it from disk — no php-fpm restart required.
+
+The plugin also defines `GOWHATSAPP_PLUGIN_VERSION` (2.2.66) and prints it as a badge on the config page, so a stale build is visible at a glance instead of failing silently.
+
+**After `git pull`:** hard-refresh the GoWhatsApp config page. If it shows **plugin v2.2.66**, the new code is live and pair code + QR work.
+
 ## [2.2.65] - 2026-10-12
 
 ---

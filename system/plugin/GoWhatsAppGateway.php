@@ -34,6 +34,12 @@
  * WAHA API (devlikeapro/waha) and uses an X-Api-Key header.
  */
 
+// Shown on the config page so a stale (opcache-cached) build is visible at a
+// glance instead of failing silently as "Function not found".
+if (!defined('GOWHATSAPP_PLUGIN_VERSION')) {
+    define('GOWHATSAPP_PLUGIN_VERSION', '2.2.66');
+}
+
 register_menu("GoWhatsApp", true, "gowhatsapp", 'COMMUNICATION', 'fa fa-whatsapp', '', '', ['Admin', 'SuperAdmin']);
 register_menu("GoWhatsApp Logs", true, "gowhatsapp_logs", 'COMMUNICATION', 'fa fa-list-alt', '', '', ['Admin', 'SuperAdmin']);
 register_menu("GoWhatsApp API", false, "gowhatsapp_api", '', '', '', '', []);
@@ -101,6 +107,7 @@ function gowhatsapp()
     $ui->assign('enabled', ($config['gowhatsapp_enabled'] ?? '') === 'yes');
     $ui->assign('gwDeviceId', $config['gowhatsapp_device_id'] ?? '');
     $ui->assign('gwVersion', $info['version'] ?? '');
+    $ui->assign('gwPluginVersion', GOWHATSAPP_PLUGIN_VERSION);
     $ui->assign('gwOs', $info['os'] ?? '');
     $ui->assign('_title', 'GoWhatsApp');
     $ui->assign('_system_menu', 'gowhatsapp');
@@ -153,6 +160,7 @@ function gowhatsapp_config()
     $ui->assign('gw_enabled', ($config['gowhatsapp_enabled'] ?? '') === 'yes');
     $ui->assign('gw_number', $config['gowhatsapp_number'] ?? '');
     $ui->assign('gw_api_key', $config['gowhatsapp_api_key'] ?? '');
+    $ui->assign('gwPluginVersion', GOWHATSAPP_PLUGIN_VERSION);
 
     $ui->assign('_title', 'GoWhatsApp Configuration');
     $ui->assign('_system_menu', 'gowhatsapp');

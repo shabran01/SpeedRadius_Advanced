@@ -90,7 +90,7 @@
 
 <div class="gwa-hero">
     <h2><i class="fa fa-sliders"></i> GoWhatsApp Configuration</h2>
-    <p class="sub">Point SpeedRadius at your self-hosted WhatsApp API, then scan once to link the device.</p>
+    <p class="sub">Point SpeedRadius at your self-hosted WhatsApp API, then scan once to link the device. <span class="gwa-chip">plugin v{$gwPluginVersion}</span></p>
 </div>
 
 <div class="gwa-grid">
