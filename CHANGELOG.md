@@ -2,6 +2,20 @@
 
  # CHANGELOG
 
+## [2.2.64] - 2026-10-12
+
+---
+
+### CHANGED: `GoWhatsAppGateway.php` is now tracked in git
+
+**`.gitignore`** — **`system/plugin/GoWhatsAppGateway.php`** — `version.json`, `CHANGELOG.md`, `changelog.html`
+
+The plugin was listed under *"Files with secrets (skipped from upload)"*, so `git pull` never delivered it. That caused three separate deployment failures: the GOWA rewrite sat on the development machine while the server kept running the old dimaskiddo plugin, which surfaced as **"Saved, but API authentication failed. Check URL and Basic Auth credentials."** — a string that no longer exists anywhere in the code.
+
+A credential scan found none: no hex runs over 24 characters, no base64 runs over 32, no `secret`, and the only literals are the `ThisIsUsername` / `ThisIsPassword` placeholders. Real credentials live in `tbl_appconfig`. The file is now versioned, so plugin changes ship with `git pull` like everything else.
+
+`gowaha.php` and `initiatePaybillStk.php` remain ignored — those have not been audited.
+
 ## [2.2.63] - 2026-10-12
 
 ---

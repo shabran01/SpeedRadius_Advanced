@@ -20,7 +20,11 @@ sync_to_github.php
 callback.php
 test_notifications.php
 nexum-chat.php
-system/plugin/GoWhatsAppGateway.php
+# GoWhatsAppGateway.php is deliberately TRACKED as of v2.2.64. It holds no
+# credentials - the only literals are the ThisIsUsername/ThisIsPassword
+# placeholders and the real values live in tbl_appconfig. While it was ignored,
+# every plugin fix needed a manual scp to each install and the server silently
+# kept running the old plugin.
 system/plugin/gowaha.php
 system/plugin/initiatePaybillStk.php
 
