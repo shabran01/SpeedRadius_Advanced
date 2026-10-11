@@ -277,12 +277,15 @@ function gowhatsapp_qr_image()
     $link = $config['gowhatsapp_qr_link'] ?? '';
     if ($link === '') {
         http_response_code(404);
+        header('Content-Type: text/plain');
+        echo 'No QR has been generated yet — click "Generate QR Code" first.';
         exit;
     }
 
+    $target = gowhatsapp_absolute_url($link);
     $ch = curl_init();
     curl_setopt_array($ch, [
-        CURLOPT_URL            => gowhatsapp_absolute_url($link),
+        CURLOPT_URL            => $target,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT        => 15,
         CURLOPT_CONNECTTIMEOUT => 8,
@@ -295,10 +298,20 @@ function gowhatsapp_qr_image()
     $img   = curl_exec($ch);
     $code  = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $ctype = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+    $cerr  = curl_error($ch);
     curl_close($ch);
 
     if ($code !== 200 || !$img) {
-        http_response_code(404);
+        // Surface the real reason as readable text instead of a bare 404, so a
+        // broken-image icon on the dashboard becomes diagnosable by opening
+        // this URL directly.
+        http_response_code($code >= 200 && $code < 600 ? $code : 502);
+        header('Content-Type: text/plain');
+        echo 'Could not fetch the QR image from GOWA.' . "\n"
+           . 'target: ' . $target . "\n"
+           . 'http_code: ' . $code . "\n"
+           . ($cerr !== '' ? 'curl_error: ' . $cerr . "\n" : '')
+           . 'response: ' . substr((string) $img, 0, 300);
         exit;
     }
 
