@@ -276,12 +276,47 @@ function gowhatsapp_qr_image()
 
     $link = $config['gowhatsapp_qr_link'] ?? '';
     if ($link === '') {
-        http_response_code(404);
+        // The dashboard may have rendered before the first /app/login returned.
+        // Generate one now so the image isn't dead on arrival.
+        gowhatsapp_get_qr(true);
+        $link = $config['gowhatsapp_qr_link'] ?? '';
+    }
+
+    $result = gowhatsapp_fetch_qr($link);
+
+    // The QR PNG lives only `qr_duration` seconds (GOWA's default is 30). If the
+    // cached link has expired, GOWA answers 404/410 — regenerate and retry once.
+    if ($result['code'] === 404 || $result['code'] === 410) {
+        gowhatsapp_get_qr(true);
+        $link2 = $config['gowhatsapp_qr_link'] ?? '';
+        if ($link2 !== '' && $link2 !== $link) {
+            $result = gowhatsapp_fetch_qr($link2);
+        }
+    }
+
+    if ($result['code'] !== 200 || $result['body'] === '') {
+        http_response_code($result['code'] >= 200 && $result['code'] < 600 ? $result['code'] : 502);
         header('Content-Type: text/plain');
-        echo 'No QR has been generated yet — click "Generate QR Code" first.';
+        echo 'Could not fetch the QR image from GOWA.' . "\n"
+           . 'target: ' . $result['target'] . "\n"
+           . 'http_code: ' . $result['code'] . "\n"
+           . ($result['error'] !== '' ? 'curl_error: ' . $result['error'] . "\n" : '')
+           . 'response: ' . substr((string) $result['body'], 0, 300);
         exit;
     }
 
+    header('Content-Type: ' . ($result['ctype'] !== '' ? $result['ctype'] : 'image/png'));
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    echo $result['body'];
+    exit;
+}
+
+function gowhatsapp_fetch_qr($link)
+{
+    if ($link === '') {
+        return ['code' => 404, 'body' => '', 'error' => '', 'ctype' => '', 'target' => '(no qr_link cached)'];
+    }
     $target = gowhatsapp_absolute_url($link);
     $ch = curl_init();
     curl_setopt_array($ch, [
@@ -295,31 +330,19 @@ function gowhatsapp_qr_image()
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_MAXREDIRS      => 3,
     ]);
-    $img   = curl_exec($ch);
+    $body  = curl_exec($ch);
     $code  = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $ctype = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-    $cerr  = curl_error($ch);
+    $err   = curl_error($ch);
     curl_close($ch);
 
-    if ($code !== 200 || !$img) {
-        // Surface the real reason as readable text instead of a bare 404, so a
-        // broken-image icon on the dashboard becomes diagnosable by opening
-        // this URL directly.
-        http_response_code($code >= 200 && $code < 600 ? $code : 502);
-        header('Content-Type: text/plain');
-        echo 'Could not fetch the QR image from GOWA.' . "\n"
-           . 'target: ' . $target . "\n"
-           . 'http_code: ' . $code . "\n"
-           . ($cerr !== '' ? 'curl_error: ' . $cerr . "\n" : '')
-           . 'response: ' . substr((string) $img, 0, 300);
-        exit;
-    }
-
-    header('Content-Type: ' . ($ctype ?: 'image/png'));
-    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-    header('Pragma: no-cache');
-    echo $img;
-    exit;
+    return [
+        'code'   => $code,
+        'body'   => $body === false ? '' : $body,
+        'error'  => $err,
+        'ctype'  => $ctype === false ? '' : $ctype,
+        'target' => $target,
+    ];
 }
 
 /** AJAX: quick send (text). */
