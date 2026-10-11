@@ -58,6 +58,24 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.67] - 2026-10-12
+
+---
+
+### FIXED: QR image URL was built with `?t=` after a URL that already ends in `?_route=`
+
+**`system/plugin/GoWhatsAppGateway.php`**
+
+`U` is defined as `APP_URL . '/?_route='`, but `gowhatsapp_qr_url()` appended the cache-buster with a second question mark:
+
+```
+?_route=plugin/gowhatsapp_qr_image?t=123
+```
+
+That glues `t=123` onto the route name, so the router looked for a function literally named `gowhatsapp_qr_image?t=123`, answered **Function not found**, and the `<img>` received a redirect to the dashboard instead of the PNG. The AJAX poll worked because it correctly used `&force=1`.
+
+The fix is `&t=` instead of `?t=`. This is why the QR never rendered despite the connection, device and template all being correct.
+
 ## [2.2.66] - 2026-10-12
 
 ---

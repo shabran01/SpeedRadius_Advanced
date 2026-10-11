@@ -772,7 +772,12 @@ function gowhatsapp_app_info()
 /** Absolute URL the browser loads the QR from (our own proxy route). */
 function gowhatsapp_qr_url($stamp = 0)
 {
-    return U . 'plugin/gowhatsapp_qr_image?t=' . ($stamp ?: time());
+    // U already ends in "?_route=", so the cache-buster must be a QUERY
+    // parameter appended with "&" — a second "?" would glue "t=123" onto the
+    // route name, so the router would look for a function literally named
+    // "gowhatsapp_qr_image?t=123", answer "Function not found", and the <img>
+    // would receive the dashboard instead of a PNG.
+    return U . 'plugin/gowhatsapp_qr_image&t=' . ($stamp ?: time());
 }
 
 /**
