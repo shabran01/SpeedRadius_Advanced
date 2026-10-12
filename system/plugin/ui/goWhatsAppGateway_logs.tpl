@@ -8,6 +8,10 @@
         <div class="row" style="margin-bottom: 15px;">
             <div class="col-md-8">
                 <form method="get" action="{$_url}plugin/gowhatsapp_logs" class="form-inline">
+                    {* A browser drops the query string already present in a form's action when
+                       it submits a GET, so _route has to be resubmitted or the search falls
+                       through to the dashboard instead of filtering the logs. *}
+                    <input type="hidden" name="_route" value="plugin/gowhatsapp_logs">
                     <div class="input-group">
                         <input type="text" name="search" class="form-control" placeholder="Search phone or message..." value="{$search}">
                         <span class="input-group-btn">
