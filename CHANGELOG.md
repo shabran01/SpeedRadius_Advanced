@@ -2,43 +2,6 @@
 
  # CHANGELOG
 
-## [2.2.72] - 2026-10-12
-
----
-
-### ADDED: M-WA Electron gateway — send notifications through the MWA-Electron desktop app
-
-**`system/plugin/MwaElectronGateway.php`** — **`system/plugin/ui/mwaElectron.tpl`** — **`system/plugin/ui/mwaElectron_config.tpl`** — **`system/plugin/ui/mwaElectron_logs.tpl`** — **`system/plugin/ui/mwaElectron_style.tpl`** — **`system/autoload/Message.php`**
-
-New optional WhatsApp gateway that talks to the Express API bundled in [MWA-Electron](https://github.com/fitri-hy/MWA-Electron):
-
-| Endpoint | Purpose |
-| --- | --- |
-| `GET /webhook/sessions` | Lists bot sessions and whether each is connected |
-| `POST /webhook/send-message` | `{sessionId, number, message}` — sends through Baileys |
-
-What it does:
-
-- Admin dashboard with reachability, session table, activity counters, recent sends and a quick-send box.
-- Config page with a session picker populated from the live session list, default country code, request timeout, optional extra header for a fronting proxy, and an optional message signature line.
-- Paginated message logs in `tbl_mwa_logs`, with search and a delete-all action.
-- `register_hook('send_whatsapp_mwa', ...)` so cron jobs can target M-WA specifically, plus a branch in `Message::sendWhatsapp()` that runs **after** GoWhatsApp — enabling both cannot silently change which sender notifications use.
-
-**Read the limits before enabling it.** MWA-Electron is a desktop application, not a service:
-
-1. Its API only answers while the app window is open. Close it and every notification fails.
-2. Bot sessions are started by hand under *M-WA → Bot → Connect*, and are **not** reconnected automatically on launch — after a restart the session reads `not_connected` until someone presses Connect.
-3. `POST /webhook/send-message` has **no authentication**. Never expose M-WA's port to the internet without an authenticating reverse proxy in front of it.
-4. MWA-Electron's multi-account *WhatsApp Web* feature is a set of Electron webviews and has no API at all — only the Baileys bot layer is reachable.
-
-Because of 1–3, a server-hosted gateway (GoWhatsApp / GOWA) remains the better primary for unattended billing reminders. Everything the plugin reports about a failure is phrased around those limits: an unreachable host, a `not_connected` session, a missing session id and a missing-app each produce a distinct, actionable message.
-
-### FIXED: GoWhatsApp log search silently landed on the dashboard
-
-**`system/plugin/ui/goWhatsAppGateway_logs.tpl`**
-
-The search box is a `GET` form, and a browser discards the query string already present in a form's `action` when submitting a GET. The route therefore vanished and the request fell through to the dashboard instead of filtering the logs. The form now resubmits `_route` as a hidden field.
-
 ## [2.2.71] - 2026-10-12
 
 ---
