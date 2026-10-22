@@ -1,6 +1,9 @@
 <?php
 
-// Ensure Logs Table Exists
+// Ensure Logs Table Exists.
+// utf8mb4, not utf8: every built-in alert template contains 4-byte emoji
+// (🔴 🟢 ⏰ ⏬) and a utf8mb3 column rejects those under strict SQL mode, which
+// loses the log row for every alert that was actually sent.
 if (!isTableExist('tbl_router_notif_logs')) {
     ORM::raw_execute("CREATE TABLE IF NOT EXISTS tbl_router_notif_logs (
         id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -9,7 +12,52 @@ if (!isTableExist('tbl_router_notif_logs')) {
         type VARCHAR(20) NOT NULL,
         recipients TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+}
+
+// ─── One-time schema repairs ─────────────────────────────────────────────────
+//  * tbl_routers.offline_since is used by this plugin only and no migration in
+//    the project ever created it, so on a fresh database the first offline event
+//    died on "Unknown column 'offline_since'" and the alert was never sent.
+//  * Log tables created by earlier versions are utf8mb3 and cannot hold emoji.
+// Guarded by a config flag so the ALTERs run once rather than on every request.
+$notif_schema = ORM::for_table('tbl_appconfig')->where('setting', 'router_notif_schema')->find_one();
+if (!$notif_schema || (string) $notif_schema->value !== '2') {
+    $schema_ok = true;
+
+    try {
+        ORM::raw_execute("ALTER TABLE tbl_router_notif_logs CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+    } catch (Exception $e) {
+        // Already utf8mb4, or the account cannot ALTER — never block the page.
+    }
+
+    try {
+        // SHOW COLUMNS rather than selecting the column: this never errors, so the
+        // check is correct regardless of the PDO error mode. Same idiom as
+        // system/controllers/plan.php.
+        $has_offline_since = ORM::for_table('tbl_routers')
+            ->raw_query("SHOW COLUMNS FROM tbl_routers LIKE 'offline_since'")
+            ->find_one();
+        if (!$has_offline_since) {
+            try {
+                ORM::raw_execute("ALTER TABLE tbl_routers ADD COLUMN offline_since DATETIME NULL DEFAULT NULL");
+            } catch (Exception $e2) {
+                // No ALTER privilege: leave the flag unset so the next request retries.
+                $schema_ok = false;
+            }
+        }
+    } catch (Exception $e) {
+        $schema_ok = false;
+    }
+
+    if ($schema_ok) {
+        if (!$notif_schema) {
+            $notif_schema = ORM::for_table('tbl_appconfig')->create();
+            $notif_schema->setting = 'router_notif_schema';
+        }
+        $notif_schema->value = '2';
+        $notif_schema->save();
+    }
 }
 
 register_hook('monitor_router_finished', 'plugin_router_status_notifier');
@@ -47,10 +95,12 @@ function plugin_router_status_notifier($args)
     // Check Status Change
     if ($prev_status !== 'offline' && $cur_status === 'offline') {
         $type = 'offline';
-        // Record offline_since for downtime tracking and cron reminders
+        // Record offline_since for downtime tracking and cron reminders.
+        // Wrapped: if the column is missing and could not be added, the alert must
+        // still go out rather than dying on the save.
         if (empty($router->offline_since)) {
             $router->offline_since = $current_time;
-            $router->save();
+            try { $router->save(); } catch (Exception $e) { /* keep notifying */ }
         }
         // NOW send the offline alert immediately (not just wait for cron)
     } elseif ($cur_status !== 'offline' && $prev_status === 'offline') {
@@ -59,7 +109,7 @@ function plugin_router_status_notifier($args)
         $was_offline_since = $router->offline_since;
         // Clear offline_since now that router is back
         $router->offline_since = null;
-        $router->save();
+        try { $router->save(); } catch (Exception $e) { /* keep notifying */ }
     } else {
         return; // No relevant change
     }
@@ -161,12 +211,19 @@ function router_status_notifier_cron()
     // Find routers that have been offline for >= delay_minutes
     $threshold = date('Y-m-d H:i:s', strtotime("-{$delay_minutes} minutes"));
 
-    $offline_routers = ORM::for_table('tbl_routers')
-        ->where_raw("LOWER(status) = 'offline'")
-        ->where_not_null('offline_since')
-        ->where_lte('offline_since', $threshold)
-        ->where('enabled', '1')
-        ->find_many();
+    try {
+        $offline_routers = ORM::for_table('tbl_routers')
+            ->where_raw("LOWER(status) = 'offline'")
+            ->where_not_null('offline_since')
+            ->where_lte('offline_since', $threshold)
+            ->where('enabled', '1')
+            ->find_many();
+    } catch (Exception $e) {
+        // tbl_routers.offline_since absent: the hook still sends, so just report
+        // and let the next cron run try again instead of fataling the job.
+        echo "[Router Notifier] Skipped: cannot read offline_since (" . $e->getMessage() . ")\n";
+        return;
+    }
 
     foreach ($offline_routers as $router) {
         // Skip ignored routers
@@ -340,9 +397,9 @@ function router_status_notifier_ui()
             $c_sim[$c['setting']] = $c['value'];
         }
 
-        // Defaults
-        $tpl_off = isset($c_sim['router_notif_tpl_offline']) ? $c_sim['router_notif_tpl_offline'] : "Router [[name]] ([[ip]]) is OFFLINE.\nTime: [[time]]";
-        $tpl_on = isset($c_sim['router_notif_tpl_online']) ? $c_sim['router_notif_tpl_online'] : "Router [[name]] ([[ip]]) is back ONLINE.\nTime: [[time]]";
+        // Defaults — same strings as the hook, so the simulation matches reality.
+        $tpl_off = isset($c_sim['router_notif_tpl_offline']) ? $c_sim['router_notif_tpl_offline'] : "🔴 Router [[name]] ([[ip]]) is OFFLINE.\n⏰ Time: [[time]]\n⏬ Downtime: [[downtime]]";
+        $tpl_on = isset($c_sim['router_notif_tpl_online']) ? $c_sim['router_notif_tpl_online'] : "🟢 Router [[name]] ([[ip]]) is back ONLINE.\n⏰ Time: [[time]]\n⏬ Downtime: [[downtime]]";
 
         $template = ($sim_type == 'offline') ? $tpl_off : $tpl_on;
 
@@ -409,11 +466,13 @@ function router_status_notifier_ui()
         $pconf[$c['setting']] = $c['value'];
     }
 
-    // Set defaults if not set
+    // Set defaults if not set. These must match the fallbacks in
+    // plugin_router_status_notifier() exactly — otherwise the Settings page shows
+    // one message while first-run alerts send a different one.
     if (!isset($pconf['router_notif_tpl_offline']))
-        $pconf['router_notif_tpl_offline'] = "ALERT: Router [[name]] ([[ip]]) has been OFFLINE for [[downtime]].\nFirst detected: [[time]]";
+        $pconf['router_notif_tpl_offline'] = "🔴 Router [[name]] ([[ip]]) is OFFLINE.\n⏰ Time: [[time]]\n⏬ Downtime: [[downtime]]";
     if (!isset($pconf['router_notif_tpl_online']))
-        $pconf['router_notif_tpl_online'] = "Router [[name]] ([[ip]]) is back ONLINE.\nTime: [[time]]";
+        $pconf['router_notif_tpl_online'] = "🟢 Router [[name]] ([[ip]]) is back ONLINE.\n⏰ Time: [[time]]\n⏬ Downtime: [[downtime]]";
     if (!isset($pconf['router_notif_flap_seconds']))
         $pconf['router_notif_flap_seconds'] = 300;
     if (!isset($pconf['router_notif_recipients']))

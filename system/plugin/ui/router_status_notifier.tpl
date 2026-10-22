@@ -1,4 +1,15 @@
-t{include file="sections/header.tpl"}
+{include file="sections/header.tpl"}
+
+{* Early, so the logs table is styled on first paint instead of repainting when the
+   stylesheet finally arrives at the bottom of the document. *}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+
+{* The alert sits outside the tab panes on purpose: saving Settings re-renders the
+   page on the #dashboard tab, so a message rendered inside that pane was never
+   actually seen. *}
+{if isset($notify)}
+    <div class="alert alert-{$notify_type}">{$notify}</div>
+{/if}
 
 <div class="row">
     <div class="col-md-12">
@@ -14,11 +25,6 @@ t{include file="sections/header.tpl"}
                 <div class="tab-pane active" id="dashboard">
                     <div class="row">
                         <div class="col-md-6 col-md-offset-3">
-                            {if isset($notify)}
-                                <div class="alert alert-{$notify_type}">
-                                    {$notify}
-                                </div>
-                            {/if}
                             <div class="panel panel-default">
                                 <div class="panel-heading">Test Notification</div>
                                 <div class="panel-body">
@@ -66,6 +72,9 @@ t{include file="sections/header.tpl"}
                     <div class="panel panel-default">
                         <div class="panel-heading">Recent Notifications</div>
                         <div class="panel-body">
+                            {* Without this wrapper a five-column table forces the whole page
+                               into horizontal scroll on a phone. *}
+                            <div class="table-responsive">
                             <table class="table table-bordered table-striped" id="logs_table">
                                 <thead>
                                     <tr>
@@ -96,14 +105,18 @@ t{include file="sections/header.tpl"}
                                     {/foreach}
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- SETTINGS TAB -->
                 <div class="tab-pane" id="settings">
-                    <forminput type="hidden" name="csrf_token" value="{$csrf_token}">
-                        < method="post" action="">
+                    {* The original markup opened this pane with two malformed tags, so no
+                       form element was ever created: "Save Settings" had nothing to submit
+                       and the CSRF token was never sent. *}
+                    <form method="post" action="">
+                        <input type="hidden" name="csrf_token" value="{$csrf_token}">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="panel panel-default">
@@ -122,7 +135,7 @@ t{include file="sections/header.tpl"}
                                         <div class="form-group">
                                             <label>Offline Grace Period (Minutes)</label>
                                             <input type="number" class="form-control" name="router_notif_offline_delay" value="{$pconf.router_notif_offline_delay}" min="1">
-                                            <p class="help-block">Wait this many minutes of confirmed downtime before sending the SMS alert. Default: 3 minutes.</p>
+                                            <p class="help-block">Backstop only. The alert is sent the moment the monitor reports a router offline; this delay is how long the cron waits before re-checking for any router it may have missed. Default: 3 minutes.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -173,16 +186,22 @@ t{include file="sections/header.tpl"}
     </div>
 </div>
 
-{include file="sections/footer.tpl"}
-<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+{* Everything below runs before the footer include so the document is not emitted
+   past </body></html>. `defer` keeps DataTables from evaluating before jQuery, which
+   footer.tpl loads; the inline block then waits for DOMContentLoaded, which fires
+   only after all deferred scripts have run. *}
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js" defer></script>
 <script>
-    $(document).ready(function() {
-        $('.select2').select2();
-        if ($.fn.DataTable) {
-            $('#logs_table').DataTable({
-                "order": [[ 0, "desc" ]]
-            });
-        }
-    });
+{literal}
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof jQuery === 'undefined') return;
+    var $ = jQuery;
+    if ($.fn.select2) { $('.select2').select2(); }
+    if ($.fn.DataTable && document.getElementById('logs_table')) {
+        $('#logs_table').DataTable({ order: [[0, 'desc']], pageLength: 25 });
+    }
+});
+{/literal}
 </script>
+
+{include file="sections/footer.tpl"}

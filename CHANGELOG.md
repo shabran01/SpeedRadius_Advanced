@@ -2,6 +2,27 @@
 
  # CHANGELOG
 
+## [2.2.73] - 2026-10-22
+
+---
+
+### FIXED: Router Status Notifier — Settings could not be saved, and alerts could not be logged
+
+**`system/plugin/ui/router_status_notifier.tpl`** — **`system/plugin/router_status_notifier.php`**
+
+- **The Settings tab was not a form.** It opened with `<forminput type="hidden" ...>` followed by `< method="post" action="">`, so no `form` element existed: "Save Settings" had nothing to submit and the CSRF token was never sent. Every setting was unreachable from the UI. Now a real `<form method="post">` whose first field is the token.
+- **`tbl_router_notif_logs` was created as `CHARSET=utf8` (utf8mb3)** while every built-in template contains 4-byte emoji (`🔴 🟢 ⏰ ⏬`). Under strict SQL mode the log INSERT failed with *Incorrect string value*, so the alert was sent but never recorded — the Logs tab stayed empty. New tables use `utf8mb4`; existing ones are converted once.
+- **`tbl_routers.offline_since` had no migration.** Nothing outside this plugin referenced it, so on a fresh database the first offline event died on *Unknown column 'offline_since'*. The column is now added on first load using `SHOW COLUMNS` (the idiom already used in `plan.php`), and both `save()` calls plus the cron query are guarded so a missing column degrades instead of fataling the notification path.
+- **A stray `t` preceded `{include file="sections/header.tpl"}`,** printing a lone character above every page.
+- **The status alert rendered only inside the Dashboard tab,** so saving Settings reported its result on a tab the user had already left. It now sits above the tab panes.
+
+Responsiveness and consistency in the same page:
+
+- The five-column logs table is wrapped in `.table-responsive`; it previously forced the whole page into horizontal scroll on a phone.
+- The DataTables stylesheet loads at the top of the page body instead of after `</body></html>`, removing the unstyled-then-restyled flash. Its script is `defer`red and the initialiser waits for `DOMContentLoaded`, so it still runs after the jQuery and select2 that `footer.tpl` loads.
+- Settings defaults and the template simulator now use the same strings as the hook, so the preview matches what is actually sent.
+- The *Offline Grace Period* help text now describes the real behaviour: the alert fires immediately, and the delay only governs the cron backstop.
+
 ## [2.2.71] - 2026-10-12
 
 ---
