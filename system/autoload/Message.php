@@ -108,15 +108,6 @@ class Message
             }
         }
 
-        // M-WA Electron (desktop bot API) — deliberately placed after GoWhatsApp so
-        // enabling both does not silently change which sender notifications use.
-        if (($config['mwa_enabled'] ?? '') === 'yes' && !empty($config['mwa_url']) && function_exists('mwa_electron_hook_send')) {
-            $result = call_user_func('mwa_electron_hook_send', [$phone, $txt]);
-            if ($result !== false) {
-                return true;
-            }
-        }
-
         // ApiWap (Cloud) — fallback if GoWhatsApp not configured
         if (!empty($config['apiwap_enabled']) && $config['apiwap_enabled'] === 'yes' && !empty($config['apiwap_api_key']) && function_exists('apiwap_hook_send')) {
             $result = call_user_func('apiwap_hook_send', [$phone, $txt]);
