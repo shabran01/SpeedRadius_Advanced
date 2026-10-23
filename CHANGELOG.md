@@ -2,23 +2,24 @@
 
  # CHANGELOG
 
-## [2.2.74] - 2026-10-23
+## [2.2.75] - 2026-10-23
 
 ---
 
-### IMPROVED: Traffic Monitor — security, resilience and totals
+### FIXED: Traffic Monitor UI restored — 2.2.74's front-end rewrite reverted, server-side hardening kept
 
-**`system/plugin/traffic_monitor.php`** — **`system/plugin/ui/traffic_monitor.tpl`** — **`ui/ui/scripts/chart.umd.min.js`**
+**`system/plugin/ui/traffic_monitor.tpl`** — **`system/plugin/traffic_monitor.php`**
 
-- **Security:** `traffic_monitor_get_data()` now calls `_admin()`. `plugin.php` performs no auth itself and every other route guards itself, so the data endpoint was previously readable by anyone who could reach the billing server — it exposed live per-interface bandwidth. It also releases the session lock (`session_write_close`) so the polling loop no longer serialises against the page that opened it.
-- **Resilience:** the page no longer white-screens when the selected router is down or has no readable interfaces — the interface fetch is wrapped and the failure renders as an in-page banner. A bad or empty router id now falls back to the first enabled router instead of a PHP notice. A new error banner surfaces poll failures (previously they were only `console.log`ged).
-- **Totals:** the endpoint now returns the cumulative `rx-bytes` / `tx-bytes` that `/interface/monitor-traffic` already provides, and the UI shows **Total RX / Total TX** alongside peak and sample counts.
-- **Interface sanitizer fixed:** it previously stripped `_` (so `wan_pppoe` never matched) and allowed path characters; it now whitelists `[A-Za-z0-9_.-]`.
-- **Offline-safe assets:** Chart.js is vendored locally (`ui/ui/scripts/chart.umd.min.js`) instead of fetched from jsdelivr, and the chart initialisation is guarded so a missing asset degrades gracefully instead of killing the script.
-- **No more double Tailwind:** the page no longer loads the Tailwind CDN a second time (header.tpl already loads it); it only overrides the config to disable preflight.
-- **Scoped CSS:** the `::-webkit-scrollbar` rules are now confined to `#tm-app` instead of restyling scrollbars across the whole admin.
-- **Correct menu highlight:** `_system_menu` is `settings` (the bucket the `AFTER_SETTINGS` menu lives in) instead of the non-matching `'Traffic Monitor'`.
-- Poll interval raised 1s → 2s, halving the number of new RouterOS connections per minute. Dead `traffic_monitor_format_bytes()` helper removed.
+The 2.2.74 front-end changes (locally vendored Chart.js, extra stat tiles, error banner, doubled poll interval) are reverted. The template is restored byte-for-byte to its previous working state: Tailwind and Chart.js come from CDN again and the poll runs at 1s. The vendored `ui/ui/scripts/chart.umd.min.js` is removed.
+
+Kept from 2.2.74, because these are server-side only and cannot affect how the page renders:
+
+- `traffic_monitor_get_data()` now calls `_admin()`. `plugin.php` performs no authentication itself, so this endpoint was previously readable by anyone who could reach the billing server, exposing live per-interface bandwidth.
+- It releases the session lock (`session_write_close`) so the poll loop does not serialise against the page that opened it.
+- Reading the interface list is wrapped in try/catch, so an unreachable router no longer throws and blanks the page.
+- A bad or empty router id falls back to the first enabled router instead of raising a PHP notice on `$routers[0]['id']`.
+- The interface-name filter whitelists `[A-Za-z0-9_.-]`; it previously stripped `_` and allowed path characters.
+- Dead `traffic_monitor_format_bytes()` helper removed.
 
 ## [2.2.73] - 2026-10-22
 
