@@ -58,6 +58,24 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.76] - 2026-10-23
+
+---
+
+### IMPROVED: Traffic Monitor — totals, error banner, 2s poll (asset loading untouched)
+
+**`system/plugin/ui/traffic_monitor.tpl`**
+
+Five changes, deliberately restricted to things that cannot affect how Tailwind or Chart.js load:
+
+- **Total RX / Total TX tiles** — the data endpoint already returned the cumulative `rx-bytes` / `tx-bytes` counters; the page now shows them formatted (B/KB/MB/GB/TB) beside Peak RX, Peak TX and Samples.
+- **Error banner** — a failed poll now displays *"Cannot reach the router. Is it online?"* instead of silently freezing the counters. It clears on the next successful sample, on Clear, and when the interface changes.
+- **Poll interval 1s → 2s**, halving the number of new RouterOS connections per minute.
+- **Scrollbar CSS scoped to `#tm-app`** — it previously restyled the scrollbars of the whole admin while the page was open.
+- The stats row now wraps (`flex-wrap`) so five tiles cannot overflow on narrower screens.
+
+Tailwind and Chart.js are still loaded from their CDNs exactly as before, and the chart configuration is unchanged. `_system_menu` already reads `settings` from 2.2.74, so the sidebar highlight is already correct.
+
 ## [2.2.75] - 2026-10-23
 
 ---
