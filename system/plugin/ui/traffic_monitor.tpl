@@ -1,6 +1,6 @@
 ﻿{include file="sections/header.tpl"}
-<!-- Tailwind CDN - preflight disabled to avoid Bootstrap conflicts -->
-<script src="https://cdn.tailwindcss.com"></script>
+{* Tailwind is already loaded by header.tpl; only override its config here so the
+   Bootstrap/AdminLTE reset is disabled on this page. *}
 <script>tailwind.config = {literal}{ corePlugins: { preflight: false } }{/literal};</script>
 <style>
 {literal}
@@ -33,10 +33,11 @@
     .tm-stat-lbl { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:2px; }
     .tm-stat-val { font-size:18px; font-weight:800; line-height:1; }
 
-    /* Scrollbar */
-    ::-webkit-scrollbar{width:5px;height:5px}
-    ::-webkit-scrollbar-track{background:#f1f5f9}
-    ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+    /* Scrollbar — scoped to this page's container so it doesn't restyle the
+       scrollbars of the surrounding admin chrome. */
+    #tm-app ::-webkit-scrollbar{width:5px;height:5px}
+    #tm-app ::-webkit-scrollbar-track{background:#f1f5f9}
+    #tm-app ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
 {/literal}
 </style>
 
@@ -53,9 +54,18 @@
                 <span class="tm-pulse animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            Live &bull; updates every 1s
+            Live &bull; updates every 2s
         </div>
     </div>
+
+    {* Page-load failure (e.g. router down, no interfaces readable). *}
+    {if $ifaceError}
+    <div class="mb-6 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-sm font-medium px-4 py-3">
+        &#9888; {$ifaceError}
+    </div>
+    {/if}
+    {* Poll failure — filled in by the fetch loop so errors are visible, not just logged. *}
+    <div id="tm-error" class="hidden mb-6 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-sm font-medium px-4 py-3"></div>
 
     <!-- Router Tabs -->
     <div class="flex flex-wrap gap-2 mb-6">
@@ -77,7 +87,7 @@
                 {/foreach}
             </select>
         </div>
-        <div class="flex gap-3">
+        <div class="flex flex-wrap gap-3">
             <div class="tm-stat">
                 <div class="tm-stat-lbl" style="color:#0ea5e9">Peak RX</div>
                 <div class="tm-stat-val" id="peak-rx" style="color:#0369a1">&mdash;</div>
@@ -85,6 +95,14 @@
             <div class="tm-stat">
                 <div class="tm-stat-lbl" style="color:#8b5cf6">Peak TX</div>
                 <div class="tm-stat-val" id="peak-tx" style="color:#6d28d9">&mdash;</div>
+            </div>
+            <div class="tm-stat">
+                <div class="tm-stat-lbl" style="color:#0d9488">Total RX</div>
+                <div class="tm-stat-val" id="total-rx" style="color:#0f766e">&mdash;</div>
+            </div>
+            <div class="tm-stat">
+                <div class="tm-stat-lbl" style="color:#c026d3">Total TX</div>
+                <div class="tm-stat-val" id="total-tx" style="color:#a21caf">&mdash;</div>
             </div>
             <div class="tm-stat">
                 <div class="tm-stat-lbl" style="color:#64748b">Samples</div>
@@ -141,7 +159,7 @@
 
 </div><!-- /tm-app -->
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="ui/ui/scripts/chart.umd.min.js"></script>
 <script>
     var tmBaseUrl = '{$_url}';
     var tmRouter  = '{$router}';
@@ -154,8 +172,10 @@
     var txData      = Array(MAX_POINTS).fill(0);
     var peakRx = 0, peakTx = 0, sampleCount = 0;
 
-    var ctx = document.getElementById('trafficChart').getContext('2d');
-    var chart = new Chart(ctx, {
+    var chart = null;
+    if (typeof Chart !== 'undefined' && document.getElementById('trafficChart')) {
+        var ctx = document.getElementById('trafficChart').getContext('2d');
+        chart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: chartLabels,
@@ -203,6 +223,7 @@
             }
         }
     });
+    }
 
     function fmtSpeed(bps) {
         if (!bps) return '0 bps';
@@ -212,15 +233,40 @@
         return Math.round(bps) + ' bps';
     }
 
+    function fmtBytes(b) {
+        b = parseInt(b) || 0;
+        if (b >= 1e12) return (b / 1e12).toFixed(2) + ' TB';
+        if (b >= 1e9)  return (b / 1e9).toFixed(2) + ' GB';
+        if (b >= 1e6)  return (b / 1e6).toFixed(2) + ' MB';
+        if (b >= 1e3)  return (b / 1e3).toFixed(2) + ' KB';
+        return b + ' B';
+    }
+
+    function showError(msg) {
+        var el = document.getElementById('tm-error');
+        if (!el) return;
+        el.textContent = '\u26A0 ' + msg;
+        el.classList.remove('hidden');
+    }
+    function hideError() {
+        var el = document.getElementById('tm-error');
+        if (el) el.classList.add('hidden');
+    }
+
     function resetAll() {
         rxData.fill(0); txData.fill(0); chartLabels.fill('');
         peakRx = 0; peakTx = 0; sampleCount = 0;
         document.getElementById('peak-rx').textContent = '\u2014';
         document.getElementById('peak-tx').textContent = '\u2014';
+        document.getElementById('total-rx').textContent = '\u2014';
+        document.getElementById('total-tx').textContent = '\u2014';
         document.getElementById('sample-count').textContent = '0';
+        document.getElementById('rx-speed').textContent = '0 bps';
+        document.getElementById('tx-speed').textContent = '0 bps';
         document.getElementById('rx-bar').style.width = '0%';
         document.getElementById('tx-bar').style.width = '0%';
-        chart.update();
+        hideError();
+        if (chart) chart.update();
     }
 
     function fetchData() {
@@ -228,7 +274,11 @@
         fetch(tmBaseUrl + 'plugin/traffic_monitor_get_data/' + tmRouter + '?interface=' + encodeURIComponent(ifaceName))
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                if (data.error || !data.rows || !data.rows.tx || !data.rows.rx) return;
+                if (data.error || !data.rows || !data.rows.tx || !data.rows.rx) {
+                    showError(data.error || 'No traffic data returned');
+                    return;
+                }
+                hideError();
                 var rx  = parseInt(data.rows.rx[0]) || 0;
                 var tx  = parseInt(data.rows.tx[0]) || 0;
                 var lbl = data.labels[0] || '';
@@ -237,6 +287,11 @@
                 if (tx > peakTx) { peakTx = tx; document.getElementById('peak-tx').textContent = fmtSpeed(tx); }
                 sampleCount++;
                 document.getElementById('sample-count').textContent = sampleCount;
+
+                if (data.totals) {
+                    document.getElementById('total-rx').textContent = fmtBytes(data.totals.rx);
+                    document.getElementById('total-tx').textContent = fmtBytes(data.totals.tx);
+                }
 
                 document.getElementById('rx-speed').textContent = fmtSpeed(rx);
                 document.getElementById('tx-speed').textContent = fmtSpeed(tx);
@@ -247,16 +302,19 @@
                 chartLabels.push(lbl); chartLabels.shift();
                 rxData.push(rx);       rxData.shift();
                 txData.push(tx);       txData.shift();
-                chart.update('none');
+                if (chart) chart.update('none');
             })
-            .catch(function(e) { console.error('Traffic fetch error:', e); });
+            .catch(function(e) {
+                console.error('Traffic fetch error:', e);
+                showError('Cannot reach the router. Is it online?');
+            });
     }
 
     document.getElementById('iface-select').addEventListener('change', resetAll);
     document.getElementById('btn-clear').addEventListener('click', resetAll);
 
     fetchData();
-    setInterval(fetchData, 1000);
+    setInterval(fetchData, 2000);
 {/literal}
 </script>
 {include file="sections/footer.tpl"}
