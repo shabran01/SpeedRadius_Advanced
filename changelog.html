@@ -58,6 +58,18 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.79] - 2026-10-26
+
+---
+
+### REVERT: Overdue Alert restored to its original v2.2.76 form
+
+**`system/plugin/overdue_alert.php`** — **`system/plugin/ui/overdue_alert.tpl`** — **`ui/lib/c/overdue_alert.js`** — **`ui/lib/c/overdue_alert.css`**
+
+All four files are restored byte-for-byte to their state at v2.2.76. The 2.2.77 fixes (DataTables loading, `tbl_user_recharges` source, last-day visibility, output escaping, redirect correction, configurable window) and the 2.2.78 redesign are withdrawn.
+
+Consequences, as before 2.2.77: the page does not load DataTables, so the search/sort/pagination and the PPPoE/Hotspot filter buttons do not initialise; the list is built from `tbl_transactions`; customers expiring on their final day are omitted; customer fields are output without escaping. Reapply the 2.2.77/2.2.78 changes if those need to be restored.
+
 ## [2.2.78] - 2026-10-26
 
 ---
