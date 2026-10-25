@@ -373,9 +373,6 @@
                                                 <div style="font-weight: 600; color: #495057; font-size: 12px;">
                                                     {$ds.expiration|date_format:"%d %b %Y"}
                                                 </div>
-                                                <div style="font-size: 10px; color: #6c757d;">
-                                                    {$ds.expiration|date_format:"%H:%M"}
-                                                </div>
                                             </td>
                                             <td>
                                                 <span class="days-badge {if $days_left <= 2}days-critical{elseif $days_left <= 4}days-warning{else}days-caution{/if}">

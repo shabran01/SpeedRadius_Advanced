@@ -1,4 +1,9 @@
 $(document).ready(function() {
+    // The table only exists when there are overdue customers to show
+    if ($('#overdue_table').length === 0) {
+        return;
+    }
+
     // Initialize modern DataTable with exactly 10 customers per page
     var $overdueTable = $('#overdue_table').DataTable({
         "responsive": true,

@@ -58,6 +58,25 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.80] - 2026-10-26
+
+---
+
+### FIXED: Overdue Alert returned an empty list (wrong data source)
+
+**`system/plugin/overdue_alert.php`** — **`system/plugin/ui/overdue_alert.tpl`** — **`ui/lib/c/overdue_alert.js`**
+
+The list was built from `tbl_transactions` (payment history, which stores the expiry of each past top-up), so it almost always returned zero rows, and any rows it did return were stale or duplicated.
+
+- **Data source** — query now reads `tbl_user_recharges` (current active packages, `status = 'on'`), joined to `tbl_customers` on `customer_id`.
+- **Window** — expirations are included from today (not tomorrow), so customers expiring on their final day are shown.
+- **Days-left** — computed with a date diff (`0` = today … `5`), replacing the wall-clock calculation that dropped same-day expirations.
+- **Plan name** — mapped from `namebp` to `plan_name` for the template.
+- **Dedup** — one row per customer (earliest expiring active package).
+- **Redirect** — not-found link corrected to `plugin/overdue_alert`.
+- **Template** — removed the misleading `00:00` time under each date (`expiration` is date-only).
+- **JS** — DataTables now guards against a missing table on the "All Clear!" empty state.
+
 ## [2.2.79] - 2026-10-26
 
 ---

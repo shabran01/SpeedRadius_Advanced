@@ -24,37 +24,57 @@ function overdue_alert()
         if ($customer) {
             r2(U . 'customers/view/' . $customer['id']);
         } else {
-            r2(U . 'overdue_alert', 'e', 'Customer not found');
+            r2(U . 'plugin/overdue_alert', 'e', 'Customer not found');
         }
     }
 
     $today = date('Y-m-d');
-    $tomorrow = date('Y-m-d', strtotime('+1 day'));
     $five_days_later = date('Y-m-d', strtotime('+5 days'));
 
-    $d = ORM::for_table('tbl_transactions')
-        ->select('tbl_transactions.*')
-        ->select('tbl_customers.id')
-        ->select('tbl_customers.fullname')
-        ->select('tbl_customers.phonenumber')
-        ->select('tbl_customers.email')
-        ->select('tbl_customers.service_type')
-        ->join('tbl_customers', array('tbl_transactions.username', '=', 'tbl_customers.username'))
-        ->where_gte('expiration', $tomorrow) // Only show from tomorrow onwards
-        ->where_lte('expiration', $five_days_later)
-        ->where('tbl_customers.status', 'Active')
-        ->order_by_desc('expiration')
+    // Active packages (tbl_user_recharges.status = 'on') expiring in the next 5 days.
+    // We use tbl_user_recharges (current active packages), not tbl_transactions (payment
+    // history), because transactions only store the expiry date of each past top-up and
+    // therefore return stale/duplicate rows.
+    $d = ORM::for_table('tbl_user_recharges')
+        ->table_alias('ur')
+        ->select('ur.username', 'username')
+        ->select('ur.namebp', 'plan_name')
+        ->select('ur.expiration', 'expiration')
+        ->select('ur.type', 'type')
+        ->select('c.id', 'id')
+        ->select('c.fullname', 'fullname')
+        ->select('c.phonenumber', 'phonenumber')
+        ->select('c.email', 'email')
+        ->select('c.service_type', 'service_type')
+        ->join('tbl_customers', array('ur.customer_id', '=', 'c.id'), 'c')
+        ->where('ur.status', 'on')
+        ->where_gte('ur.expiration', $today)
+        ->where_lte('ur.expiration', $five_days_later)
+        ->where('c.status', 'Active')
+        ->order_by_asc('ur.expiration')
         ->find_many();
 
-    // Filter out any records with less than 1 day remaining
+    // One row per customer (keep the earliest expiring active package).
+    // days_left: 0 = expiring today, 1 = tomorrow, ... 5 = in 5 days.
+    $today_dt = new DateTime($today);
+    $seen = array();
     $filtered_d = array();
     foreach ($d as $record) {
-        $days_left = (int) ceil((strtotime($record['expiration']) - time()) / 86400);
-        if ($days_left >= 1) {
-            $row = $record->as_array();
-            $row['days_left'] = $days_left;
-            $filtered_d[] = $row;
+        $customer_id = $record->id;
+        if (isset($seen[$customer_id])) {
+            continue;
         }
+        $seen[$customer_id] = true;
+
+        $exp = new DateTime($record->expiration);
+        $days_left = (int) $today_dt->diff($exp)->format('%r%a');
+        if ($days_left < 0) {
+            $days_left = 0;
+        }
+
+        $row = $record->as_array();
+        $row['days_left'] = $days_left;
+        $filtered_d[] = $row;
     }
 
     $ui->assign('d', $filtered_d);
