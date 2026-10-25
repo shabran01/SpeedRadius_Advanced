@@ -5,6 +5,7 @@ $(document).ready(function () {
         lengthChange: false,
         order: [[4, 'asc']],
         pagingType: 'full_numbers',
+        autoWidth: false,
         columnDefs: [
             {
                 "targets": 6, // Actions
@@ -43,21 +44,10 @@ $(document).ready(function () {
         }
     });
 
-    // PPPoE / Hotspot filter buttons (column 7 holds the service type)
-    $(document).on('click', '.btn-filter', function () {
-        $('.btn-filter').removeClass('active');
+    // Service-type filter chips (column 7 holds the service type)
+    $(document).on('click', '.oa-chip', function () {
+        $('.oa-chip').removeClass('active');
         $(this).addClass('active');
         $overdueTable.column(7).search($(this).data('filter') || '').draw();
     });
-
-    // Small click animation on action buttons
-    $(document).on('click', '.btn-modern', function () {
-        var $this = $(this);
-        $this.addClass('animate-click');
-        setTimeout(function () {
-            $this.removeClass('animate-click');
-        }, 150);
-    });
-
-    $('[data-toggle="tooltip"]').tooltip();
 });

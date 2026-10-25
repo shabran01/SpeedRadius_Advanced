@@ -58,6 +58,24 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.78] - 2026-10-26
+
+---
+
+### IMPROVED: Overdue Alert — modern, responsive, clean UI
+
+**`system/plugin/ui/overdue_alert.tpl`** — **`ui/lib/c/overdue_alert.css`** — **`ui/lib/c/overdue_alert.js`**
+
+The page's red/purple gradients and hardcoded inline styles are replaced with a neutral, modern design. No functional change: same query, window selector, filters and columns.
+
+- **New palette** — white surfaces on a neutral background, slate/indigo accents, severity communicated by a thin 3px inset bar and a soft dot badge instead of loud gradient headers.
+- **Stats** — four bordered cards with a colored top accent, neutral numbers, responsive 4 → 2 → 2 grid.
+- **Card layout** — title/subtitle and the window selector share a flex header that wraps cleanly on mobile; filter chips are neutral pills with a dark active state.
+- **Table** — quiet uppercase headers, one hairline per row, subtle hover and severity tints; horizontal scroll with a 780px min-width on phones instead of squeezing eight columns.
+- **Controls** — rounded search input (full width on mobile), pill pagination, outline "View" buttons.
+- **Dark mode** — full `modern-skin-dark` variable overrides for surfaces, borders, badges, chips, inputs and pagination.
+- All page CSS now lives in `ui/lib/c/overdue_alert.css`; the large inline `<style>` block is gone.
+
 ## [2.2.77] - 2026-10-26
 
 ---
