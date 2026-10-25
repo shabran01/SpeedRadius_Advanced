@@ -268,59 +268,51 @@
             <!-- Header Section -->
             <div class="overdue-header">
                 <i class="fa fa-clock-o overdue-icon"></i>
-                <h1><i class="fa fa-exclamation-triangle"></i> Overdue Alert System</h1>
-                <p>Customers expiring in the next 5 days - Take action to prevent service interruption</p>
+                <h1><i class="fa fa-exclamation-triangle"></i> {Lang::T('Overdue Alert System')}</h1>
+                <p>{Lang::T('Customers expiring in the next')} {$days} {Lang::T('days')} - {Lang::T('Take action to prevent service interruption')}</p>
             </div>
 
-            <!-- Statistics Cards -->
+            <!-- Statistics Cards (computed in PHP to avoid O(n) template loops) -->
             <div class="stats-cards">
                 <div class="stat-card">
-                    <div class="stat-number">{count($d)}</div>
-                    <div class="stat-label">Total Overdue</div>
+                    <div class="stat-number">{$stats.total}</div>
+                    <div class="stat-label">{Lang::T('Total Expiring')}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">
-                        {assign var="critical" value=0}
-                        {foreach $d as $ds}
-                            {if $ds.days_left <= 2}{assign var="critical" value=$critical+1}{/if}
-                        {/foreach}
-                        {$critical}
-                    </div>
-                    <div class="stat-label">Critical (≤2 days)</div>
+                    <div class="stat-number">{$stats.critical}</div>
+                    <div class="stat-label">{Lang::T('Critical')} (&le;2 {Lang::T('days')})</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">
-                        {assign var="warning" value=0}
-                        {foreach $d as $ds}
-                            {if $ds.days_left >= 3 && $ds.days_left <= 4}{assign var="warning" value=$warning+1}{/if}
-                        {/foreach}
-                        {$warning}
-                    </div>
-                    <div class="stat-label">Warning (3-4 days)</div>
+                    <div class="stat-number">{$stats.warning}</div>
+                    <div class="stat-label">{Lang::T('Warning')} (3-4 {Lang::T('days')})</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">
-                        {assign var="caution" value=0}
-                        {foreach $d as $ds}
-                            {if $ds.days_left == 5}{assign var="caution" value=$caution+1}{/if}
-                        {/foreach}
-                        {$caution}
-                    </div>
-                    <div class="stat-label">Caution (5 days)</div>
+                    <div class="stat-number">{$stats.caution}</div>
+                    <div class="stat-label">{Lang::T('Caution')} (5+ {Lang::T('days')})</div>
                 </div>
             </div>
 
             <!-- Main Table -->
             <div class="modern-table-container">
-                <div class="table-header">
-                    <h3><i class="fa fa-users"></i> Customer Overdue List</h3>
+                <div class="table-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <h3 style="margin:0;"><i class="fa fa-users"></i> {Lang::T('Customers Expiring Soon')}</h3>
+                    <form method="get" action="" style="display:flex;align-items:center;gap:8px;margin:0;">
+                        <input type="hidden" name="_route" value="plugin/overdue_alert">
+                        <label for="days" style="margin:0;font-size:12px;font-weight:600;color:#fff;">{Lang::T('Show next')}</label>
+                        <select id="days" name="days" onchange="this.form.submit()"
+                                style="border:none;border-radius:6px;padding:5px 8px;font-size:12px;color:#495057;background:#fff;">
+                            {foreach $dayOptions as $opt}
+                                <option value="{$opt}"{if $opt == $days} selected{/if}>{$opt} {Lang::T('days')}</option>
+                            {/foreach}
+                        </select>
+                    </form>
                 </div>
                 <div class="table-body">
                     {if count($d) > 0}
                         <!-- Service Type Filter Buttons -->
                         <div class="service-filter-bar" style="margin-bottom:16px;">
-                            <span style="font-size:12px;font-weight:600;color:#6c757d;margin-right:10px;text-transform:uppercase;letter-spacing:.5px;">Filter:</span>
-                            <button class="btn-filter active" data-filter="">All</button>
+                            <span style="font-size:12px;font-weight:600;color:#6c757d;margin-right:10px;text-transform:uppercase;letter-spacing:.5px;">{Lang::T('Filter')}:</span>
+                            <button class="btn-filter active" data-filter="">{Lang::T('All')}</button>
                             <button class="btn-filter" data-filter="PPPoE"><i class="fa fa-plug"></i> PPPoE</button>
                             <button class="btn-filter" data-filter="Hotspot"><i class="fa fa-wifi"></i> Hotspot</button>
                         </div>
@@ -328,70 +320,67 @@
                             <table id="overdue_table" class="modern-table">
                                 <thead>
                                     <tr>
-                                        <th><i class="fa fa-user"></i> Customer</th>
-                                        <th><i class="fa fa-tag"></i> Username</th>
-                                        <th><i class="fa fa-wifi"></i> Plan</th>
-                                        <th><i class="fa fa-phone"></i> Contact</th>
-                                        <th><i class="fa fa-calendar"></i> Expires</th>
-                                        <th><i class="fa fa-clock-o"></i> Days Left</th>
-                                        <th><i class="fa fa-cogs"></i> Actions</th>
-                                        <th>Service Type</th>
+                                        <th><i class="fa fa-user"></i> {Lang::T('Customer')}</th>
+                                        <th><i class="fa fa-tag"></i> {Lang::T('Username')}</th>
+                                        <th><i class="fa fa-wifi"></i> {Lang::T('Plan')}</th>
+                                        <th><i class="fa fa-phone"></i> {Lang::T('Contact')}</th>
+                                        <th><i class="fa fa-calendar"></i> {Lang::T('Expires')}</th>
+                                        <th><i class="fa fa-clock-o"></i> {Lang::T('Days Left')}</th>
+                                        <th><i class="fa fa-cogs"></i> {Lang::T('Actions')}</th>
+                                        <th>{Lang::T('Service Type')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {foreach $d as $ds}
-                                        {assign var="days_left" value=$ds.days_left}
-                                        <tr>
+                                        <tr class="severity-row severity-{$ds.severity}">
                                             <td>
-                                                <div style="font-weight: 600; color: #495057; font-size: 13px;">{$ds.fullname}</div>
+                                                <div style="font-weight: 600; color: #495057; font-size: 13px;">{$ds.fullname|escape:'html'}</div>
                                                 {if $ds.email}
                                                     <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">
-                                                        <i class="fa fa-envelope"></i> {$ds.email}
+                                                        <i class="fa fa-envelope"></i> {$ds.email|escape:'html'}
                                                     </div>
                                                 {/if}
                                             </td>
                                             <td>
                                                 <code style="background: #f8f9fa; padding: 3px 6px; border-radius: 4px; color: #495057; font-size: 11px;">
-                                                    {$ds.username}
+                                                    {$ds.username|escape:'html'}
                                                 </code>
                                             </td>
                                             <td>
                                                 <span style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;">
-                                                    {$ds.plan_name}
+                                                    {$ds.plan_name|escape:'html'}
                                                 </span>
                                             </td>
                                             <td>
                                                 {if $ds.phonenumber}
-                                                    <a href="tel:{$ds.phonenumber}" style="color: #28a745; text-decoration: none; font-size: 12px;">
-                                                        <i class="fa fa-phone"></i> {$ds.phonenumber}
+                                                    <a href="tel:{$ds.phonenumber|escape:'html'}" style="color: #28a745; text-decoration: none; font-size: 12px;">
+                                                        <i class="fa fa-phone"></i> {$ds.phonenumber|escape:'html'}
                                                     </a>
                                                 {else}
-                                                    <span style="color: #6c757d; font-size: 12px;">No phone</span>
+                                                    <span style="color: #6c757d; font-size: 12px;">{Lang::T('No phone')}</span>
                                                 {/if}
                                             </td>
                                             <td>
+                                                <span class="sort-key" style="display:none;">{$ds.expiration|escape:'html'} {$ds.expiry_time_display|escape:'html'}</span>
                                                 <div style="font-weight: 600; color: #495057; font-size: 12px;">
                                                     {$ds.expiration|date_format:"%d %b %Y"}
                                                 </div>
                                                 <div style="font-size: 10px; color: #6c757d;">
-                                                    {$ds.expiration|date_format:"%H:%M"}
+                                                    {$ds.expiry_time_display|escape:'html'}
                                                 </div>
                                             </td>
                                             <td>
-                                                <span class="days-badge {if $days_left <= 2}days-critical{elseif $days_left <= 4}days-warning{else}days-caution{/if}">
-                                                    {if $days_left == 1}
-                                                        {$days_left} day left
-                                                    {else}
-                                                        {$days_left} days left
-                                                    {/if}
+                                                <span class="sort-key" style="display:none;">{$ds.seconds_key}</span>
+                                                <span class="days-badge days-{$ds.severity}">
+                                                    {$ds.days_left_text|escape:'html'}
                                                 </span>
                                             </td>
                                             <td>
-                                                <a href="{$_url}customers/view/{$ds.id}" class="btn-modern btn-view">
-                                                    <i class="fa fa-eye"></i> View
+                                                <a href="{$_url}customers/view/{$ds.customer_id}" class="btn-modern btn-view">
+                                                    <i class="fa fa-eye"></i> {Lang::T('View')}
                                                 </a>
                                             </td>
-                                            <td>{$ds.service_type}</td>
+                                            <td>{$ds.service_type|escape:'html'}</td>
                                         </tr>
                                     {/foreach}
                                 </tbody>
@@ -402,8 +391,8 @@
                             <div class="empty-state-icon">
                                 <i class="fa fa-check-circle"></i>
                             </div>
-                            <h3>All Clear!</h3>
-                            <p>No customers will be overdue in the next 5 days.</p>
+                            <h3>{Lang::T('All Clear!')}</h3>
+                            <p>{Lang::T('No customers will be overdue in the next')} {$days} {Lang::T('days')}.</p>
                         </div>
                     {/if}
                 </div>

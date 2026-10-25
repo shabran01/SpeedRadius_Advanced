@@ -214,10 +214,72 @@
         text-align: center;
         margin-bottom: 15px;
     }
-    
+
     .dataTables_wrapper .dataTables_info,
     .dataTables_wrapper .dataTables_paginate {
         text-align: center;
         margin-top: 15px;
     }
+}
+
+/* Severity rows — rendered server-side, not re-applied on every DataTables draw */
+.modern-table tbody tr.severity-critical > td:first-child {
+    border-left: 4px solid #ff6b6b;
+}
+.modern-table tbody tr.severity-critical {
+    background: rgba(255, 107, 107, 0.05);
+}
+
+.modern-table tbody tr.severity-warning > td:first-child {
+    border-left: 4px solid #ffa726;
+}
+.modern-table tbody tr.severity-warning {
+    background: rgba(255, 167, 38, 0.05);
+}
+
+.modern-table tbody tr.severity-caution > td:first-child {
+    border-left: 4px solid #ffc107;
+}
+.modern-table tbody tr.severity-caution {
+    background: rgba(255, 193, 7, 0.05);
+}
+
+/* Dark theme (body.modern-skin-dark) */
+.modern-skin-dark .modern-overdue-container {
+    background: #1b1b29;
+}
+
+.modern-skin-dark .stat-card,
+.modern-skin-dark .modern-table-container,
+.modern-skin-dark .modern-table {
+    background: #24243a;
+}
+
+.modern-skin-dark .modern-table thead th {
+    background: #1b1b29 !important;
+    color: #cbd5e1 !important;
+    border-bottom-color: #33354d !important;
+}
+
+.modern-skin-dark .modern-table tbody td {
+    border-bottom-color: #2b2d44 !important;
+}
+
+.modern-skin-dark .modern-table tbody tr:hover {
+    background: #2b2d44 !important;
+}
+
+.modern-skin-dark .modern-table tbody td div,
+.modern-skin-dark .modern-table tbody td code {
+    color: #e2e8f0 !important;
+    background: transparent !important;
+}
+
+.modern-skin-dark .stat-label,
+.modern-skin-dark .empty-state p {
+    color: #94a3b8;
+}
+
+.modern-skin-dark .empty-state h3 {
+    color: #cbd5e1;
 }

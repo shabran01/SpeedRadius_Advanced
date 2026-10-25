@@ -58,6 +58,25 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.77] - 2026-10-26
+
+---
+
+### FIXED: Overdue Alert — correct data source, working table, last-day visibility, XSS
+
+**`system/plugin/overdue_alert.php`** — **`system/plugin/ui/overdue_alert.tpl`** — **`ui/lib/c/overdue_alert.js`** — **`ui/lib/c/overdue_alert.css`**
+
+The page looked fine but was mostly inert: DataTables was never included, so `.DataTable()` threw and the search/sort/pagination and the PPPoE/Hotspot filter buttons never initialised. It also read the transaction log instead of the active subscription, so customers on their last paid day disappeared.
+
+- **Table now works** — the vendored `ui/lib/dt/jquery.dataTables.min.{css,js}` (1.10.5) is loaded through `xheader`/`xfooter`. The page uses hidden fixed-width sort keys because 1.10.5 does not support `data-order`.
+- **Correct source of truth** — queries `tbl_user_recharges` (`status='on'`) joined to `tbl_customers` instead of `tbl_transactions`. No duplicate rows for customers with recharge history, and it uses the indexed `expiration` column.
+- **Last active day is visible** — the window starts at *today* instead of tomorrow, and `days_left` is computed from `expiration` + the real `time` (monthly plans expire at 23:59:59). Rows already past that time are excluded.
+- **Configurable window** — `?days=N`, default from `tbl_appconfig.overdue_alert_days`, fallback 5, clamped 1–90; a selector in the table header switches it.
+- **XSS fixed** — `fullname`, `email`, `username`, `plan_name`, `phonenumber` and `service_type` are escaped with `|escape:'html'`; Smarty has no auto-escape in this app.
+- **Broken redirect fixed** — "Customer not found" went to `?_route=overdue_alert`, which has no controller; it now returns to `plugin/overdue_alert`.
+- **No more destructive reload** — the 5-minute `location.reload()` that wiped search, filter and page position is removed.
+- Stats are computed in PHP in one pass (was nested Smarty loops), labels corrected ("Total Overdue" → "Total Expiring"), strings wrapped in `Lang::T()`, and dark-mode row/table styling added.
+
 ## [2.2.76] - 2026-10-23
 
 ---
