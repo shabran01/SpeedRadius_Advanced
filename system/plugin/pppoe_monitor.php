@@ -5,6 +5,17 @@ use PEAR2\Net\RouterOS;
 // Register the PPPoE Monitor menu
 register_menu(" PPPoE Monitor", true, "pppoe_monitor_router_menu", 'AFTER_SETTINGS', 'ion ion-ios-pulse', "Hot", "red");
 
+// Require an authenticated admin for JSON endpoints (the plugin router does no auth).
+function pppoe_monitor_json_auth()
+{
+    $admin = Admin::_info();
+    if (!$admin) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit;
+    }
+}
+
 function pppoe_monitor_router_menu()
 {
     global $ui, $routes;
@@ -18,6 +29,7 @@ function pppoe_monitor_router_menu()
     $ui->assign('routers', $routers);
     $ui->assign('router', $router);
     $ui->assign('interfaces', pppoe_monitor_router_getInterface());
+    $ui->assign('csrf_token', Csrf::generateAndStoreToken());
     
     $ui->display('pppoe_monitor.tpl');
 }
@@ -37,8 +49,15 @@ function pppoe_monitor_router_getInterface()
         return [];
     }
 
-    $client = Mikrotik::getClient($mikrotik['ip_address'], $mikrotik['username'], $mikrotik['password']);
-    $interfaces = $client->sendSync(new RouterOS\Request('/interface/print'));
+    try {
+        $client = Mikrotik::getClient($mikrotik['ip_address'], $mikrotik['username'], $mikrotik['password']);
+        if (!$client) {
+            return [];
+        }
+        $interfaces = $client->sendSync(new RouterOS\Request('/interface/print'));
+    } catch (Exception $e) {
+        return [];
+    }
 
     $interfaceList = [];
     foreach ($interfaces as $interface) {
@@ -50,6 +69,8 @@ function pppoe_monitor_router_getInterface()
 }
 
 function pppoe_monitor_router_get_combined_users() {
+    pppoe_monitor_json_auth();
+
     global $routes;
     $router = $routes['2'];
     $mikrotik = ORM::for_table('tbl_routers')->where('enabled', '1')->find_one($router);
@@ -197,15 +218,28 @@ function pppoe_monitor_router_formatBytes($bytes, $precision = 2)
 
 function pppoe_monitor_router_traffic()
 {
-    $interface = $_GET["interface"]; // Ambil interface dari parameter GET
+    pppoe_monitor_json_auth();
 
-    // Contoh koneksi ke MikroTik menggunakan library tertentu (misalnya menggunakan ORM dan MikroTik API wrapper)
+    $interface = isset($_GET['interface']) ? preg_replace('/[^a-zA-Z0-9_\-\.<>\s]/', '', (string)$_GET['interface']) : '';
+
     global $routes;
     $router = $routes['2'];
     $mikrotik = ORM::for_table('tbl_routers')->where('enabled', '1')->find_one($router);
-    $client = Mikrotik::getClient($mikrotik['ip_address'], $mikrotik['username'], $mikrotik['password']);
+
+    if (!$mikrotik) {
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Router not found']);
+        return;
+    }
 
     try {
+        $client = Mikrotik::getClient($mikrotik['ip_address'], $mikrotik['username'], $mikrotik['password']);
+        if (!$client) {
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Cannot connect to router']);
+            return;
+        }
+
         $results = $client->sendSync(
             (new RouterOS\Request('/interface/monitor-traffic'))
                 ->setArgument('interface', $interface)
@@ -246,11 +280,24 @@ function pppoe_monitor_router_traffic()
 
 function pppoe_monitor_router_online()
 {
+    pppoe_monitor_json_auth();
+
     global $routes;
     $router = $routes['2'];
     $mikrotik = ORM::for_table('tbl_routers')->where('enabled', '1')->find_one($router);
-    $client = Mikrotik::getClient($mikrotik['ip_address'], $mikrotik['username'], $mikrotik['password']);
-    $pppUsers = $client->sendSync(new RouterOS\Request('/ppp/active/print'));
+    if (!$mikrotik) {
+        return [];
+    }
+
+    try {
+        $client = Mikrotik::getClient($mikrotik['ip_address'], $mikrotik['username'], $mikrotik['password']);
+        if (!$client) {
+            return [];
+        }
+        $pppUsers = $client->sendSync(new RouterOS\Request('/ppp/active/print'));
+    } catch (Exception $e) {
+        return [];
+    }
 
     $pppoeInterfaces = [];
 
@@ -270,14 +317,22 @@ function pppoe_monitor_router_online()
 
 function pppoe_monitor_router_delete_ppp_user()
 {
+    pppoe_monitor_json_auth();
+
+    if (!Csrf::check(_post('csrf_token'))) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Invalid or expired CSRF token']);
+        exit;
+    }
+
     global $routes;
     $router = $routes['2'];
-    $id = $_POST['id']; // Ambil .id dari POST data
+    $id = isset($_POST['id']) ? trim((string)$_POST['id']) : '';
 
-    // Cek apakah ID ada di POST data
-    if (empty($id)) {
+    // RouterOS .id is a hex pointer like "*1A2B3C"
+    if ($id === '' || !preg_match('/^\*[0-9A-Fa-f]+$/', $id)) {
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'ID is missing.']);
+        echo json_encode(['success' => false, 'message' => 'Invalid session ID.']);
         return;
     }
 
@@ -290,16 +345,15 @@ function pppoe_monitor_router_delete_ppp_user()
         return;
     }
 
-    // Dapatkan klien MikroTik
-    $client = Mikrotik::getClient($mikrotik['ip_address'], $mikrotik['username'], $mikrotik['password']);
-
-    if (!$client) {
-        header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Failed to connect to the router.']);
-        return;
-    }
-
     try {
+        // Dapatkan klien MikroTik
+        $client = Mikrotik::getClient($mikrotik['ip_address'], $mikrotik['username'], $mikrotik['password']);
+
+        if (!$client) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Failed to connect to the router.']);
+            return;
+        }
         // Buat permintaan untuk menghapus koneksi aktif PPPoE
         $request = new RouterOS\Request('/ppp/active/remove');
         $request->setArgument('.id', $id); // Gunakan .id yang sesuai
@@ -322,64 +376,44 @@ function pppoe_monitor_router_delete_ppp_user()
 // Fungsi untuk menghitung total data yang digunakan per harinya
 function pppoe_monitor_router_daily_data_usage()
 {
-    global $routes;
-    $router = $routes['2'];
-    $mikrotik = ORM::for_table('tbl_routers')->where('enabled', '1')->find_one($router);
-    $client = Mikrotik::getClient($mikrotik['ip_address'], $mikrotik['username'], $mikrotik['password']);
-    
-    // Ambil semua pengguna aktif PPPoE
-    $pppUsers = $client->sendSync(new RouterOS\Request('/ppp/active/print'));
-    $interfaceTraffic = $client->sendSync(new RouterOS\Request('/interface/print'));
+    pppoe_monitor_json_auth();
 
-    // Array untuk menyimpan data penggunaan harian
-    $daily_usage = [];
-
-    // Looping untuk setiap pengguna PPPoE
-    foreach ($pppUsers as $pppUser) {
-        $username = $pppUser->getProperty('name');
-        $interfaceName = "<pppoe-$username>"; // Nama interface sesuai format PPPoE
-
-        // Ambil data traffic untuk interface ini
-        $interfaceData = [];
-        foreach ($interfaceTraffic as $interface) {
-            $name = $interface->getProperty('name');
-            if ($name === $interfaceName) {
-                $interfaceData = [
-                    'txBytes' => intval($interface->getProperty('tx-byte')),
-                    'rxBytes' => intval($interface->getProperty('rx-byte'))
-                ];
-                break;
-            }
-        }
-
-        // Hitung total penggunaan harian
-        $txBytes = $interfaceData['txBytes'] ?? 0;
-        $rxBytes = $interfaceData['rxBytes'] ?? 0;
-        $totalDataMB = ($txBytes + $rxBytes) / (1024 * 1024); // Konversi ke MB
-
-        // Ambil tanggal dari waktu saat ini
-        $date = date('Y-m-d', time());
-
-        // Jika belum ada data untuk tanggal ini, inisialisasi
-        if (!isset($daily_usage[$date])) {
-            $daily_usage[$date] = [
-                'total' => 0,
-                'users' => []
-            ];
-        }
-
-        // Tambahkan penggunaan harian untuk pengguna ini
-        $daily_usage[$date]['total'] += $totalDataMB;
-        $daily_usage[$date]['users'][] = [
-            'username' => $username,
-            'tx' => pppoe_monitor_router_formatBytes($txBytes),
-            'rx' => pppoe_monitor_router_formatBytes($rxBytes),
-            'total' => pppoe_monitor_router_formatBytes($txBytes + $rxBytes)
-        ];
+    $username = isset($_GET['username']) ? preg_replace('/[^a-zA-Z0-9_.-]/', '', (string)$_GET['username']) : '';
+    if ($username === '') {
+        header('Content-Type: application/json');
+        echo json_encode([]);
+        return;
     }
 
-    // Kembalikan hasil dalam format JSON
+    $from = !empty($_GET['start_date']) ? (string)$_GET['start_date'] : date('Y-m-01');
+    $to   = !empty($_GET['end_date'])   ? (string)$_GET['end_date']   : date('Y-m-t');
+
+    $fromTs = strtotime($from);
+    $toTs   = strtotime($to);
+    $from = $fromTs ? date('Y-m-d', $fromTs) : date('Y-m-01');
+    $to   = $toTs   ? date('Y-m-d', $toTs)   : date('Y-m-t');
+
+    require_once __DIR__ . '/../helpers/monthly_usage.php';
+
+    $rows = daily_usage_get($username, $from, $to);
+
+    $daily_usage = [];
+    foreach ($rows as $row) {
+        $day = $row['day'];
+        if (!isset($daily_usage[$day])) {
+            $daily_usage[$day] = ['total' => 0, 'users' => []];
+        }
+        $dl = (int)$row['download_bytes'];
+        $ul = (int)$row['upload_bytes'];
+        $daily_usage[$day]['users'][] = [
+            'username' => $username,
+            'rx' => pppoe_monitor_router_formatBytes($dl),
+            'tx' => pppoe_monitor_router_formatBytes($ul),
+            'total' => pppoe_monitor_router_formatBytes($dl + $ul)
+        ];
+        $daily_usage[$day]['total'] += ($dl + $ul) / (1024 * 1024);
+    }
+
     header('Content-Type: application/json');
-    echo json_encode($daily_usage); // $daily_usage adalah array yang berisi data harian dalam format yang sesuai
+    echo json_encode($daily_usage);
 }
-// Fungsi untuk mendapatkan pengguna terbatas pada MikroTik

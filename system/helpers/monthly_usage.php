@@ -43,6 +43,20 @@ function monthly_usage_ensure_tables()
             UNIQUE KEY `ux_user_router` (`username`, `router_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ");
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS `tbl_customer_daily_usage` (
+            `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            `customer_id`     INT UNSIGNED NOT NULL,
+            `username`        VARCHAR(64)  NOT NULL,
+            `day`             DATE NOT NULL COMMENT 'YYYY-MM-DD',
+            `download_bytes`  BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            `upload_bytes`    BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            `last_updated`    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY `ux_customer_day` (`customer_id`, `day`),
+            INDEX `idx_day` (`day`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
 }
 
 /**
@@ -127,6 +141,7 @@ function monthly_usage_process_session($customer_id, $username, $router_id,
     }
 
     monthly_usage_accumulate($customer_id, $username, $delta_in, $delta_out);
+    daily_usage_accumulate($customer_id, $username, $delta_in, $delta_out);
 }
 
 /**
@@ -328,4 +343,65 @@ function monthly_usage_get_network_totals($month = null)
     } catch (Exception $e) {
         return ['download_bytes' => 0, 'upload_bytes' => 0, 'total_bytes' => 0];
     }
+}
+
+/**
+ * Accumulate bytes into today's total for a customer (daily granularity).
+ * Keyed by (customer_id, YYYY-MM-DD) so data resets each new day.
+ *
+ * @param int    $customer_id
+ * @param string $username
+ * @param int    $delta_in   bytes downloaded this interval
+ * @param int    $delta_out  bytes uploaded this interval
+ */
+function daily_usage_accumulate($customer_id, $username, $delta_in, $delta_out)
+{
+    if ($delta_in <= 0 && $delta_out <= 0) {
+        return;
+    }
+    $day = date('Y-m-d');
+
+    $existing = ORM::for_table('tbl_customer_daily_usage')
+        ->where('customer_id', (int)$customer_id)
+        ->where('day', $day)
+        ->find_one();
+
+    if ($existing) {
+        $existing->download_bytes = (int)$existing->download_bytes + (int)$delta_in;
+        $existing->upload_bytes   = (int)$existing->upload_bytes   + (int)$delta_out;
+        $existing->save();
+    } else {
+        $row = ORM::for_table('tbl_customer_daily_usage')->create();
+        $row->customer_id    = (int)$customer_id;
+        $row->username       = $username;
+        $row->day            = $day;
+        $row->download_bytes = (int)$delta_in;
+        $row->upload_bytes   = (int)$delta_out;
+        $row->save();
+    }
+}
+
+/**
+ * Get daily usage rows for a username within a date range (inclusive).
+ * Returns an array ordered oldest-first.
+ *
+ * @param  string      $username
+ * @param  string|null $from  'YYYY-MM-DD' — defaults to first day of current month
+ * @param  string|null $to    'YYYY-MM-DD' — defaults to last day of current month
+ * @return array
+ */
+function daily_usage_get($username, $from = null, $to = null)
+{
+    if ($from === null) {
+        $from = date('Y-m-01');
+    }
+    if ($to === null) {
+        $to = date('Y-m-t');
+    }
+    return ORM::for_table('tbl_customer_daily_usage')
+        ->where('username', $username)
+        ->where_gte('day', $from)
+        ->where_lte('day', $to)
+        ->order_by_asc('day')
+        ->find_array();
 }

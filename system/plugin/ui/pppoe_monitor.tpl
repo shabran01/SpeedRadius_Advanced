@@ -1,15 +1,12 @@
 {include file="sections/header.tpl"}
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-<script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.7.1/css/buttons.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/1.7.1/js/dataTables.buttons.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.3/js/dataTables.bootstrap5.min.js"></script>
 
 <style>
     .modal {
@@ -510,7 +507,7 @@ function reconnect(id, username) {
         $.ajax({
             url: '{$_url}plugin/pppoe_monitor_router_delete_ppp_user/{$router}', // Perbaiki URL AJAX
             method: 'POST',
-            data: { id: id, username: username },
+            data: { id: id, username: username, csrf_token: '{$csrf_token}' },
             success: function(response) {
                 if (response.success) {
                     alert('User ' + username + ' has been disconnected.');
@@ -553,7 +550,7 @@ function reconnect(id, username) {
 
             // Melakukan pencarian dan menggambar ulang tabel
             table.column(1).search(username).draw(); // Kolom 1 untuk username
-            table.column(9).search(status).draw(); // Kolom 9 untuk status
+            table.column(10).search(status).draw(); // Kolom 10 untuk status
         });
 
         // Menambahkan ikon search ke dalam tombol

@@ -58,6 +58,21 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.81] - 2026-10-28
+
+---
+
+### SECURITY + FIXED: PPPoE Monitor — auth, CSRF, and broken daily usage
+
+**`system/plugin/pppoe_monitor.php`** — **`system/plugin/ui/pppoe_monitor.tpl`** — **`system/helpers/monthly_usage.php`**
+
+- **Auth** — all JSON endpoints (`get_combined_users`, `traffic`, `online`, `delete_ppp_user`, `daily_data_usage`) now require an authenticated admin; previously anyone could read live sessions or disconnect PPPoE users.
+- **CSRF** — the disconnect endpoint validates a CSRF token.
+- **Input validation** — the disconnect `.id` must match a RouterOS `*HEX` pointer before being sent to the router.
+- **Robustness** — `Mikrotik::getClient()` wrapped in try/catch with null guards so a down router returns clean JSON instead of a fatal.
+- **Daily usage** — rewritten to read a new `tbl_customer_daily_usage` table (keyed by customer + day, populated by the existing usage cron), replacing the old endpoint that mislabeled cumulative interface bytes as daily.
+- **Template** — removed duplicate jQuery/DataTables loads, fixed the status search to target the status column, added the CSRF token to the disconnect request.
+
 ## [2.2.80] - 2026-10-26
 
 ---
