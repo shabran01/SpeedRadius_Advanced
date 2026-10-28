@@ -2,6 +2,20 @@
 
  # CHANGELOG
 
+## [2.2.82] - 2026-10-28
+
+---
+
+### FIXED: PPPoE Monitor table empty after 2.2.81 (script regression)
+
+**`system/plugin/ui/pppoe_monitor.tpl`**
+
+Restores the original jQuery/DataTables `<script>` order. The 2.2.81 dedup removed the first jQuery, so `jQuery.noConflict()` reset the global `jQuery`/`$` to `undefined` and DataTables never initialised (empty table, no search/pagination/controls).
+
+- Restored the original CDN script set (jQuery 3.5.1 + 3.6.0, DataTables 1.10.23 + 1.11.3).
+- Hardened the DataTables AJAX `dataSrc` with an `Array.isArray` guard so a non-array response cannot throw.
+- Security fixes from 2.2.81 (auth guard, CSRF, `.id` validation) are unchanged.
+
 ## [2.2.81] - 2026-10-28
 
 ---
