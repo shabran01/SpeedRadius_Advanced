@@ -2,6 +2,16 @@
 
  # CHANGELOG
 
+## [2.2.83] - 2026-10-29
+
+---
+
+### CHANGED: Reports — remove VPN from the Type filter
+
+**`system/controllers/reports.php`**
+
+`VPN` is removed from the Type dropdown in the Daily Report, the Period Report, and the report chart breakdown. The enum list is filtered case-insensitively right after `getEnum('type')`, so it applies to all three code paths (`daily-report`/default, `ajax`, `by-period`).
+
 ## [2.2.82] - 2026-10-28
 
 ---

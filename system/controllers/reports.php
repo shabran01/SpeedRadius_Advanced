@@ -38,6 +38,10 @@ switch ($action) {
         $ts = _req('ts', '00:00:00');
         $te = _req('te', '23:59:59');
         $types = ORM::for_table('tbl_transactions')->getEnum('type');
+        // VPN plans are not relevant for reports
+        $types = array_values(array_filter($types, function ($t) {
+            return strtolower(trim($t)) !== 'vpn';
+        }));
         $tps = ($_GET['tps']) ? $_GET['tps'] : $types;
         $plans = array_column(ORM::for_table('tbl_transactions')->select('plan_name')->distinct('plan_name')->find_array(), 'plan_name');
         $plns = ($_GET['plns']) ? $_GET['plns'] : $plans;
@@ -291,6 +295,10 @@ switch ($action) {
 
     case 'by-period':
         $types = ORM::for_table('tbl_transactions')->getEnum('type');
+        // VPN plans are not relevant for period reports
+        $types = array_values(array_filter($types, function ($t) {
+            return strtolower(trim($t)) !== 'vpn';
+        }));
         $methods = array_column(ORM::for_table('tbl_transactions')->rawQuery("SELECT DISTINCT SUBSTRING_INDEX(`method`, ' - ', 1) as method FROM tbl_transactions;")->findArray(), 'method');
         $routers = array_column(ORM::for_table('tbl_transactions')->select('routers')->distinct('routers')->find_array(), 'routers');
         $plans = array_column(ORM::for_table('tbl_transactions')->select('plan_name')->distinct('plan_name')->find_array(), 'plan_name');
@@ -350,6 +358,10 @@ switch ($action) {
     case 'daily-report':
     default:
         $types = ORM::for_table('tbl_transactions')->getEnum('type');
+        // VPN plans are not relevant for reports
+        $types = array_values(array_filter($types, function ($t) {
+            return strtolower(trim($t)) !== 'vpn';
+        }));
         $methods = array_column(ORM::for_table('tbl_transactions')->rawQuery("SELECT DISTINCT SUBSTRING_INDEX(`method`, ' - ', 1) as method FROM tbl_transactions;")->findArray(), 'method');
         $routers = array_column(ORM::for_table('tbl_transactions')->select('routers')->distinct('routers')->find_array(), 'routers');
         $plans = array_column(ORM::for_table('tbl_transactions')->select('plan_name')->distinct('plan_name')->find_array(), 'plan_name');
