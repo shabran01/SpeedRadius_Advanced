@@ -2,6 +2,18 @@
 
  # CHANGELOG
 
+## [2.2.84] - 2026-10-31
+
+---
+
+### FIXED: Mikrotik Import — "Data truncated for column 'rate_up_unit'"
+
+**`system/plugin/mikrotik_import.php`**
+
+- **Rate units** — MikroTik profiles report rates like `512k`, and the importer appended `"bps"`, producing `kbps`, which is not in the `tbl_bandwidth.rate_up_unit` / `rate_down_unit` ENUM (`Kbps`, `Mbps`). Added `mikrotik_import_parse_rate()` to map `k` → `Kbps`, `M` → `Mbps`, `G` → `Mbps` (×1024). Applied to both the Hotspot and PPPoE importers.
+- **Recharge date** — the importer wrote `date('Y-m-d H:i:s')` into the DATE column `tbl_user_recharges.recharged_on`; changed to `date('Y-m-d')` and set `recharged_time` separately.
+- **`shared_users`** — cast to int with a default of 1.
+
 ## [2.2.83] - 2026-10-29
 
 ---

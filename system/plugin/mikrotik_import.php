@@ -2,6 +2,29 @@
 
 use PEAR2\Net\RouterOS;
 
+/**
+ * Parse a MikroTik rate token (e.g. "10M", "512k", "1G") into
+ * [int rate, string unit] where unit matches tbl_bandwidth.rate_*_unit
+ * (that ENUM only allows "Kbps" and "Mbps").
+ */
+function mikrotik_import_parse_rate($token)
+{
+    $token = trim((string)$token);
+    $num   = (int) preg_replace('/[^0-9]/', '', $token);
+    $unit  = strtolower(preg_replace('/[^a-zA-Z]/', '', $token));
+
+    switch ($unit) {
+        case 'g':
+            // ENUM has no Gbps -> express as Mbps
+            return [$num * 1024, 'Mbps'];
+        case 'm':
+            return [$num, 'Mbps'];
+        case 'k':
+        default:
+            return [$num, 'Kbps'];
+    }
+}
+
 register_menu("Mikrotik Import", true, "mikrotik_import_ui", 'SETTINGS', '');
 
 function mikrotik_import_ui()
@@ -59,15 +82,13 @@ function mikrotik_import_mikrotik_hotspot_package($router, $ip, $user, $pass)
             // Create Bandwidth profile
             $rate = explode("/", $rateLimit);
             if (count($rate) >= 2) {
-                $unit_up = preg_replace("/[^a-zA-Z]+/", "", $rate[0]) . "bps";
-                $unit_down = preg_replace("/[^a-zA-Z]+/", "", $rate[1]) . "bps";
-                $rate_up = (int) preg_replace("/[^0-9]+/", "", $rate[0]);
-                $rate_down = (int) preg_replace("/[^0-9]+/", "", $rate[1]);
+                list($rate_up, $unit_up)     = mikrotik_import_parse_rate($rate[0]);
+                list($rate_down, $unit_down) = mikrotik_import_parse_rate($rate[1]);
             } else {
-                $unit_up = 'bps';
-                $unit_down = 'bps';
                 $rate_up = 0;
                 $rate_down = 0;
+                $unit_up = 'Kbps';
+                $unit_down = 'Kbps';
             }
             if ($rate_up > 0 || $rate_down > 0) {
             $bw_name = str_replace("/", "_", $rateLimit);
@@ -104,7 +125,7 @@ function mikrotik_import_mikrotik_hotspot_package($router, $ip, $user, $pass)
                 $d->data_unit = 'MB';
                 $d->validity = '30';
                 $d->validity_unit = 'Days';
-                $d->shared_users = $sharedUser;
+                $d->shared_users = (int)($sharedUser ?: 1);
                 $d->routers = $router;
                 $d->enabled = 1;
                 $d->save();
@@ -167,7 +188,8 @@ function mikrotik_import_mikrotik_hotspot_package($router, $ip, $user, $pass)
                                 $r->status = 'on';
                                 $r->expiration = date('Y-m-d', $expTs);
                                 $r->time = date('H:i:s', $expTs);
-                                $r->recharged_on = date('Y-m-d H:i:s');
+                                $r->recharged_on = date('Y-m-d');
+                                $r->recharged_time = date('H:i:s');
                                 $r->routers = $router;
                                 $r->save();
                                 $results[] = "  └ Recharge set: expires " . date('Y-m-d H:i:s', $expTs);
@@ -203,15 +225,13 @@ function mikrotik_import_mikrotik_ppoe_package($router, $ip, $user, $pass)
             // Create Bandwidth profile
             $rate = explode("/", $rateLimit);
             if (count($rate) >= 2) {
-                $unit_up = preg_replace("/[^a-zA-Z]+/", "", $rate[0]) . "bps";
-                $unit_down = preg_replace("/[^a-zA-Z]+/", "", $rate[1]) . "bps";
-                $rate_up = (int) preg_replace("/[^0-9]+/", "", $rate[0]);
-                $rate_down = (int) preg_replace("/[^0-9]+/", "", $rate[1]);
+                list($rate_up, $unit_up)     = mikrotik_import_parse_rate($rate[0]);
+                list($rate_down, $unit_down) = mikrotik_import_parse_rate($rate[1]);
             } else {
-                $unit_up = 'bps';
-                $unit_down = 'bps';
                 $rate_up = 0;
                 $rate_down = 0;
+                $unit_up = 'Kbps';
+                $unit_down = 'Kbps';
             }
             if ($rate_up > 0 || $rate_down > 0) {
             $bw_name = str_replace("/", "_", $rateLimit);
@@ -316,7 +336,8 @@ function mikrotik_import_mikrotik_ppoe_package($router, $ip, $user, $pass)
                                 $r->status = 'on';
                                 $r->expiration = date('Y-m-d', $expTs);
                                 $r->time = date('H:i:s', $expTs);
-                                $r->recharged_on = date('Y-m-d H:i:s');
+                                $r->recharged_on = date('Y-m-d');
+                                $r->recharged_time = date('H:i:s');
                                 $r->routers = $router;
                                 $r->save();
                                 $results[] = "  └ Recharge set: expires " . date('Y-m-d H:i:s', $expTs);
