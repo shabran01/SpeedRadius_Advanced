@@ -407,24 +407,33 @@ function CreateHostspotUser()
 
 function InitiateStkpush($phone, $planId, $accountId, $routerId)
 {
-    $gateway = ORM::for_table('tbl_appconfig')
+    $gw = ORM::for_table('tbl_appconfig')
         ->where('setting', 'payment_gateway')
         ->find_one();
-    $gateway = ($gateway) ? $gateway->value : null;
-    if ($gateway == "MpesatillStk") {
-        $url = U . "plugin/initiatetillstk";
-    } elseif ($gateway == "BankStkPush") {
-        $url = U . "plugin/initiatebankstk";
-    } elseif ($gateway == "PaybillStk") {
-        $url = U . "plugin/initiatePaybillStk";
-    } elseif ($gateway == "mpesa") {
-        $url = U . "plugin/initiatempesa";
-    } elseif ($gateway == "PayHero") {
-        $url = U . "plugin/initiatepayhero";
-    } elseif ($gateway == "PesaPal") {
-        $url = U . "plugin/initiatepesapal";
-    } else {
-        $url = null; // or handle the default case appropriately
+    $gateways = array_values(array_filter(array_map('trim', explode(',', (string)($gw ? $gw->value : '')))));
+    // The active list is comma-separated; pick the first gateway that maps to an STK flow.
+    $url = null;
+    foreach ($gateways as $gateway) {
+        switch ($gateway) {
+            case 'MpesatillStk':
+                $url = U . "plugin/initiatetillstk";
+                break 2;
+            case 'BankStkPush':
+                $url = U . "plugin/initiatebankstk";
+                break 2;
+            case 'PaybillStk':
+                $url = U . "plugin/initiatePaybillStk";
+                break 2;
+            case 'mpesa':
+                $url = U . "plugin/initiatempesa";
+                break 2;
+            case 'PayHero':
+                $url = U . "plugin/initiatepayhero";
+                break 2;
+            case 'PesaPal':
+                $url = U . "plugin/initiatepesapal";
+                break 2;
+        }
     }
     $Planname = ORM::for_table('tbl_plans')
         ->where('id', $planId)

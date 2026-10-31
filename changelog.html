@@ -58,6 +58,20 @@ document.addEventListener('DOMContentLoaded', function() {
 <script id="md-source" type="text/markdown">
  # CHANGELOG
 
+## [2.2.85] - 2026-10-31
+
+---
+
+### FIXED: Payment Gateway activation + STK gateway selection
+
+**`system/controllers/paymentgateway.php`** — **`system/plugin/CreateHotspotUser.php`** — **`ui/ui/paymentgateway.tpl`**
+
+- **Gateway selection** — `InitiateStkpush()` compared the whole comma-separated `payment_gateway` list against a single gateway name, so with more than one active gateway no STK push was ever sent. It now splits the list and uses the first gateway that maps to an STK flow.
+- **List UI** — added a hint that checking a gateway makes it ACTIVE, while clicking its name only opens its credentials page.
+- **Delete** — replaced the recursive `deleteFile()` with a direct `unlink()` of the exact gateway file.
+- **Audit** — only filters by gateway when one is selected, fixed the pagination query string, and added a not-found guard on audit view.
+- **CSRF** — the "active gateways" save now validates a CSRF token, and the `payment_gateway` read uses a null-safe default.
+
 ## [2.2.84] - 2026-10-31
 
 ---

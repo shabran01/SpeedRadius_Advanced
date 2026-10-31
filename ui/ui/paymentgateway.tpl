@@ -1,9 +1,11 @@
 {include file="sections/header.tpl"}
 <form method="post">
+    <input type="hidden" name="csrf_token" value="{$csrf_token}">
     <div class="row">
         <div class="col-md-6 col-md-offset-3">
             <div class="panel panel-info panel-hovered">
                 <div class="panel-heading">{Lang::T('Payment Gateway')}</div>
+                <p class="text-muted" style="padding: 0 15px; margin: 0 0 10px;"><small>Check a gateway to make it ACTIVE, then click "Save Changes". Clicking a gateway name only opens its credentials — saving there does not activate it.</small></p>
                 <div class="table-responsive">
                     <table class="table table-striped table-condensed">
                         <tbody>
