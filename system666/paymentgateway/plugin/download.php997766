@@ -1,0 +1,1168 @@
+<?php
+include '../../config.php';
+
+// ────────────────────────────────────────────────
+// CORS — allow requests from MikroTik hotspot
+// ────────────────────────────────────────────────
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
+$mysqli = new mysqli($db_host, $db_user, $db_password, $db_name);
+
+if ($mysqli->connect_error) {
+    die("Connection failed: " . $mysqli->connect_error);
+}
+
+// ────────────────────────────────────────────────
+// MPESA RECONNECT HANDLER (POST to same page)
+// Detects: "UG6PQAGHDN" OR "MpesatillStk - UG6PQAGHDN"
+// ────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'mpesa_reconnect') {
+    header('Content-Type: application/json');
+    
+    $rawInput = trim($_POST['mpesa_code'] ?? '');
+    $mac = trim($_POST['mac'] ?? '');
+    $ip = trim($_POST['ip'] ?? '');
+    
+    if (empty($rawInput)) {
+        echo json_encode(['Resultcode' => '2', 'Message' => 'Please enter an MPesa transaction code']);
+        exit;
+    }
+    
+    // Extract the actual code — handle both formats:
+    // "UG6PQAGHDN"              → UG6PQAGHDN
+    // "MpesatillStk - UG6PQAGHDN" → UG6PQAGHDN
+    $mpesaCode = $rawInput;
+    if (preg_match('/[A-Z0-9]{8,12}$/i', $rawInput, $m)) {
+        $mpesaCode = $m[0]; // Extract the last alphanumeric token (the actual code)
+    }
+    
+    // 1. Try EXACT match on gateway_trx_id
+    $tx = $mysqli->prepare("SELECT * FROM tbl_payment_gateway WHERE gateway_trx_id = ?");
+    $tx->bind_param("s", $mpesaCode);
+    $tx->execute();
+    $transaction = $tx->get_result()->fetch_assoc();
+    
+    // 2. Try LIKE match (handles "MpesatillStk - UG6PQAGHDN" in gateway_trx_id)
+    if (!$transaction) {
+        $txLike = $mysqli->prepare("SELECT * FROM tbl_payment_gateway WHERE gateway_trx_id LIKE ?");
+        $likeCode = '%' . $mpesaCode . '%';
+        $txLike->bind_param("s", $likeCode);
+        $txLike->execute();
+        $transaction = $txLike->get_result()->fetch_assoc();
+    }
+    
+    // 3. Try finding via tbl_user_recharges.method (stores "MpesatillStk - CODE")
+    if (!$transaction) {
+        $rechQ = $mysqli->prepare("
+            SELECT pg.* FROM tbl_payment_gateway pg
+            INNER JOIN tbl_user_recharges ur ON ur.username = pg.username
+            WHERE ur.method LIKE ?
+            ORDER BY pg.id DESC LIMIT 1
+        ");
+        $rechQ->bind_param("s", $likeCode);
+        $rechQ->execute();
+        $transaction = $rechQ->get_result()->fetch_assoc();
+    }
+    
+    // 4. Check raw M-Pesa transactions table
+    if (!$transaction) {
+        $raw = $mysqli->prepare("SELECT * FROM tbl_mpesa_transactions WHERE TransID = ?");
+        $raw->bind_param("s", $mpesaCode);
+        $raw->execute();
+        $mpesaRaw = $raw->get_result()->fetch_assoc();
+        
+        // Also try LIKE on raw transactions
+        if (!$mpesaRaw) {
+            $rawLike = $mysqli->prepare("SELECT * FROM tbl_mpesa_transactions WHERE TransID LIKE ?");
+            $rawLike->bind_param("s", $likeCode);
+            $rawLike->execute();
+            $mpesaRaw = $rawLike->get_result()->fetch_assoc();
+        }
+        
+        if ($mpesaRaw) {
+            // Force-create the payment gateway record
+            $phone = $mpesaRaw['MSISDN'] ?? '';
+            $amount = $mpesaRaw['TransAmount'] ?? '0';
+            $transId = $mpesaRaw['TransID'] ?? '';
+            $billRef = $mpesaRaw['BillRefNumber'] ?? '';
+            
+            $planId = 0;
+            $planRouters = '';
+            if (!empty($billRef)) {
+                $planQ = $mysqli->prepare("SELECT id, routers FROM tbl_plans WHERE name_plan = ? OR id = ?");
+                $planQ->bind_param("si", $billRef, $billRef);
+                $planQ->execute();
+                $plan = $planQ->get_result()->fetch_assoc();
+                if ($plan) {
+                    $planId = $plan['id'];
+                    $planRouters = $plan['routers'];
+                }
+            }
+            
+            $username = 'MPESA_' . $phone;
+            $insert = $mysqli->prepare("INSERT INTO tbl_payment_gateway (gateway, gateway_trx_id, username, price, status, paid_date, plan_id, routers) VALUES ('mpesa', ?, ?, ?, 2, NOW(), ?, ?)");
+            $insert->bind_param("sssis", $transId, $username, $amount, $planId, $planRouters);
+            $insert->execute();
+            
+            // Re-fetch
+            $tx->execute();
+            $transaction = $tx->get_result()->fetch_assoc();
+        }
+    }
+    
+    if (!$transaction) {
+        echo json_encode(['Resultcode' => '2', 'Message' => 'MPesa code not found. Please check and try again.']);
+        exit;
+    }
+    
+    // Check transaction status
+    if ($transaction['status'] != 2) {
+        $statusMsgs = ['0' => 'pending', '1' => 'failed', '3' => 'cancelled', '4' => 'timed out'];
+        $msg = isset($statusMsgs[$transaction['status']]) ? $statusMsgs[$transaction['status']] : 'unknown';
+        echo json_encode(['Resultcode' => '2', 'Message' => 'Payment is ' . $msg . '. Please ensure payment was completed.']);
+        exit;
+    }
+    
+    $username = $transaction['username'];
+    if (empty($username)) {
+        echo json_encode(['Resultcode' => '2', 'Message' => 'No user account linked to this transaction.']);
+        exit;
+    }
+    
+    // Activate/reconnect session — search by LIKE on method
+    $sessQ = $mysqli->prepare("SELECT * FROM tbl_user_recharges WHERE username = ? AND method LIKE ? ORDER BY id DESC LIMIT 1");
+    $sessQ->bind_param("ss", $username, $likeCode);
+    $sessQ->execute();
+    $session = $sessQ->get_result()->fetch_assoc();
+    
+    if (!$session) {
+        $sessQ2 = $mysqli->prepare("SELECT * FROM tbl_user_recharges WHERE username = ? ORDER BY id DESC LIMIT 1");
+        $sessQ2->bind_param("s", $username);
+        $sessQ2->execute();
+        $session = $sessQ2->get_result()->fetch_assoc();
+    }
+    
+    if ($session) {
+        $update = $mysqli->prepare("UPDATE tbl_user_recharges SET status = 'on', macaddress = ? WHERE id = ?");
+        $update->bind_param("si", $mac, $session['id']);
+        $update->execute();
+    }
+    
+    echo json_encode([
+        'Resultcode' => '3',
+        'username' => $username,
+        'Message' => 'Reconnected successfully! You will be logged in shortly.',
+        'Status' => 'success'
+    ]);
+    exit;
+}
+
+
+// Batch load all settings in 1 query — 6× faster than 5 separate queries
+$settings = [];
+$allSettings = $mysqli->query("SELECT setting, value FROM tbl_appconfig WHERE setting IN ('hotspot_title','description','phone','CompanyName','router_name','router_id')");
+while ($row = $allSettings->fetch_assoc()) {
+    $settings[$row['setting']] = $row['value'];
+}
+$hotspotTitle = $settings['hotspot_title'] ?? '';
+$description  = $settings['description'] ?? '';
+$phone        = $settings['phone'] ?? '';
+$company      = $settings['CompanyName'] ?? 'ISP';
+$routerName   = $settings['router_name'] ?? '';
+$routerId     = $settings['router_id'] ?? '';
+
+// Fetch available plans — uses idx_plans_type index
+$planStmt = $mysqli->prepare("SELECT id, name_plan, price, validity, validity_unit FROM tbl_plans WHERE routers = ? AND type = 'Hotspot'");
+$planStmt->bind_param("s", $routerName);
+$planStmt->execute();
+$planResult = $planStmt->get_result();
+
+// Initialize HTML content variable
+$htmlContent = "";
+$htmlContent .= "<!DOCTYPE html>\n";
+$htmlContent .= "<html lang=\"en\">\n";
+$htmlContent .= "<head>\n";
+$htmlContent .= "    <meta charset=\"UTF-8\">\n";
+$htmlContent .= "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
+$htmlContent .= "    <title>$company</title>\n";
+$htmlContent .= "    <script src=\"https://cdn.tailwindcss.com\"></script>\n";
+$htmlContent .= "    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css\">\n";
+$htmlContent .= "    <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/glider-js@1.7.7/glider.min.css\" />\n";
+$htmlContent .= "    <script src=\"https://cdn.jsdelivr.net/npm/glider-js@1.7.7/glider.min.js\"></script>\n";
+$htmlContent .= "    <link rel=\"preconnect\" href=\"https://cdn.jsdelivr.net\">\n";
+$htmlContent .= "    <link rel=\"preconnect\" href=\"https://cdnjs.cloudflare.com\" crossorigin>\n";
+$htmlContent .= "    <link rel=\"stylesheet\" href=\"https://rsms.me/inter/inter.css\">\n";
+$htmlContent .= "    <!-- <link rel=\"stylesheet\" type=\"text/css\" href=\"styles.css\"> -->\n";
+
+$htmlContent .= "    <style>\n";
+$htmlContent .= "        .btn-3d-green {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #4ade80, #22c55e);\n";
+$htmlContent .= "            border: 1px solid rgba(255,255,255,0.2);\n";
+$htmlContent .= "            box-shadow: 0 4px 15px rgba(74, 222, 128, 0.3),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.3);\n";
+$htmlContent .= "            text-shadow: 0 1px 2px rgba(0,0,0,0.2);\n";
+$htmlContent .= "            transform-style: preserve-3d;\n";
+$htmlContent .= "            transition: all 0.3s ease;\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-green:hover {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #22c55e, #4ade80);\n";
+$htmlContent .= "            transform: translateY(-2px) scale(1.02);\n";
+$htmlContent .= "            box-shadow: 0 8px 20px rgba(74, 222, 128, 0.4),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.4);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-green:active {\n";
+$htmlContent .= "            transform: translateY(1px);\n";
+$htmlContent .= "            box-shadow: 0 2px 10px rgba(74, 222, 128, 0.2);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-blue {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #60a5fa, #3b82f6);\n";
+$htmlContent .= "            border: 1px solid rgba(255,255,255,0.2);\n";
+$htmlContent .= "            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.3);\n";
+$htmlContent .= "            text-shadow: 0 1px 2px rgba(0,0,0,0.2);\n";
+$htmlContent .= "            transform-style: preserve-3d;\n";
+$htmlContent .= "            transition: all 0.3s ease;\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-blue:hover {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #3b82f6, #60a5fa);\n";
+$htmlContent .= "            transform: translateY(-2px) scale(1.02);\n";
+$htmlContent .= "            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.4);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-blue:active {\n";
+$htmlContent .= "            transform: translateY(1px);\n";
+$htmlContent .= "            box-shadow: 0 2px 10px rgba(59, 130, 246, 0.2);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d {\n";
+$htmlContent .= "            position: relative;\n";
+$htmlContent .= "            border-radius: 8px;\n";
+$htmlContent .= "            overflow: hidden;\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d::before {\n";
+$htmlContent .= "            content: '';\n";
+$htmlContent .= "            position: absolute;\n";
+$htmlContent .= "            top: 0;\n";
+$htmlContent .= "            left: -100%;\n";
+$htmlContent .= "            width: 100%;\n";
+$htmlContent .= "            height: 100%;\n";
+$htmlContent .= "            background: linear-gradient(\n";
+$htmlContent .= "                120deg,\n";
+$htmlContent .= "                transparent,\n";
+$htmlContent .= "                rgba(255, 255, 255, 0.3),\n";
+$htmlContent .= "                transparent\n";
+$htmlContent .= "            );\n";
+$htmlContent .= "            transition: 0.5s;\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d:hover::before {\n";
+$htmlContent .= "            left: 100%;\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-gold {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #ffd700, #ffa500);\n";
+$htmlContent .= "            border: 1px solid rgba(255,255,255,0.3);\n";
+$htmlContent .= "            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.5);\n";
+$htmlContent .= "            text-shadow: 0 1px 2px rgba(0,0,0,0.2);\n";
+$htmlContent .= "            transform-style: preserve-3d;\n";
+$htmlContent .= "            transition: all 0.3s ease;\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-gold:hover {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #ffa500, #ffd700);\n";
+$htmlContent .= "            transform: translateY(-2px) scale(1.02);\n";
+$htmlContent .= "            box-shadow: 0 8px 20px rgba(255, 215, 0, 0.4),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.6);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-purple {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #9333ea, #7e22ce);\n";
+$htmlContent .= "            border: 1px solid rgba(255,255,255,0.2);\n";
+$htmlContent .= "            box-shadow: 0 4px 15px rgba(147, 51, 234, 0.3),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.3);\n";
+$htmlContent .= "            text-shadow: 0 1px 2px rgba(0,0,0,0.2);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-purple:hover {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #7e22ce, #9333ea);\n";
+$htmlContent .= "            transform: translateY(-2px) scale(1.02);\n";
+$htmlContent .= "            box-shadow: 0 8px 20px rgba(147, 51, 234, 0.4),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.4);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-rose {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #f43f5e, #e11d48);\n";
+$htmlContent .= "            border: 1px solid rgba(255,255,255,0.2);\n";
+$htmlContent .= "            box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.3);\n";
+$htmlContent .= "            text-shadow: 0 1px 2px rgba(0,0,0,0.2);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-rose:hover {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #e11d48, #f43f5e);\n";
+$htmlContent .= "            transform: translateY(-2px) scale(1.02);\n";
+$htmlContent .= "            box-shadow: 0 8px 20px rgba(244, 63, 94, 0.4),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.4);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-emerald {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #34d399, #059669);\n";
+$htmlContent .= "            border: 1px solid rgba(255,255,255,0.2);\n";
+$htmlContent .= "            box-shadow: 0 4px 15px rgba(52, 211, 153, 0.3),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.3);\n";
+$htmlContent .= "            text-shadow: 0 1px 2px rgba(0,0,0,0.2);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-emerald:hover {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #059669, #34d399);\n";
+$htmlContent .= "            transform: translateY(-2px) scale(1.02);\n";
+$htmlContent .= "            box-shadow: 0 8px 20px rgba(52, 211, 153, 0.4),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.4);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-cyan {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #22d3ee, #0891b2);\n";
+$htmlContent .= "            border: 1px solid rgba(255,255,255,0.2);\n";
+$htmlContent .= "            box-shadow: 0 4px 15px rgba(34, 211, 238, 0.3),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.3);\n";
+$htmlContent .= "            text-shadow: 0 1px 2px rgba(0,0,0,0.2);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-cyan:hover {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #0891b2, #22d3ee);\n";
+$htmlContent .= "            transform: translateY(-2px) scale(1.02);\n";
+$htmlContent .= "            box-shadow: 0 8px 20px rgba(34, 211, 238, 0.4),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.4);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-black {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #2d3748, #1a202c);\n";
+$htmlContent .= "            border: 1px solid rgba(255,255,255,0.1);\n";
+$htmlContent .= "            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.1);\n";
+$htmlContent .= "            text-shadow: 0 1px 2px rgba(0,0,0,0.5);\n";
+$htmlContent .= "            transform-style: preserve-3d;\n";
+$htmlContent .= "            transition: all 0.3s ease;\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-black:hover {\n";
+$htmlContent .= "            background: linear-gradient(145deg, #1a202c, #2d3748);\n";
+$htmlContent .= "            transform: translateY(-2px) scale(1.02);\n";
+$htmlContent .= "            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4),\n";
+$htmlContent .= "                        inset 0 2px 4px rgba(255, 255, 255, 0.2);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        .btn-3d-black:active {\n";
+$htmlContent .= "            transform: translateY(1px);\n";
+$htmlContent .= "            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "    </style>\n";
+$htmlContent .= "</head>\n";
+
+$htmlContent .= "<body class=\"font-sans antialiased text-gray-900 bg-gray-900 font-inter\">\n";
+$htmlContent .= "    <!-- Main Content -->\n";
+$htmlContent .= "    <div class=\"mx-auto max-w-screen-2xl px-4 md:px-4\">\n";
+$htmlContent .= "        <div class=\"max-h-34 relative mx-auto mt-4 flex max-w-lg flex-1 shrink-0 items-center justify-center overflow-hidden shadow-lg rounded-lg bg-green-100\">\n";
+$htmlContent .= "            <!-- overlay - start -->\n";
+$htmlContent .= "            <!-- <div class=\"absolute inset-0  mix-blend-multiply\"></div> -->\n";
+$htmlContent .= "            <!-- overlay - end -->\n";
+$htmlContent .= "            <!-- text start -->\n";
+$htmlContent .= "            <div class=\"relative flex flex-col items-center p-4 sm:max-w-xl\">\n";
+$htmlContent .= "                <p id=\"company-name\" class=\"mb-4 text-center text-2xl font-bold text-gray-800 sm:text-xl md:mb-2 \">$company</p>\n";
+$htmlContent .= "                <h3 class=\"text-lg italic text-gray-700 mb-2\">How to Purchase:</h3>\n"; // Smaller and italicized title
+$htmlContent .= "                <ol class=\"text-base text-left text-gray-800 mb-1 list-decimal pl-6\">\n";
+$htmlContent .= "                    <li>Click on your preferred package Buy</li>\n";
+$htmlContent .= "                    <li>Enter Your Mpesa No.</li>\n";
+$htmlContent .= "                    <li>Enter pin</li>\n";
+$htmlContent .= "                    <li>Wait for 30sec to be connected</li>\n";
+$htmlContent .= "                </ol>\n";
+$htmlContent .= "                <p id=\"customer-care\" class=\"mb-4 text-center text-lg font-medium text-gray-700 sm:text-1xl md:mb-1  md:text-xl\">CUSTOMER CARE : $phone</p>\n";
+$htmlContent .= "            </div>\n";
+$htmlContent .= "            <!-- text end -->\n";
+$htmlContent .= "        </div>\n";
+$htmlContent .= "    </div>\n";
+
+$htmlContent .= "    <div class=\"py-2 sm:py-4 lg:py-4\">\n";
+$htmlContent .= "        <div class=\"mx-auto max-w-screen-2xl px-4 md:px-4\">\n";
+$htmlContent .= "            <div class=\"mx-auto max-w-lg\">\n";
+$htmlContent .= "                <div class=\"flex flex-col gap-4\">\n";
+$htmlContent .= "                    <button type=\"button\" class=\"btn-3d btn-3d-green flex items-center justify-center gap-2 rounded-lg px-8 py-3 text-center text-sm font-semibold text-white outline-none md:text-base\" onclick=\"redeemVoucher()\">\n";
+$htmlContent .= "                        <svg class=\"w-5 h-5 mr-2\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\">\n";
+$htmlContent .= "                            <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7\"></path>\n";
+$htmlContent .= "                        </svg>\n";
+$htmlContent .= "                        Redeem Voucher\n";
+$htmlContent .= "                    </button>\n";
+$htmlContent .= "                    <button type=\"button\" class=\"btn-3d btn-3d-blue flex items-center justify-center gap-2 rounded-lg px-8 py-3 text-center text-sm font-semibold text-white outline-none md:text-base\" onclick=\"reconnectWithMpesa()\">\n";
+$htmlContent .= "                        <svg class=\"w-5 h-5 mr-2\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\">\n";
+$htmlContent .= "                            <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z\"></path>\n";
+$htmlContent .= "                        </svg>\n";
+$htmlContent .= "                        Reconnect with MPesa Code\n";
+$htmlContent .= "                    </button>\n";
+$htmlContent .= "                    <button type=\"button\" class=\"btn-3d btn-3d-green flex items-center justify-center gap-2 rounded-lg px-8 py-3 text-center text-sm font-semibold text-white outline-none md:text-base\" onclick=\"document.getElementById('submitBtn').click()\">\n";
+$htmlContent .= "                        Already Have an Active Package?\n";
+$htmlContent .= "                    </button>\n";
+$htmlContent .= "                </div>\n";
+$htmlContent .= "            </div>\n";
+$htmlContent .= "        </div>\n";
+$htmlContent .= "    </div>\n";
+
+$htmlContent .= "    <div class=\"text-center\">\n";
+$htmlContent .= "        $(if trial == 'yes')\n";
+$htmlContent .= "        <a href=\"$(link-login-only)?dst=$(link-orig-esc)&amp;username=T-$(mac-esc)\" class=\"btn-3d text-space\" style=\"display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; font-weight: bold; border-radius: 5px;\">\n";
+$htmlContent .= "            FREE TRIAL 10 MINS\n";
+$htmlContent .= "        </a>\n";
+$htmlContent .= "        $(endif)\n";
+$htmlContent .= "    </div>\n";
+$htmlContent .= "    <div><br></div>\n"; // Added line break for spacing
+
+$htmlContent .= "    <div id=\"hotspot-ads-container\" class=\"mx-auto max-w-lg px-4 mb-2\"></div>\n";
+
+$htmlContent .= "    <div class=\"py-2 sm:py-4 lg:py-6\">\n";
+$htmlContent .= "        <div class=\"mx-auto max-w-screen-2xl px-4 md:px-8\">\n";
+$htmlContent .= "            <div class=\"mx-auto max-w-lg grid grid-cols-2 sm:grid-cols-3 gap-1 p-1\" id=\"cards-container\">\n";
+$htmlContent .= "            </div>\n";
+$htmlContent .= "        </div>\n";
+$htmlContent .= "    </div>\n";
+
+$htmlContent .= "    <div class=\"container mx-auto px-4 mb-4\">\n";
+$htmlContent .= "        <div class=\"max-w-md mx-auto bg-white rounded-lg overflow-hidden md:max-w-lg\">\n";
+$htmlContent .= "            <div class=\"md:flex\">\n";
+$htmlContent .= "                <div class=\"w-full p-5\">\n";
+$htmlContent .= "                    <div class=\"text-center\">\n";
+$htmlContent .= "                        <h3 class=\"text-2xl text-gray-900\">Already Have an Active Package?</h3>\n";
+$htmlContent .= "                    </div>\n";
+$htmlContent .= "                    <form id=\"loginForm\" class=\"form\" name=\"login\" action=\"$(link-login-only)\" method=\"post\" $(if chap-id)onSubmit=\"return doLogin()\" $(endif)>\n";
+$htmlContent .= "                        <input type=\"hidden\" name=\"dst\" value=\"$(link-orig)\" />\n";
+$htmlContent .= "                        <input type=\"hidden\" name=\"popup\" value=\"true\" />\n";
+$htmlContent .= "                        <div class=\"text-center\">\n";
+$htmlContent .= "                            <label class=\"block text-gray-700 text-sm font-bold mb-2\" for=\"username\">Enter your account number or user name</label>\n";
+$htmlContent .= "                            <div>\n";
+$htmlContent .= "                                <input id=\"usernameInput\" name=\"username\" type=\"text\" value=\"\" placeholder=\"e.g ACC123456\" class=\"w-full rounded-lg border bg-gray-50 px-3 py-2 text-gray-800 outline-none ring-indigo-300 transition duration-100 focus:ring\" />\n";
+$htmlContent .= "                                <button id=\"submitBtn\" class=\"btn-3d btn-3d-green w-full mt-3 flex items-center justify-center gap-2 rounded-lg px-8 py-3 text-center text-sm font-semibold text-white outline-none md:text-base\" type=\"button\" onclick=\"submitLogin()\">\n";
+$htmlContent .= "                                    Connect\n";
+$htmlContent .= "                                </button>\n";
+$htmlContent .= "                            </div>\n";
+$htmlContent .= "                        </div>\n";
+$htmlContent .= "                        <input type=\"hidden\" name=\"password\" value=\"1234\">\n";
+$htmlContent .= "                    </form>\n";
+$htmlContent .= "                </div>\n";
+$htmlContent .= "            </div>\n";
+$htmlContent .= "        </div>\n";
+$htmlContent .= "    </div>\n";
+
+$htmlContent .= "    <div class=\"container mx-auto px-4 mb-4\">\n";
+$htmlContent .= "        <div class=\"max-w-md mx-auto bg-white rounded-lg overflow-hidden md:max-w-lg\">\n";
+$htmlContent .= "            <div class=\"md:flex\">\n";
+$htmlContent .= "                <div class=\"w-full p-5\">\n";
+$htmlContent .= "                    <div class=\"text-center\">\n";
+$htmlContent .= "                        <h3 class=\"text-2xl text-gray-900\">User Login</h3>\n";
+$htmlContent .= "                    </div>\n";
+
+$htmlContent .= "                    <form class=\"login\" name=\"login\" action=\"$(link-login-only)\" method=\"post\">\n";
+$htmlContent .= "                        <input type=\"hidden\" name=\"dst\" value=\"$(link-orig)\" />\n";
+$htmlContent .= "                        <p class=\"logo-area text-center\" id=\"wifi_name\"></p>\n";
+$htmlContent .= "                        <p class=\"text-center\" style=\"color: black;\">(Enter your username and password to login.)</p>\n";
+$htmlContent .= "                        <input type=\"hidden\" name=\"popup\" value=\"true\" />\n";
+$htmlContent .= "                        <div class=\"s-login\">\n";
+$htmlContent .= "                            <hr/>\n";
+$htmlContent .= "                            <input type=\"text\" name=\"username\" class=\"username w-full rounded-lg border bg-gray-50 px-3 py-2 text-gray-800 outline-none ring-indigo-300 transition duration-100 focus:ring\" placeholder=\"Username\" required />\n";
+$htmlContent .= "                            <div class=\"relative mt-4\">\n";  // Added margin-top for spacing
+$htmlContent .= "                                <input type=\"password\" name=\"password\" id=\"password\" class=\"password w-full rounded-lg border bg-gray-50 px-3 py-2 text-gray-800 outline-none ring-indigo-300 transition duration-100 focus:ring\" placeholder=\"Password\" required />\n";  // Removed value attribute to make it empty
+$htmlContent .= "                                <input type=\"checkbox\" onclick=\"togglePasswordVisibility()\" class=\"absolute top-2 right-3\" style=\"cursor: pointer;\">  \n";
+$htmlContent .= "                            </div>\n";
+$htmlContent .= "                        </div>\n";
+$htmlContent .= "                        <button type=\"submit\" class=\"btn-3d btn-3d-green btn btn-login w-full mt-3 flex items-center justify-center gap-2 rounded-lg px-8 py-3 text-center text-sm font-semibold text-white outline-none md:text-base\"><b>LOGIN</b></button>\n";
+$htmlContent .= "                    </form>\n";
+$htmlContent .= "                </div>\n";
+$htmlContent .= "            </div>\n";
+$htmlContent .= "        </div>\n";
+$htmlContent .= "    </div>\n";
+
+// Device Info Card (MikroTik substitutes $(ip) and $(mac) automatically)
+$htmlContent .= "    <div class=\"container mx-auto px-4 mb-6\">\n";
+$htmlContent .= "        <div class=\"max-w-md mx-auto rounded-2xl overflow-hidden\" style=\"background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(8px);\">\n";
+$htmlContent .= "            <div class=\"px-5 py-3 border-b\" style=\"border-color:rgba(255,255,255,0.08);\">\n";
+$htmlContent .= "                <p style=\"color:rgba(255,255,255,0.5);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;text-align:center;margin:0;\">Your Device Info</p>\n";
+$htmlContent .= "            </div>\n";
+$htmlContent .= "            <div class=\"px-5 py-4\">\n";
+// IP Address row
+$htmlContent .= "                <div class=\"flex items-center justify-between py-2\" style=\"border-bottom:1px solid rgba(255,255,255,0.07);\">\n";
+$htmlContent .= "                    <div class=\"flex items-center gap-2\" style=\"color:rgba(255,255,255,0.5);font-size:13px;\">\n";
+$htmlContent .= "                        <svg xmlns=\"http://www.w3.org/2000/svg\" style=\"width:15px;height:15px;flex-shrink:0;\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"2\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9\"/></svg>\n";
+$htmlContent .= "                        IP Address\n";
+$htmlContent .= "                    </div>\n";
+$htmlContent .= "                    <span style=\"color:#fff;font-family:monospace;font-size:13px;font-weight:600;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.3);padding:2px 10px;border-radius:6px;\">$(ip)</span>\n";
+$htmlContent .= "                </div>\n";
+// MAC Address row
+$htmlContent .= "                <div class=\"flex items-center justify-between py-2\">\n";
+$htmlContent .= "                    <div class=\"flex items-center gap-2\" style=\"color:rgba(255,255,255,0.5);font-size:13px;\">\n";
+$htmlContent .= "                        <svg xmlns=\"http://www.w3.org/2000/svg\" style=\"width:15px;height:15px;flex-shrink:0;\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"2\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0 0h18\"/></svg>\n";
+$htmlContent .= "                        MAC Address\n";
+$htmlContent .= "                    </div>\n";
+$htmlContent .= "                    <span style=\"color:#fff;font-family:monospace;font-size:13px;font-weight:600;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);padding:2px 10px;border-radius:6px;\">$(mac)</span>\n";
+$htmlContent .= "                </div>\n";
+$htmlContent .= "            </div>\n";
+$htmlContent .= "        </div>\n";
+$htmlContent .= "    </div>\n";
+
+$htmlContent .= "<script>\n";
+$htmlContent .= "function togglePasswordVisibility() {\n";
+$htmlContent .= "    var passwordInput = document.getElementById('password');\n";
+$htmlContent .= "    if (passwordInput.type === 'password') {\n";
+$htmlContent .= "        passwordInput.type = 'text';\n";
+$htmlContent .= "    } else {\n";
+$htmlContent .= "        passwordInput.type = 'password';\n";
+$htmlContent .= "    }\n";
+$htmlContent .= "}\n";
+$htmlContent .= "</script>\n";
+
+$htmlContent .= "    <div class=\"mx-auto max-w-screen-2xl px-4 md:px-8\">\n";
+$htmlContent .= "        <div class=\"mx-auto mb-4 max-w-lg\">\n";
+$htmlContent .= "            <div class=\"border-t py-4\">\n";
+$htmlContent .= "                <p class=\"text-xs text-center\" style=\"color: white; font-weight: bold;\">&copy;  All rights reserved. Created by SpeedRadius</p>\n";
+$htmlContent .= "            </div>\n";
+$htmlContent .= "        </div>\n";
+$htmlContent .= "    </div>\n";
+$htmlContent .= "</body>\n";
+
+$htmlContent .= "<script>\n";
+$htmlContent .= "    document.addEventListener('DOMContentLoaded', function() {\n";
+$htmlContent .= "        var accountId = getCookie('accountid');\n";
+$htmlContent .= "        if (accountId) {\n";
+$htmlContent .= "            document.getElementById('usernameInput').value = accountId;\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "    });\n";
+$htmlContent .= "\n";
+$htmlContent .= "</script>\n";
+
+$htmlContent .= "<script>\n";
+$htmlContent .= "function fetchData() {\n";
+$htmlContent .= "    let domain = '" . APP_URL . "/';\n";
+$htmlContent .= "    let siteUrl = domain + \"/index.php?_route=plugin/hotspot_plan\";\n";
+$htmlContent .= "    let request = new XMLHttpRequest();\n";
+$htmlContent .= "    const routerName = encodeURIComponent(\"$routerName\");\n";
+$htmlContent .= "    const dataparams = `routername=\${routerName}`;\n";
+$htmlContent .= "    request.open(\"POST\", siteUrl, true);\n";
+$htmlContent .= "    request.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');\n";
+$htmlContent .= "    request.onload = () => {\n";
+$htmlContent .= "        if (request.readyState === XMLHttpRequest.DONE) {\n";
+$htmlContent .= "            if (request.status === 200) {\n";
+$htmlContent .= "                let fetchedData = JSON.parse(request.responseText);\n";
+$htmlContent .= "                populateCards(fetchedData);\n";
+$htmlContent .= "            } else {\n";
+$htmlContent .= "                console.log(`Error \${request.status}: \${request.statusText}`);\n";
+$htmlContent .= "            }\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "    };\n";
+$htmlContent .= "    request.onerror = () => {\n";
+$htmlContent .= "        console.error(\"Network error\");\n";
+$htmlContent .= "    };\n";
+$htmlContent .= "    request.send(dataparams);\n";
+$htmlContent .= "}\n";
+
+$htmlContent .= "function populateCards(data) {\n";
+$htmlContent .= "    // Update company name and customer care in real-time from DB\n";
+$htmlContent .= "    if (data.company) {\n";
+$htmlContent .= "        var companyEl = document.getElementById('company-name');\n";
+$htmlContent .= "        if (companyEl) companyEl.textContent = data.company;\n";
+$htmlContent .= "    }\n";
+$htmlContent .= "    if (data.phone) {\n";
+$htmlContent .= "        var careEl = document.getElementById('customer-care');\n";
+$htmlContent .= "        if (careEl) careEl.textContent = 'CUSTOMER CARE : ' + data.phone;\n";
+$htmlContent .= "    }\n";
+$htmlContent .= "    var cardsContainer = document.getElementById('cards-container');\n";
+$htmlContent .= "    cardsContainer.innerHTML = ''; // Clear existing content\n";
+$htmlContent .= "    data.data.forEach(router => {\n";
+$htmlContent .= "        router.plans_hotspot.forEach(item => {\n";
+$htmlContent .= "            var cardDiv = document.createElement('div');\n";
+$htmlContent .= "            cardDiv.className = 'bg-white border border-black rounded-lg shadow-md overflow-hidden transition duration-300 hover:shadow-lg flex flex-col items-center justify-between mx-auto mb-4 w-40';\n";
+$htmlContent .= "            cardDiv.innerHTML = `\n";
+$htmlContent .= "                <div class=\"bg-green-500 text-white w-full py-1\">\n";
+$htmlContent .= "                    <h2 class=\"text-sm font-medium uppercase text-center\" style=\"font-size: clamp(0.75rem, 1.5vw, 1rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;\">\n";
+$htmlContent .= "                        \${item.planname}\n";
+$htmlContent .= "                    </h2>\n";
+$htmlContent .= "                </div>\n";
+$htmlContent .= "                <div class=\"px-4 py-2 flex-grow\">\n";
+$htmlContent .= "                    <p class=\"text-2xl font-bold text-green-600 mb-1\">\n";
+$htmlContent .= "                        <span class=\"text-lg font-medium text-black\">\${item.currency}</span>\n";
+$htmlContent .= "                        \${item.price}\n";
+$htmlContent .= "                    </p>\n";
+$htmlContent .= "                    <p class=\"text-sm text-black mb-2\">\n";
+$htmlContent .= "                        Valid for \${item.validity} \${item.timelimit}\n";
+$htmlContent .= "                    </p>\n";
+$htmlContent .= "                    <hr class=\"border-black mb-2\">\n";
+$htmlContent .= "                </div>\n";
+$htmlContent .= "                <div class=\"px-4 py-2 flex-shrink-0\">\n";
+$htmlContent .= "                    <a href=\"#\" class=\"btn-3d btn-3d-black inline-block font-semibold py-2 px-6 rounded-lg text-white text-md\"\n";
+$htmlContent .= "                        onclick=\"handlePhoneNumberSubmission('\${item.planId}', '\${item.routerId}', '\${item.price}'); return false;\"\n";
+$htmlContent .= "                        data-plan-id=\"\${item.planId}\"\n";
+$htmlContent .= "                        data-router-id=\"\${item.routerId}\">\n";
+$htmlContent .= "                            Buy\n";
+$htmlContent .= "                    </a>\n";
+$htmlContent .= "                </div>\n";
+$htmlContent .= "            `;\n";
+$htmlContent .= "            cardsContainer.appendChild(cardDiv);\n";
+$htmlContent .= "        });\n";
+$htmlContent .= "    });\n";
+$htmlContent .= "}\n";
+$htmlContent .= "fetchData();\n";
+$htmlContent .= "</script>\n";
+
+$htmlContent .= "<script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script>\n";
+$htmlContent .= "<script>\n";
+$htmlContent .= "    function formatPhoneNumber(phoneNumber) {\n";
+$htmlContent .= "        if (phoneNumber.startsWith('+')) {\n";
+$htmlContent .= "            phoneNumber = phoneNumber.substring(1);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        if (phoneNumber.startsWith('0')) {\n";
+$htmlContent .= "            phoneNumber = '254' + phoneNumber.substring(1);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        if (phoneNumber.match(/^(7|1)/)) {\n";
+$htmlContent .= "            phoneNumber = '254' + phoneNumber;\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        return phoneNumber;\n";
+$htmlContent .= "    }\n";
+$htmlContent .= "\n";
+$htmlContent .= "    function setCookie(name, value, days) {\n";
+$htmlContent .= "        var expires = \"\";\n";
+$htmlContent .= "        if (days) {\n";
+$htmlContent .= "            var date = new Date();\n";
+$htmlContent .= "            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));\n";
+$htmlContent .= "            expires = \"; expires=\" + date.toUTCString();\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        document.cookie = name + \"=\" + (value || \"\") + expires + \"; path=/\";\n";
+$htmlContent .= "        // Also store in localStorage as backup\n";
+$htmlContent .= "        try {\n";
+$htmlContent .= "            localStorage.setItem(name, value);\n";
+$htmlContent .= "        } catch (e) {\n";
+$htmlContent .= "            console.log('LocalStorage not available');\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "    }\n";
+$htmlContent .= "\n";
+$htmlContent .= "    function getCookie(name) {\n";
+$htmlContent .= "        var nameEQ = name + \"=\";\n";
+$htmlContent .= "        var ca = document.cookie.split(';');\n";
+$htmlContent .= "        for (var i = 0; i < ca.length; i++) {\n";
+$htmlContent .= "            var c = ca[i];\n";
+$htmlContent .= "            while (c.charAt(0) == ' ') c = c.substring(1, c.length);\n";
+$htmlContent .= "            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        // Try getting from localStorage if cookie not found\n";
+$htmlContent .= "        try {\n";
+$htmlContent .= "            var localValue = localStorage.getItem(name);\n";
+$htmlContent .= "            if (localValue) {\n";
+$htmlContent .= "                // Restore cookie from localStorage\n";
+$htmlContent .= "                setCookie(name, localValue, 365);\n";
+$htmlContent .= "                return localValue;\n";
+$htmlContent .= "            }\n";
+$htmlContent .= "        } catch (e) {\n";
+$htmlContent .= "            console.log('LocalStorage not available');\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        return null;\n";
+$htmlContent .= "    }\n";
+$htmlContent .= "\n";
+$htmlContent .= "    function generateAccountId() {\n";
+$htmlContent .= "        return 'user_' + Math.random().toString(36).substr(2, 9);\n";
+$htmlContent .= "    }\n";
+$htmlContent .= "\n";
+$htmlContent .= "    function persistAccountId() {\n";
+$htmlContent .= "        var accountId = getCookie('accountId');\n";
+$htmlContent .= "        if (!accountId) {\n";
+$htmlContent .= "            accountId = generateAccountId();\n";
+$htmlContent .= "            setCookie('accountId', accountId, 365); // Store for 1 year\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "        return accountId;\n";
+$htmlContent .= "    }\n";
+$htmlContent .= "\n";
+$htmlContent .= "    document.addEventListener('DOMContentLoaded', function() {\n";
+$htmlContent .= "        var accountId = persistAccountId();\n";
+$htmlContent .= "        var usernameInput = document.getElementById('usernameInput');\n";
+$htmlContent .= "        if (usernameInput) {\n";
+$htmlContent .= "            usernameInput.value = accountId;\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "    });\n";
+$htmlContent .= "\n";
+$htmlContent .= "    function generateAccountId() {\n";
+$htmlContent .= "        return '' + Math.floor(10000 + Math.random() * 90000); // Generate a random number between 10000 and 99999\n";
+$htmlContent .= "    }\n";
+$htmlContent .= "\n";
+
+$htmlContent .= "var loginTimeout; // Variable to store the timeout ID\n";
+$htmlContent .= "function handlePhoneNumberSubmission(planId, routerId, price) {\n";
+$htmlContent .= "    // Fallback: if price not passed, read from the card\n";
+$htmlContent .= "    if (!price || price === 'undefined') {\n";
+$htmlContent .= "        var btn = event.target.closest('a');\n";
+$htmlContent .= "        if (btn) {\n";
+$htmlContent .= "            var card = btn.closest('.bg-white');\n";
+$htmlContent .= "            if (card) {\n";
+$htmlContent .= "                var priceEl = card.querySelector('.text-green-600');\n";
+$htmlContent .= "                if (priceEl) {\n";
+$htmlContent .= "                    var match = priceEl.textContent.match(/[\\d,]+/);\n";
+$htmlContent .= "                    if (match) price = match[0].replace(/,/g, '');\n";
+$htmlContent .= "                }\n";
+$htmlContent .= "            }\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "    }\n";
+$htmlContent .= "    var displayPrice = price || '...';\n";
+$htmlContent .= "    var msg = 'You are about to pay <strong style=\"font-size:1.3em;color:#16a34a;\">Ksh: ' + displayPrice + '/=</strong><br>Enter phonenumber below and click pay now to initialize payment';\n";
+$htmlContent .= "    swal.fire({\n";
+$htmlContent .= "        title: 'Enter Your Mpesa Number',\n";
+$htmlContent .= "        html: msg,\n";
+$htmlContent .= "        input: 'number',\n";
+$htmlContent .= "        inputAttributes: {\n";
+$htmlContent .= "            required: 'true'\n";
+$htmlContent .= "        },\n";
+$htmlContent .= "        inputValidator: function(value) {\n";
+$htmlContent .= "            if (value === '') {\n";
+$htmlContent .= "                return 'You need to write your phonenumber!';\n";
+$htmlContent .= "            }\n";
+$htmlContent .= "        },\n";
+$htmlContent .= "        showCancelButton: true,\n";
+$htmlContent .= "        confirmButtonColor: '#3085d6',\n";
+$htmlContent .= "        cancelButtonColor: '#d33',\n";
+$htmlContent .= "        confirmButtonText: 'Pay Now',\n";
+$htmlContent .= "        showLoaderOnConfirm: true,\n";
+$htmlContent .= "        preConfirm: (phoneNumber) => {\n";
+$htmlContent .= "            var formattedPhoneNumber = formatPhoneNumber(phoneNumber);\n";
+$htmlContent .= "            var accountId = getCookie('accountId');\n";
+$htmlContent .= "            if (!accountId) {\n";
+$htmlContent .= "                accountId = generateAccountId(); // Generate a new account ID\n";
+$htmlContent .= "                setCookie('accountId', accountId, 4); // Set account ID as a cookie\n";
+$htmlContent .= "            }\n";
+$htmlContent .= "            document.getElementById('usernameInput').value = accountId; // Use account ID as the new username\n";
+$htmlContent .= "            console.log(\"Phone number for autofill:\", formattedPhoneNumber);\n";
+$htmlContent .= "\n";
+$htmlContent .= "            return fetch('" . APP_URL . "/index.php?_route=plugin/CreateHotspotuser&type=grant', {\n";
+$htmlContent .= "                method: 'POST',\n";
+$htmlContent .= "                headers: {'Content-Type': 'application/json'},\n";
+$htmlContent .= "                body: JSON.stringify({phone_number: formattedPhoneNumber, plan_id: planId, router_id: routerId, account_id: accountId}),\n";
+$htmlContent .= "            })\n";
+$htmlContent .= "            .then(response => {\n";
+$htmlContent .= "                if (!response.ok) throw new Error('Network response was not ok');\n";
+$htmlContent .= "                return response.json();\n";
+$htmlContent .= "            })\n";
+$htmlContent .= "            .then(data => {\n";
+$htmlContent .= "                if (data.status === 'error') throw new Error(data.message);\n";
+$htmlContent .= "                // For redirect-based gateways (e.g. PesaPal), open the payment URL in a new tab\n";
+$htmlContent .= "                if (data.redirect_url) {\n";
+$htmlContent .= "                    window.open(data.redirect_url, '_blank');\n";
+$htmlContent .= "                }\n";
+$htmlContent .= "                Swal.fire({\n";
+$htmlContent .= "                    icon: 'info',\n";
+$htmlContent .= "                    title: 'Processing..',\n";
+$htmlContent .= "                    html: `A payment request has been sent to your phone. Please wait while we process your payment.`,\n";
+$htmlContent .= "                    showConfirmButton: false,\n";
+$htmlContent .= "                    allowOutsideClick: false,\n";
+$htmlContent .= "                    didOpen: () => {\n";
+$htmlContent .= "                        Swal.showLoading();\n";
+$htmlContent .= "                        checkPaymentStatus(formattedPhoneNumber);\n";
+$htmlContent .= "                    }\n";
+$htmlContent .= "                });\n";
+$htmlContent .= "                return formattedPhoneNumber;\n";
+$htmlContent .= "            })\n";
+$htmlContent .= "            .catch(error => {\n";
+$htmlContent .= "                Swal.fire({\n";
+$htmlContent .= "                    icon: 'error',\n";
+$htmlContent .= "                    title: 'Oops...',\n";
+$htmlContent .= "                    text: error.message,\n";
+$htmlContent .= "                });\n";
+$htmlContent .= "            });\n";
+$htmlContent .= "        },\n";
+$htmlContent .= "        allowOutsideClick: () => !Swal.isLoading()\n";
+$htmlContent .= "    });\n";
+$htmlContent .= "}\n";
+$htmlContent .= "\n";
+$htmlContent .= "function checkPaymentStatus(phoneNumber) {\n";
+$htmlContent .= "    let checkInterval = setInterval(() => {\n";
+$htmlContent .= "        $.ajax({\n";
+$htmlContent .= "            url: '" . APP_URL . "/index.php?_route=plugin/CreateHotspotuser&type=verify',\n";
+$htmlContent .= "            method: 'POST',\n";
+$htmlContent .= "            data: JSON.stringify({account_id: document.getElementById('usernameInput').value}),\n";
+$htmlContent .= "            contentType: 'application/json',\n";
+$htmlContent .= "            dataType: 'json',\n";
+$htmlContent .= "            success: function(data) {\n";
+$htmlContent .= "                console.log('Raw Response:', data); // Debugging\n";
+$htmlContent .= "                if (data.Resultcode === '3') { // Success\n";
+$htmlContent .= "                    clearInterval(checkInterval);\n";
+$htmlContent .= "                    Swal.fire({\n";
+$htmlContent .= "                        icon: 'success',\n";
+$htmlContent .= "                        title: 'Payment Successful',\n";
+$htmlContent .= "                        text: data.Message,\n";
+$htmlContent .= "                        showConfirmButton: false\n";
+$htmlContent .= "                    });\n";
+$htmlContent .= "                    if (loginTimeout) {\n";
+$htmlContent .= "                        clearTimeout(loginTimeout);\n";
+$htmlContent .= "                    }\n";
+$htmlContent .= "                    loginTimeout = setTimeout(function() {\n";
+$htmlContent .= "                        document.getElementById('loginForm').submit();\n";
+$htmlContent .= "                    }, 2000);\n";
+$htmlContent .= "                } else if (data.Resultcode === '2') { // Error\n";
+$htmlContent .= "                    clearInterval(checkInterval);\n";
+$htmlContent .= "                    let iconType = data.Status === 'danger' ? 'error' : data.Status;\n";
+$htmlContent .= "                    Swal.fire({\n";
+$htmlContent .= "                        icon: iconType,\n";
+$htmlContent .= "                        title: 'Payment Issue',\n";
+$htmlContent .= "                        text: data.Message,\n";
+$htmlContent .= "                    });\n";
+$htmlContent .= "                } else if (data.Resultcode === '1') { // Primary\n";
+$htmlContent .= "                    // Continue checking\n";
+$htmlContent .= "                }\n";
+$htmlContent .= "            },\n";
+$htmlContent .= "            error: function(xhr, textStatus, errorThrown) {\n";
+$htmlContent .= "                console.log('Error: ' + errorThrown);\n";
+$htmlContent .= "            }\n";
+$htmlContent .= "        });\n";
+$htmlContent .= "    }, 2000);\n";
+$htmlContent .= "\n";
+$htmlContent .= "    setTimeout(() => {\n";
+$htmlContent .= "        clearInterval(checkInterval);\n";
+$htmlContent .= "        Swal.fire({\n";
+$htmlContent .= "            icon: 'warning',\n";
+$htmlContent .= "            title: 'Timeout',\n";
+$htmlContent .= "            text: 'Payment verification timed out. Please try again.',\n";
+$htmlContent .= "        });\n";
+$htmlContent .= "    }, 60000); // Stop checking after 60 seconds\n";
+$htmlContent .= "}\n";
+$htmlContent .= "</script>\n";
+
+$htmlContent .= "<script src=\"https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js\"></script>\n";
+
+$htmlContent .= "<script>\n";
+$htmlContent .= "document.addEventListener('DOMContentLoaded', function() {\n";
+$htmlContent .= "     // Ensure the button is correctly targeted by its ID.\n";
+$htmlContent .= "     var submitBtn = document.getElementById('submitBtn');\n";
+$htmlContent .= "     \n";
+$htmlContent .= "     // Add a click event listener to the \"Login Now\" button.\n";
+$htmlContent .= "     submitBtn.addEventListener('click', function(event) {\n";
+$htmlContent .= "         event.preventDefault(); // Prevent the default button action.\n";
+$htmlContent .= "         \n";
+$htmlContent .= "         // Optional: Log to console for debugging purposes.\n";
+$htmlContent .= "         console.log(\"Login Now button clicked.\");\n";
+$htmlContent .= " \n";
+$htmlContent .= "         // Direct form submission, bypassing the doLogin function for simplicity.\n";
+$htmlContent .= "         var form = document.getElementById('loginForm');\n";
+$htmlContent .= "         form.submit(); // Submit the form directly.\n";
+$htmlContent .= "     });\n";
+$htmlContent .= "});\n";
+$htmlContent .= "</script>\n";
+
+$htmlContent .= "<script>\n";
+$htmlContent .= "document.addEventListener('DOMContentLoaded', function() {\n";
+$htmlContent .= "     // Ensure the top button is correctly targeted by its ID.\n";
+$htmlContent .= "     var submitBtnTop = document.getElementById('submitBtnTop');\n";
+$htmlContent .= "     \n";
+$htmlContent .= "     // Add a click event listener to the top \"Connect\" button.\n";
+$htmlContent .= "     submitBtnTop.addEventListener('click', function(event) {\n";
+$htmlContent .= "         event.preventDefault(); // Prevent the default button action.\n";
+$htmlContent .= "         \n";
+$htmlContent .= "         // Optional: Log to console for debugging purposes.\n";
+$htmlContent .= "         console.log(\"Top Connect button clicked.\");\n";
+$htmlContent .= " \n";
+$htmlContent .= "         // Direct form submission, bypassing the doLogin function for simplicity.\n";
+$htmlContent .= "         var form = document.getElementById('loginFormTop');\n";
+$htmlContent .= "         form.submit(); // Submit the form directly.\n";
+$htmlContent .= "     });\n";
+$htmlContent .= "});\n";
+$htmlContent .= "</script>\n";
+
+$htmlContent .= "<script>\n";
+$htmlContent .= "var loginTimeout; // Variable to store the timeout ID\n";
+$htmlContent .= "function redeemVoucher() {\n";
+$htmlContent .= "    Swal.fire({\n";
+$htmlContent .= "        title: 'Redeem Voucher',\n";
+$htmlContent .= "        input: 'text',\n";
+$htmlContent .= "        inputPlaceholder: 'Enter voucher code',\n";
+$htmlContent .= "        inputValidator: function(value) {\n";
+$htmlContent .= "            if (!value) {\n";
+$htmlContent .= "                return 'You need to enter a voucher code!';\n";
+$htmlContent .= "            }\n";
+$htmlContent .= "        },\n";
+$htmlContent .= "        confirmButtonColor: '#3085d6',\n";
+$htmlContent .= "        cancelButtonColor: '#d33',\n";
+$htmlContent .= "        confirmButtonText: 'Redeem',\n";
+$htmlContent .= "        showLoaderOnConfirm: true,\n";
+$htmlContent .= "        preConfirm: (voucherCode) => {\n";
+$htmlContent .= "            var accountId = getCookie('accountId');\n";
+$htmlContent .= "            if (!accountId) {\n";
+$htmlContent .= "                accountId = generateAccountId();\n";
+$htmlContent .= "                setCookie('accountId', accountId, 7);\n";
+$htmlContent .= "            }\n";
+$htmlContent .= "            return fetch('" . APP_URL . "/index.php?_route=plugin/CreateHotspotuser&type=voucher', {\n";
+$htmlContent .= "                method: 'POST',\n";
+$htmlContent .= "                headers: {'Content-Type': 'application/json'},\n";
+$htmlContent .= "                body: JSON.stringify({voucher_code: voucherCode, account_id: accountId}),\n";
+$htmlContent .= "            })\n";
+$htmlContent .= "            .then(response => {\n";
+$htmlContent .= "                if (!response.ok) throw new Error('Network response was not ok');\n";
+$htmlContent .= "                return response.json();\n";
+$htmlContent .= "            })\n";
+$htmlContent .= "            .then(data => {\n";
+$htmlContent .= "                if (data.status === 'error') throw new Error(data.message);\n";
+$htmlContent .= "                return data;\n";
+$htmlContent .= "            });\n";
+$htmlContent .= "        },\n";
+$htmlContent .= "        allowOutsideClick: () => !Swal.isLoading()\n";
+$htmlContent .= "    }).then((result) => {\n";
+$htmlContent .= "        if (result.isConfirmed) {\n";
+$htmlContent .= "            Swal.fire({\n";
+$htmlContent .= "                icon: 'success',\n";
+$htmlContent .= "                title: 'Voucher Redeemed',\n";
+$htmlContent .= "                text: result.value.message,\n";
+$htmlContent .= "                showConfirmButton: false,\n";
+$htmlContent .= "                allowOutsideClick: false,\n";
+$htmlContent .= "                didOpen: () => {\n";
+$htmlContent .= "                    Swal.showLoading();\n";
+$htmlContent .= "                    var username = result.value.username;\n";
+$htmlContent .= "                    console.log('Received username from server:', username);\n";
+$htmlContent .= "                    var usernameInput = document.querySelector('input[name=\"username\"]');\n";
+$htmlContent .= "                    if (usernameInput) {\n";
+$htmlContent .= "                        console.log('Found username input element.');\n";
+$htmlContent .= "                        usernameInput.value = username;\n";
+$htmlContent .= "                        loginTimeout = setTimeout(function() {\n";
+$htmlContent .= "                            var loginForm = document.getElementById('loginForm');\n";
+$htmlContent .= "                            if (loginForm) {\n";
+$htmlContent .= "                                loginForm.submit();\n";
+$htmlContent .= "                            } else {\n";
+$htmlContent .= "                                console.error('Login form not found.');\n";
+$htmlContent .= "                                Swal.fire({\n";
+$htmlContent .= "                                    icon: 'error',\n";
+$htmlContent .= "                                    title: 'Error',\n";
+$htmlContent .= "                                    text: 'Login form not found. Please try again.',\n";
+$htmlContent .= "                                });\n";
+$htmlContent .= "                            }\n";
+$htmlContent .= "                        }, 2000);\n";
+$htmlContent .= "                    } else {\n";
+$htmlContent .= "                        console.error('Username input element not found.');\n";
+$htmlContent .= "                        Swal.fire({\n";
+$htmlContent .= "                            icon: 'error',\n";
+$htmlContent .= "                            title: 'Error',\n";
+$htmlContent .= "                            text: 'Username input not found. Please try again.',\n";
+$htmlContent .= "                        });\n";
+$htmlContent .= "                    }\n";
+$htmlContent .= "                }\n";
+$htmlContent .= "            });\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "    }).catch(error => {\n";
+$htmlContent .= "        Swal.fire({\n";
+$htmlContent .= "            icon: 'error',\n";
+$htmlContent .= "            title: 'Oops...',\n";
+$htmlContent .= "            text: error.message,\n";
+$htmlContent .= "        });\n";
+$htmlContent .= "    });\n";
+$htmlContent .= "}\n";
+$htmlContent .= "</script>\n";
+
+$htmlContent .= "<script>\n";
+$htmlContent .= "function reconnectWithMpesa() {\n";
+$htmlContent .= "    Swal.fire({\n";
+$htmlContent .= "        title: 'Reconnect with MPesa',\n";
+$htmlContent .= "        input: 'text',\n";
+$htmlContent .= "        inputPlaceholder: 'Enter MPesa Transaction Code',\n";
+$htmlContent .= "        inputValidator: function(value) {\n";
+$htmlContent .= "            if (!value) {\n";
+$htmlContent .= "                return 'You need to enter an MPesa code!';\n";
+$htmlContent .= "            }\n";
+$htmlContent .= "            // Accept only the code: e.g. UG6PQAGHDN\n";
+$htmlContent .= "            if (!/^[A-Z0-9]{8,12}$/i.test(value.trim())) {\n";
+$htmlContent .= "                return 'Enter the transaction code only (e.g. UG6PQAGHDN)';\n";
+$htmlContent .= "            }\n";
+$htmlContent .= "        },\n";
+$htmlContent .= "        confirmButtonColor: '#3085d6',\n";
+$htmlContent .= "        cancelButtonColor: '#d33',\n";
+$htmlContent .= "        confirmButtonText: 'Reconnect',\n";
+$htmlContent .= "        showLoaderOnConfirm: true,\n";
+$htmlContent .= "        preConfirm: (mpesaCode) => {\n";
+$htmlContent .= "            // Get device info from the page (MikroTik substitutes these)\n";
+$htmlContent .= "            var macAddr = '$(mac)';\n";
+$htmlContent .= "            var ipAddr = '$(ip)';\n";
+$htmlContent .= "            var accountId = getCookie('accountId') || generateAccountId();\n";
+$htmlContent .= "            setCookie('accountId', accountId, 7);\n";
+$htmlContent .= "            \n";
+$htmlContent .= "            // POST to the server — CORS headers are set\n";
+$htmlContent .= "            var formData = new FormData();\n";
+$htmlContent .= "            formData.append('action', 'mpesa_reconnect');\n";
+$htmlContent .= "            formData.append('mpesa_code', mpesaCode);\n";
+$htmlContent .= "            formData.append('mac', macAddr);\n";
+$htmlContent .= "            formData.append('ip', ipAddr);\n";
+$htmlContent .= "            formData.append('account_id', accountId);\n";
+$htmlContent .= "            \n";
+$htmlContent .= "            return fetch('" . APP_URL . "/system/plugin/download.php', {\n";
+$htmlContent .= "                method: 'POST',\n";
+$htmlContent .= "                body: formData,\n";
+$htmlContent .= "            })\n";
+$htmlContent .= "            .then(response => {\n";
+$htmlContent .= "                if (!response.ok) throw new Error('Network response was not ok');\n";
+$htmlContent .= "                return response.json();\n";
+$htmlContent .= "            })\n";
+$htmlContent .= "            .then(data => {\n";
+$htmlContent .= "                console.log('MPesa reconnect response:', data);\n";
+$htmlContent .= "                if (data.Resultcode === '2') {\n";
+$htmlContent .= "                    throw new Error(data.Message || 'Reconnection failed');\n";
+$htmlContent .= "                }\n";
+$htmlContent .= "                if (data.Resultcode !== '3') {\n";
+$htmlContent .= "                    throw new Error(data.Message || 'Unexpected response');\n";
+$htmlContent .= "                }\n";
+$htmlContent .= "                return data;\n";
+$htmlContent .= "            });\n";
+$htmlContent .= "        },\n";
+$htmlContent .= "        allowOutsideClick: () => !Swal.isLoading()\n";
+$htmlContent .= "    }).then((result) => {\n";
+$htmlContent .= "        if (result.isConfirmed) {\n";
+$htmlContent .= "            Swal.fire({\n";
+$htmlContent .= "                icon: 'success',\n";
+$htmlContent .= "                title: 'Reconnection Successful',\n";
+$htmlContent .= "                text: result.value.Message,\n";
+$htmlContent .= "                showConfirmButton: false,\n";
+$htmlContent .= "                allowOutsideClick: false,\n";
+$htmlContent .= "                didOpen: () => {\n";
+$htmlContent .= "                    Swal.showLoading();\n";
+$htmlContent .= "                    var username = result.value.username;\n";
+$htmlContent .= "                    console.log('Received username from MPesa reconnect:', username);\n";
+$htmlContent .= "                    \n";
+$htmlContent .= "                    if (!username || username === '') {\n";
+$htmlContent .= "                        console.error('No username received from server');\n";
+$htmlContent .= "                        Swal.fire({\n";
+$htmlContent .= "                            icon: 'error',\n";
+$htmlContent .= "                            title: 'Error',\n";
+$htmlContent .= "                            text: 'No username received from server. Please contact support.',\n";
+$htmlContent .= "                        });\n";
+$htmlContent .= "                        return;\n";
+$htmlContent .= "                    }\n";
+$htmlContent .= "                    \n";
+$htmlContent .= "                    // Update all possible username inputs\n";
+$htmlContent .= "                    var usernameInputs = document.querySelectorAll('input[name=\"username\"]');\n";
+$htmlContent .= "                    var accountInput = document.getElementById('usernameInput');\n";
+$htmlContent .= "                    \n";
+$htmlContent .= "                    if (usernameInputs.length > 0) {\n";
+$htmlContent .= "                        usernameInputs.forEach(function(input) {\n";
+$htmlContent .= "                            input.value = username;\n";
+$htmlContent .= "                            console.log('Updated username input:', input);\n";
+$htmlContent .= "                        });\n";
+$htmlContent .= "                    }\n";
+$htmlContent .= "                    \n";
+$htmlContent .= "                    if (accountInput) {\n";
+$htmlContent .= "                        accountInput.value = username;\n";
+$htmlContent .= "                        console.log('Updated account input:', accountInput);\n";
+$htmlContent .= "                    }\n";
+$htmlContent .= "                    \n";
+$htmlContent .= "                    // Store the username in cookie for persistence\n";
+$htmlContent .= "                    setCookie('accountId', username, 7);\n";
+$htmlContent .= "                    \n";
+$htmlContent .= "                    setTimeout(function() {\n";
+$htmlContent .= "                        console.log('Attempting to login with username:', username);\n";
+$htmlContent .= "                        // Try to submit the quick login form first (loginForm)\n";
+$htmlContent .= "                        var loginForm = document.getElementById('loginForm');\n";
+$htmlContent .= "                        if (loginForm) {\n";
+$htmlContent .= "                            console.log('Found loginForm, submitting...');\n";
+$htmlContent .= "                            console.log('Form action:', loginForm.action);\n";
+$htmlContent .= "                            console.log('Username input value:', loginForm.querySelector('input[name=\"username\"]').value);\n";
+$htmlContent .= "                            loginForm.submit();\n";
+$htmlContent .= "                        } else {\n";
+$htmlContent .= "                            console.log('loginForm not found, trying manual login form');\n";
+$htmlContent .= "                            // Fallback to manual login form\n";
+$htmlContent .= "                            var manualLoginForm = document.querySelector('form.login');\n";
+$htmlContent .= "                            if (manualLoginForm) {\n";
+$htmlContent .= "                                console.log('Found manual login form, submitting...');\n";
+$htmlContent .= "                                console.log('Form action:', manualLoginForm.action);\n";
+$htmlContent .= "                                var usernameField = manualLoginForm.querySelector('input[name=\"username\"]');\n";
+$htmlContent .= "                                var passwordField = manualLoginForm.querySelector('input[name=\"password\"]');\n";
+$htmlContent .= "                                if (usernameField) {\n";
+$htmlContent .= "                                    console.log('Username field value:', usernameField.value);\n";
+$htmlContent .= "                                }\n";
+$htmlContent .= "                                if (passwordField && passwordField.type === 'password') {\n";
+$htmlContent .= "                                    passwordField.value = '1234'; // Set default password for reconnection\n";
+$htmlContent .= "                                    console.log('Set password field for manual form');\n";
+$htmlContent .= "                                }\n";
+$htmlContent .= "                                manualLoginForm.submit();\n";
+$htmlContent .= "                            } else {\n";
+$htmlContent .= "                                console.error('No login form found.');\n";
+$htmlContent .= "                                Swal.fire({\n";
+$htmlContent .= "                                    icon: 'error',\n";
+$htmlContent .= "                                    title: 'Error',\n";
+$htmlContent .= "                                    text: 'Login form not found. Please manually enter the username: ' + username + ' and login.',\n";
+$htmlContent .= "                                });\n";
+$htmlContent .= "                            }\n";
+$htmlContent .= "                        }\n";
+$htmlContent .= "                    }, 2000);\n";
+$htmlContent .= "                }\n";
+$htmlContent .= "            });\n";
+$htmlContent .= "        }\n";
+$htmlContent .= "    }).catch(error => {\n";
+$htmlContent .= "        Swal.fire({\n";
+$htmlContent .= "            icon: 'error',\n";
+$htmlContent .= "            title: 'Oops...',\n";
+$htmlContent .= "            text: error.message,\n";
+$htmlContent .= "        });\n";
+$htmlContent .= "    });\n";
+$htmlContent .= "}\n";
+$htmlContent .= "</script>\n";
+
+$htmlContent .= "<script>\n";
+$htmlContent .= "function loadHotspotAds() {\n";
+$htmlContent .= "    fetch('" . APP_URL . "/index.php?_route=plugin/hotspot_ads/get_active')\n";
+$htmlContent .= "        .then(function(r) { return r.json(); })\n";
+$htmlContent .= "        .then(function(ads) {\n";
+$htmlContent .= "            var container = document.getElementById('hotspot-ads-container');\n";
+$htmlContent .= "            if (!container || !ads.length) return;\n";
+$htmlContent .= "            container.innerHTML = '';\n";
+$htmlContent .= "            ads.forEach(function(ad, index) {\n";
+$htmlContent .= "                var el = document.createElement('div');\n";
+$htmlContent .= "                el.className = 'mb-2 text-center';\n";
+$htmlContent .= "                if (ad.type === 'text') {\n";
+$htmlContent .= "                    el.innerHTML = '<p class=\"text-white text-sm font-medium\">' + ad.content + '</p>';\n";
+$htmlContent .= "                } else if (ad.type === 'video') {\n";
+$htmlContent .= "                    var vid_id = 'ad-video-' + index;\n";
+$htmlContent .= "                    var btn_id = 'ad-unmute-' + index;\n";
+$htmlContent .= "                    el.style.cssText = 'position:relative;display:inline-block;';\n";
+$htmlContent .= "                    el.innerHTML =\n";
+$htmlContent .= "                        '<video id=\"' + vid_id + '\" src=\"' + ad.content + '\" autoplay muted loop playsinline class=\"mx-auto max-w-full rounded-lg\" style=\"display:block;\"></video>' +\n";
+$htmlContent .= "                        '<button id=\"' + btn_id + '\" onclick=\"(function(){' +\n";
+$htmlContent .= "                            'var v=document.getElementById(\\'' + vid_id + '\\');' +\n";
+$htmlContent .= "                            'var b=document.getElementById(\\'' + btn_id + '\\');' +\n";
+$htmlContent .= "                            'v.muted=!v.muted;' +\n";
+$htmlContent .= "                            'b.textContent=v.muted?\\'🔇 Tap for sound\\':\\'🔊 Sound on\\';' +\n";
+$htmlContent .= "                        '})()\" style=\"position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;\">🔇 Tap for sound</button>';\n";
+$htmlContent .= "                } else {\n";
+$htmlContent .= "                    el.innerHTML = '<img src=\"' + ad.content + '\" alt=\"' + ad.title + '\" class=\"mx-auto max-w-full rounded-lg\">';\n";
+$htmlContent .= "                }\n";
+$htmlContent .= "                container.appendChild(el);\n";
+$htmlContent .= "            });\n";
+$htmlContent .= "        })\n";
+$htmlContent .= "        .catch(function(e) { console.log('Ads load error:', e); });\n";
+$htmlContent .= "}\n";
+$htmlContent .= "loadHotspotAds();\n";
+$htmlContent .= "</script>\n";
+
+// Google Analytics Tracking
+$htmlContent .= "<script async src='https://www.googletagmanager.com/gtag/js?id=G-MKTVFMD7HE'></script>\n";
+$htmlContent .= "<script>\n";
+$htmlContent .= "  window.dataLayer = window.dataLayer || [];\n";
+$htmlContent .= "  function gtag(){dataLayer.push(arguments);}\n";
+$htmlContent .= "  gtag('js', new Date());\n";
+$htmlContent .= "  gtag('config', 'G-MKTVFMD7HE');\n";
+$htmlContent .= "</script>\n";
+
+$htmlContent .= "</html>\n";
+
+$planStmt->close(); 
+$mysqli->close();
+// Check if the download parameter is set
+if (isset($_GET['download']) && $_GET['download'] == '1') {
+   // Prepare the HTML content for download
+   // ... build your HTML content ...
+
+   // Specify the filename for the download
+   $filename = "login.html";
+
+   // Send headers to force download
+   header('Content-Type: application/octet-stream');
+   header('Content-Disposition: attachment; filename='.basename($filename));
+   header('Expires: 0');
+   header('Cache-Control: must-revalidate');
+   header('Pragma: public');
+   header('Content-Length: ' . strlen($htmlContent));
+
+   // Output the content
+   echo $htmlContent;
+
+   // Prevent any further output
+   exit;
+}
+
+// Regular page content goes here
+// ... HTML and PHP code to display the page ...
+
+
+

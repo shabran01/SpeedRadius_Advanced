@@ -1,0 +1,680 @@
+{include file="sections/header.tpl"}
+
+<style>
+/* Modern WhatsApp Interface Styles */
+.go-whatsapp-container {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.go-whatsapp-title {
+    color: #128C7E;
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.go-whatsapp-title:before {
+    content: '';
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23128C7E"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-11h2v5h-2v-5zm0 6h2v2h-2v-2z"/></svg>') no-repeat center center;
+}
+
+.btn-3d {
+    position: relative;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    background: linear-gradient(145deg, #25d366, #128C7E);
+    box-shadow: 0 2px 6px rgba(37, 211, 102, 0.3),
+                0 1px 2px rgba(0, 0, 0, 0.2);
+    transform: translateY(0);
+    transition: all 0.2s ease;
+    margin: 0 2px;
+    cursor: pointer;
+    display: inline-block;
+    text-decoration: none;
+    line-height: 1.2;
+}
+
+.btn-3d:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(37, 211, 102, 0.4),
+                0 2px 3px rgba(0, 0, 0, 0.2);
+}
+
+.btn-3d:active {
+    transform: translateY(0px);
+    box-shadow: 0 1px 4px rgba(37, 211, 102, 0.2);
+}
+
+.btn-3d.remove {
+    background: linear-gradient(145deg, #ff5555, #dc3545);
+    box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3);
+}
+
+.btn-3d.remove:hover {
+    box-shadow: 0 3px 8px rgba(220, 53, 69, 0.4);
+}
+
+.btn-3d.qr {
+    background: linear-gradient(145deg, #6c5ce7, #5851db);
+    box-shadow: 0 2px 6px rgba(108, 92, 231, 0.3);
+}
+
+.btn-3d.qr:hover {
+    box-shadow: 0 3px 8px rgba(108, 92, 231, 0.4);
+}
+
+.btn-3d.pair {
+    background: linear-gradient(145deg, #00b894, #00a884);
+    box-shadow: 0 2px 6px rgba(0, 184, 148, 0.3);
+}
+
+.btn-3d.pair:hover {
+    box-shadow: 0 3px 8px rgba(0, 184, 148, 0.4);
+}
+
+.btn-3d.logout {
+    background: linear-gradient(145deg, #3498db, #2980b9);
+    box-shadow: 0 2px 6px rgba(52, 152, 219, 0.3);
+}
+
+.btn-3d.logout:hover {
+    box-shadow: 0 3px 8px rgba(52, 152, 219, 0.4),
+                0 2px 3px rgba(0, 0, 0, 0.2);
+}
+
+.btn-3d.logout:active {
+    transform: translateY(0px);
+    box-shadow: 0 1px 4px rgba(52, 152, 219, 0.2);
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.status-badge.logged-in {
+    background: #25d366;
+    color: white;
+}
+
+.status-badge.not-logged-in {
+    background: #ff5555;
+    color: white;
+}
+
+.go-whatsapp-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.go-whatsapp-table th {
+    background: #128C7E;
+    color: white;
+    padding: 15px;
+    font-weight: 600;
+}
+
+.go-whatsapp-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+
+.go-whatsapp-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Compact button container for table cells */
+.action-buttons {
+    white-space: nowrap;
+}
+
+.action-buttons .btn-3d {
+    margin: 0 1px;
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+.go-whatsapp-form {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+    border-color: #128C7E;
+    outline: none;
+}
+
+.status-container {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.api-info {
+    background: #f8f9fa;
+    border-left: 4px solid #128C7E;
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 0 8px 8px 0;
+}
+</style>
+
+{if $menu == 'login'}
+    <div class="go-whatsapp-container">
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                <div class="box box-primary">
+                    <div class="box-header with-border">
+                        <h3 class="box-title">
+                            <i class="glyphicon glyphicon-qrcode"></i> Go WhatsApp Connection
+                        </h3>
+                    </div>
+                    <div class="box-body with-border">
+                        <div class="login-status text-center">
+                            {if isset($message)}
+                                <div class="qr-container">
+                                    {$message}
+                                </div>
+                                {if strpos($message, 'pair_code') !== false}
+                                    <div class="alert alert-info">
+                                        <i class="glyphicon glyphicon-info-sign"></i>
+                                        Open WhatsApp on your phone, go to <b>Settings &rarr; Linked Devices &rarr; Link a Device</b>
+                                    </div>
+                                {/if}
+                            {else}
+                                <div class="alert alert-warning">
+                                    <i class="glyphicon glyphicon-warning-sign"></i> Disconnected
+                                </div>
+                            {/if}
+                        </div>
+
+                        <hr style="margin:15px 0">
+
+                        {if $usePairingCode}
+                            <p class="text-muted text-center" style="margin-bottom:10px">
+                                <a href="{$_url}plugin/goWhatsappGateway_login&s={$session}">
+                                    <i class="glyphicon glyphicon-qrcode"></i> Use QR code instead
+                                </a>
+                            </p>
+                        {else}
+                            <p class="text-center" style="margin-bottom:8px"><small class="text-muted">Or connect using a pairing code</small></p>
+                            <form id="pairing-form" method="get" action="" onsubmit="return submitPairingForm(this)">
+                                <div class="input-group" style="width:100%">
+                                    <input type="tel" class="form-control" id="pairing-phone" name="phone"
+                                        placeholder="e.g. 254712345678" style="border-radius:6px 0 0 6px">
+                                    <span class="input-group-btn">
+                                        <button class="btn-3d pair" type="submit">Get Code</button>
+                                    </span>
+                                </div>
+                                <span class="help-block" style="font-size:11px">Enter number with country code, no + or spaces</span>
+                            </form>
+                            <script>
+                            var _pairingBaseUrl = '{$_url}plugin/goWhatsappGateway_login&s={$session}&use_pairing_code=1&phone=';
+                            function submitPairingForm(form) {
+                                var p = document.getElementById('pairing-phone').value.trim();
+                                if (!p) { window.alert('Enter your WhatsApp phone number'); return false; }
+                                window.location = _pairingBaseUrl + encodeURIComponent(p);
+                                return false;
+                            }
+                            </script>
+                        {/if}
+                    </div>
+                    <div class="box-footer">
+                        <div class="row">
+                            <div class="col-xs-4">
+                                <a class="btn-3d" href="{$_url}plugin/goWhatsappGateway">Back</a>
+                            </div>
+                            <div class="col-xs-8">
+                                <button class="btn-3d refresh" type="button" onclick="checkGoWhatsappStatus()">Check Status</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .qr-container {
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin: 20px 0;
+    }
+    .qr-container h1 {
+        font-size: 24px;
+        color: #128C7E;
+        margin: 10px 0;
+    }
+    .btn-3d.refresh {
+        background: linear-gradient(145deg, #4CAF50, #45a049);
+        min-width: 120px;
+    }
+
+    .btn-3d.refresh:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+        background: linear-gradient(145deg, #81C784, #66BB6A) !important;
+    }
+
+    .btn-3d.refresh:disabled:hover {
+        transform: none !important;
+        box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3) !important;
+    }
+
+    /* Spinning animation for glyphicon */
+    .glyphicon-spin {
+        animation: spin 1s infinite linear;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .login-status {
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    .alert {
+        width: 100%;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+    .alert-info {
+        background: #e3f2fd;
+        color: #1976d2;
+        border: 1px solid #bbdefb;
+    }
+    .alert-warning {
+        background: #fff3e0;
+        color: #f57c00;
+        border: 1px solid #ffe0b2;
+    }
+    </style>
+
+    <script>
+    function checkGoWhatsappStatus() {
+        const button = document.querySelector('.btn-3d.refresh');
+        const originalText = button.innerHTML;
+
+        button.innerHTML = '<i class="glyphicon glyphicon-refresh glyphicon-spin"></i> Checking...';
+        button.disabled = true;
+        button.style.pointerEvents = 'none';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentSession = urlParams.get('s');
+
+        let refreshUrl = window.location.href;
+
+        const separator = refreshUrl.includes('?') ? '&' : '?';
+        refreshUrl += separator + '_t=' + Date.now();
+
+        setTimeout(function() {
+            window.location.href = refreshUrl;
+        }, 1000);
+    }
+
+    let autoRefreshInterval;
+
+    function startAutoRefresh() {
+        autoRefreshInterval = setInterval(function() {
+            if (window.location.href.indexOf('goWhatsappGateway_login') !== -1) {
+                window.location.reload();
+            } else {
+                clearInterval(autoRefreshInterval);
+            }
+        }, 60000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.location.href.indexOf('goWhatsappGateway_login') !== -1) {
+            setTimeout(startAutoRefresh, 3000);
+        }
+    });
+
+    window.addEventListener('beforeunload', function() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+    });
+    </script>
+{elseif $menu == 'config'}
+
+    <form class="form" method="post" role="form" action="{$_url}plugin/goWhatsappGateway_config">
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                <div class="box box-primary">
+                    <div class="box-header with-border">
+                        <h3 class="box-title">
+                            Go WhatsApp Configuration
+                        </h3>
+                    </div>
+                    <div class="box-body with-border">
+                        <div class="form-group">
+                            <label>Server URL</label>
+                            <input type="text" class="form-control" name="go_whatsapp_gateway_url"
+                                value="{$_c['go_whatsapp_gateway_url']}" required placeholder="http://localhost:3000">
+                            <p class="help-block">URL where your Go WhatsApp API server is running</p>
+                        </div>
+                        <div class="form-group">
+                            <label>API Username</label>
+                            <input type="text" class="form-control" name="go_whatsapp_username"
+                                value="{$_c['go_whatsapp_username']}" placeholder="admin">
+                            <p class="help-block">Basic Auth username for the Go WhatsApp API</p>
+                        </div>
+                        <div class="form-group">
+                            <label>API Password</label>
+                            <input type="password" class="form-control" name="go_whatsapp_password"
+                                value="{$_c['go_whatsapp_password']}" placeholder="admin">
+                            <p class="help-block">Basic Auth password for the Go WhatsApp API</p>
+                        </div>
+                    </div>
+                    <div class="box-footer">
+                        <div class="row">
+                            <div class="col-xs-4">
+                                <a class="btn-3d btn-default btn-block" href="{$_url}plugin/goWhatsappGateway">Back</a>
+                            </div>
+                            <div class="col-xs-8">
+                                <button class="btn-3d btn-block" type="submit">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+{elseif $menu == 'test'}
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <div class="box box-primary">
+                <div class="box-header with-border">
+                    <h3 class="box-title">
+                        <i class="glyphicon glyphicon-send"></i> Test WhatsApp Message
+                    </h3>
+                    <div class="box-tools pull-right">
+                        <a href="{$_url}plugin/goWhatsappGateway" class="btn btn-box-tool" data-toggle="tooltip"
+                            data-placement="top" title="Back to Gateway"><i class="glyphicon glyphicon-arrow-left"></i></a>
+                    </div>
+                </div>
+                <div class="box-body with-border">
+                    {if isset($testResult)}
+                        <div class="alert alert-{if $testResult.status == 'success'}success{elseif $testResult.status == 'warning'}warning{else}danger{/if} alert-dismissible">
+                            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+                            <h4><i class="icon fa fa-{if $testResult.status == 'success'}check{elseif $testResult.status == 'warning'}exclamation-triangle{else}ban{/if}"></i> {$testResult.message}</h4>
+                            {if $testResult.status == 'warning'}
+                                <p><strong>To send messages, you need to:</strong></p>
+                                <ol>
+                                    <li><a href="{$_url}plugin/goWhatsappGateway_config">Configure the Go WhatsApp server URL</a></li>
+                                    <li><a href="{$_url}plugin/goWhatsappGateway">Add a session</a></li>
+                                    <li>Click "Connect" to authenticate with WhatsApp (QR code or pairing code)</li>
+                                    <li>Come back here to test sending messages</li>
+                                </ol>
+                            {/if}
+                            {if isset($testResult.response) && $testResult.response}
+                                <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px;">{json_encode($testResult.response, JSON_PRETTY_PRINT)}</pre>
+                            {/if}
+                        </div>
+                    {/if}
+
+                    <form class="form-horizontal" method="post" role="form" action="{$_url}plugin/goWhatsappGateway_testMessage">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Phone Number</label>
+                            <div class="col-sm-9">
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="glyphicon glyphicon-phone"></i></span>
+                                    <input type="text" class="form-control" name="test_phone" required
+                                        placeholder="628xxxxxxxxx" value="{$testPhone}">
+                                </div>
+                                <span class="help-block">Enter phone number with country code (without +)</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Message</label>
+                            <div class="col-sm-9">
+                                <textarea class="form-control" name="test_message" rows="3" required
+                                    placeholder="Enter your test message here...">Hello! This is a test message from Go WhatsApp Gateway.</textarea>
+                                <span class="help-block">Enter the message you want to send as a test</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-3 col-sm-9">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="glyphicon glyphicon-send"></i> Send Test Message
+                                </button>
+                                <a href="{$_url}plugin/goWhatsappGateway_logs" class="btn btn-default btn-lg">
+                                    <i class="glyphicon glyphicon-list"></i> View Logs
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{else}
+    <div class="row">
+        <div class="col-md-4">
+            <div class="box box-primary">
+                <div class="box-header with-border">
+                    <h3 class="box-title">
+                        <i class="glyphicon glyphicon-plus"></i>
+                        Add Session
+                    </h3>
+                    <div class="box-tools pull-right">
+                        <a href="{$_url}plugin/goWhatsappGateway_config" class="btn btn-box-tool" data-toggle="tooltip"
+                            data-placement="top" title="Configuration"><i class="glyphicon glyphicon-cog"></i></a>
+                    </div>
+                </div>
+                <div class="box-body with-border">
+                    <form class="form-horizontal" method="post" role="form" action="{$_url}plugin/goWhatsappGateway_addSession">
+                        <div class="form-group">
+                            <div class="col-md-12">
+                                <label>{Lang::T('Session Name')}</label>
+                                <div class="input-group">
+                                    <span class="input-group-addon" id="basic-addon1"><i
+                                            class="glyphicon glyphicon-tag"></i></span>
+                                    <input type="text" class="form-control" name="sessionname" required
+                                        placeholder="session1">
+                                </div>
+                                <span class="pull-right">Unique name for this WhatsApp session</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-md-12">
+                                <button class="btn btn-success btn-block btn-sm" type="submit">Add Session</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="box box-info">
+                <div class="box-header with-border">
+                    <h3 class="box-title">
+                        <i class="glyphicon glyphicon-wrench"></i>
+                        Test Message
+                    </h3>
+                </div>
+                <div class="box-body">
+                    <p>Test your WhatsApp connection by sending a message.</p>
+                    <a href="{$_url}plugin/goWhatsappGateway_testMessage" class="btn btn-info btn-block">
+                        <i class="glyphicon glyphicon-send"></i> Test Message
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="box box-primary">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Active Sessions</h3>
+                    <div class="box-tools pull-right">
+                        <a href="{$_url}plugin/goWhatsappGateway_config" class="btn btn-box-tool" data-toggle="tooltip"
+                            data-placement="top" title="Configuration"><i class="glyphicon glyphicon-cog"></i></a>
+                    </div>
+                </div>
+                <table class="table table-condensed table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Session Name</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                            <th>Remove</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {foreach $sessions as $session}
+                            <tr>
+                                <td>{$session}</td>
+                                <td api-get-text='{$_url}plugin/goWhatsappGateway_status&s={$session}'><span
+                                        class="label label-default">&nbsp;</span></td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{$_url}plugin/goWhatsappGateway_login&s={$session}"
+                                            class="btn-3d qr">Connect</a>
+                                        <a href="{$_url}plugin/goWhatsappGateway_reconnect&s={$session}"
+                                            class="btn-3d" style="background:linear-gradient(145deg,#f39c12,#e67e22);box-shadow:0 2px 6px rgba(243,156,18,.3)"
+                                            onclick="return confirm('Reconnect session {$session}?')">Reconnect</a>
+                                        <a href="{$_url}plugin/goWhatsappGateway_logout&s={$session}"
+                                            class="btn-3d logout" onclick="return confirm('Are you sure you want to logout session {$session}?')">Logout</a>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{$_url}plugin/goWhatsappGateway_delSession&s={$session}"
+                                            class="btn-3d remove"
+                                            onclick="return confirm('Remove session {$session}?')">Remove</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {/foreach}
+                    </tbody>
+                </table>
+            </div>
+            <div class="bs-callout bs-callout-warning well">
+                <h4>API To send directly</h4>
+                <input type="text" class="form-control" readonly onclick="this.select();"
+                    value="{$_url}plugin/goWhatsappGateway_send&to=[number]&msg=[text]&secret=go_whatsapp_secret">
+                <span class="text-muted">Use this endpoint to send WhatsApp messages programmatically</span>
+            </div>
+        </div>
+    </div>
+{/if}
+
+<div class="bs-callout bs-callout-warning well">
+    <h4>Sending WhatsApp Messages</h4>
+    <p>Use the Go WhatsApp API to send messages via WhatsApp Business API.</p>
+    <p><b>Configure the Server URL</b> in the configuration section to point to your Go WhatsApp API server.</p>
+    <p>This plugin integrates with the Go WhatsApp Multi-Device REST API.</p>
+</div>
+
+<!-- API Documentation Section -->
+<div class="box box-solid">
+    <div class="box-header">
+        <h3 class="box-title">External API Access</h3>
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" data-widget="collapse" data-toggle="tooltip" title="Collapse">
+                <i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="box-body">
+        <h4>Send WhatsApp Messages via API</h4>
+        <p><strong>Endpoint:</strong> <code>{$_url}plugin/goWhatsappGateway_send</code></p>
+        <p><strong>Methods:</strong> <code>GET</code> or <code>POST</code></p>
+        <p><strong>Content-Type:</strong> <code>application/json</code> (for POST), <code>application/x-www-form-urlencoded</code> (for GET)</p>
+        <p><strong>Secret Key:</strong> <code id="display-secret">Loading...</code> 
+        <button type="button" class="btn btn-sm btn-info" onclick="generateNewSecret()">Generate New Secret</button>
+        <small class="help-block">Current secret is stored securely and used for API authentication</small></p>
+        
+        <h5>GET Method (Simple URL):</h5>
+        <pre>{$_url}plugin/goWhatsappGateway_send?to=[number]&msg=[text]&secret=[CURRENT_SECRET]</pre>
+        
+        <h5>POST Method (JSON):</h5>
+        <pre>{
+  "to": "+1234567890",
+  "message": "Your message here",
+  "secret": "[CURRENT_SECRET]"
+}</pre>
+        
+        <h5>Response:</h5>
+        <pre>{
+  "code": "SUCCESS",
+  "message": "Message sent successfully",
+  "data": { "original_response" }
+}</pre>
+        
+        <h5>cURL Examples:</h5>
+        <h6>GET Method:</h6>
+        <pre>curl "{$_url}plugin/goWhatsappGateway_send?to=+1234567890&msg=Hello&secret=[CURRENT_SECRET]"</pre>
+        
+        <h6>POST Method:</h6>
+        <pre>curl -X POST "{$_url}plugin/goWhatsappGateway_send" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "+1234567890",
+    "message": "Hello from API!",
+    "secret": "[CURRENT_SECRET]"
+  }'</pre>
+    </div>
+</div>
+
+<script>
+function generateNewSecret() {
+    $.ajax({
+        url: '{$_url}plugin/goWhatsappGateway_generateSecret',
+        type: 'POST',
+        success: function(response) {
+            if (response.code === 'SUCCESS') {
+                $('#display-secret').text(response.secret);
+                alert('New secret key generated: ' + response.secret);
+            } else {
+                alert('Failed to generate secret key');
+            }
+        },
+        error: function() {
+            alert('Error generating secret key');
+        }
+    });
+}
+</script>
+
+{include file="sections/footer.tpl"}
