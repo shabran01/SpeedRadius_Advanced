@@ -22,7 +22,7 @@
     <!-- Fix for blank panels in settings - high priority -->
     <script src="ui/ui/scripts/fix-all-panels.js"></script>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="ui/ui/scripts/tailwind.js"></script>
     <!-- Remove any refresh buttons -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {

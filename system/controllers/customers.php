@@ -1726,9 +1726,11 @@ switch ($action) {
         ];
 
         $service_filter = _req('service_filter');
+        $expiry_filter  = _req('expiry_filter');
 
-        $append_url = "&order=" . urlencode($order) . "&filter=" . urlencode($filter) . "&orderby=" . urlencode($orderby) . 
-            (!empty($service_filter) ? "&service_filter=" . urlencode($service_filter) : "");
+        $append_url = "&order=" . urlencode($order) . "&filter=" . urlencode($filter) . "&orderby=" . urlencode($orderby) .
+            (!empty($service_filter) ? "&service_filter=" . urlencode($service_filter) : "") .
+            (!empty($expiry_filter) ? "&expiry_filter=" . urlencode($expiry_filter) : "");
 
         if ($search != '') {
             // FIX: SQL Injection — use proper escaping via PDO quote instead of raw string interpolation
@@ -1749,6 +1751,24 @@ switch ($action) {
         if (!empty($service_filter)) {
             $query->where("service_type", $service_filter);
         }
+
+        // Add plan expiry filter.
+        // "Expired" is decided by each customer's LATEST recharge row only, so a customer who
+        // renewed after an old expired package is not incorrectly listed as expired.
+        if (in_array($expiry_filter, ['expired', 'active', 'none'], true)) {
+            if ($expiry_filter === 'none') {
+                $query->where_raw("tbl_customers.id NOT IN (SELECT customer_id FROM tbl_user_recharges)");
+            } else {
+                $latest_recharge = "(SELECT r.customer_id FROM tbl_user_recharges r " .
+                    "JOIN (SELECT customer_id, MAX(id) AS mid FROM tbl_user_recharges GROUP BY customer_id) m " .
+                    "ON m.mid = r.id WHERE TIMESTAMP(r.expiration, r.time) ";
+                if ($expiry_filter === 'expired') {
+                    $query->where_raw("tbl_customers.id IN " . $latest_recharge . "< NOW())");
+                } else {
+                    $query->where_raw("tbl_customers.id IN " . $latest_recharge . ">= NOW())");
+                }
+            }
+        }
         if($order == 'lastname') {
             $query->order_by_expr("SUBSTR(fullname, INSTR(fullname, ' ')) $orderby");
         }else{
@@ -1767,7 +1787,7 @@ switch ($action) {
             header('Expires: 0');
             header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
             header("Content-type: text/csv");
-            header('Content-Disposition: attachment;filename="phpnuxbill_customers_' . $filter . '_' . date('Y-m-d_H_i') . '.csv"');
+            header('Content-Disposition: attachment;filename="phpnuxbill_customers_' . $filter . (!empty($expiry_filter) ? '_' . $expiry_filter : '') . '_' . date('Y-m-d_H_i') . '.csv"');
             header('Content-Transfer-Encoding: binary');
 
             $headers = ['id', 'username', 'fullname', 'address', 'phonenumber', 'email', 'balance', 'service_type'];
@@ -1798,6 +1818,8 @@ switch ($action) {
         $ui->assign('d', $d);
         $ui->assign('statuses', ORM::for_table('tbl_customers')->getEnum("status"));
         $ui->assign('filter', $filter);
+        $ui->assign('service_filter', $service_filter);
+        $ui->assign('expiry_filter', $expiry_filter);
         $ui->assign('search', $search);
         $ui->assign('order', $order);
         $ui->assign('order_pos', isset($order_pos[$order]) ? $order_pos[$order] : 0);

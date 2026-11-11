@@ -53,8 +53,15 @@
                     <option value="">{Lang::T('All Services')}</option>
                     <option value="PPPoE" {if $service_filter eq 'PPPoE'}selected{/if}>PPPoE</option>
                     <option value="Hotspot" {if $service_filter eq 'Hotspot'}selected{/if}>Hotspot</option>
-                    <option value="VPN" {if $service_filter eq 'VPN'}selected{/if}>VPN</option>
                     <option value="Others" {if $service_filter eq 'Others'}selected{/if}>Others</option>
+                </select>
+            </div>
+            <div class="filter-field">
+                <select name="expiry_filter" class="filter-select">
+                    <option value="">{Lang::T('All Plans')}</option>
+                    <option value="active" {if $expiry_filter eq 'active'}selected{/if}>{Lang::T('Plan Active')}</option>
+                    <option value="expired" {if $expiry_filter eq 'expired'}selected{/if}>{Lang::T('Expired')}</option>
+                    <option value="none" {if $expiry_filter eq 'none'}selected{/if}>{Lang::T('No Plan')}</option>
                 </select>
             </div>
             <div class="filter-field filter-search">
@@ -229,8 +236,6 @@
         });
     </script>
     {/if}
-
-    {include file="sections/footer.tpl"}
 
 </div>
 

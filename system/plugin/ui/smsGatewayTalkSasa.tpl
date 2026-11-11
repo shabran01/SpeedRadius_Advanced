@@ -18,8 +18,15 @@
                     <div class="form-group">
                         <label class="col-md-2 control-label">Sender ID</label>
                         <div class="col-md-6">
-                            <input type="text" class="form-control" id="talksasa_sender_id" name="talksasa_sender_id" value="{$_c['talksasa_sender_id']}">
+                            <input type="text" class="form-control" id="talksasa_sender_id" name="talksasa_sender_id" value="{$_c['talksasa_sender_id']}" maxlength="11">
                             <p class="help-block">Your assigned Sender ID (alphanumeric, max 11 characters)</p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-2 control-label">DLT Template ID</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="talksasa_dlt_template_id" name="talksasa_dlt_template_id" value="{$_c['talksasa_dlt_template_id']}">
+                            <p class="help-block">Optional. Only required if your account uses registered DLT content templates.</p>
                         </div>
                     </div>
                     <div class="form-group">
@@ -157,8 +164,9 @@ function checkBalance() {
 }
 
 function formatBalanceData(data) {
+    if (data === null || data === undefined) return '-';
     if (typeof data === 'object') {
-        return data.units || data.balance || JSON.stringify(data);
+        return data.remaining_balance || data.units || data.balance || JSON.stringify(data);
     }
     return data;
 }
@@ -186,6 +194,12 @@ function checkMessages() {
     });
 }
 
+function esc(v) {
+    return String(v === null || v === undefined ? '-' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function formatMessagesData(data) {
     if (!Array.isArray(data)) {
         return '<table class="table table-striped table-bordered"><tr><td class="text-center">No messages available</td></tr></table>';
@@ -205,11 +219,11 @@ function formatMessagesData(data) {
     } else {
         data.forEach(function(msg) {
             html += '<tr>';
-            html += '<td>' + (msg.created_at || msg.date || '-') + '</td>';
-            html += '<td>' + (msg.recipient || msg.phone || '-') + '</td>';
-            html += '<td>' + (msg.message || '-') + '</td>';
+            html += '<td>' + esc(msg.created_at || msg.date) + '</td>';
+            html += '<td>' + esc(msg.to || msg.recipient || msg.phone) + '</td>';
+            html += '<td>' + esc(msg.message) + '</td>';
             html += '<td>' + formatMessageStatus(msg.status) + '</td>';
-            html += '<td>' + (msg.cost || msg.units || '-') + '</td>';
+            html += '<td>' + esc(msg.cost || msg.units) + '</td>';
             html += '</tr>';
         });
     }

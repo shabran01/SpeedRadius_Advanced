@@ -1658,5 +1658,17 @@
     "Turn_Off": "Turn Off",
     "Turn_On": "Turn On",
     "Status_unavailable": "Status unavailable",
-    "DISABLED": "DISABLED"
+    "DISABLED": "DISABLED",
+    "Open_account": "Open account",
+    "Activation_Reports": "Activation Reports",
+    "Track_user_activations_and_transactions": "Track user activations and transactions",
+    "Search_by_invoice__username_or_method": "Search by invoice, username or method",
+    "records_on_this_page": "records on this page",
+    "user_expiring_today": "user expiring today",
+    "Orphan_Recharges": "Orphan Recharges",
+    "Recharge_records_whose_customer_account_no_longer_exists__This_report_is_read_only_": "Recharge records whose customer account no longer exists. This report is read-only.",
+    "Recharge_Count": "Recharge Count",
+    "No_orphan_recharge_records_were_found_": "No orphan recharge records were found.",
+    "Plan_Active": "Plan Active",
+    "No_Plan": "No Plan"
 }

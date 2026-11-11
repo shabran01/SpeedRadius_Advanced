@@ -2,19 +2,36 @@
 
  # CHANGELOG
 
-## [2.2.85] - 2026-10-31
+## [2.2.86] - 2026-11-11
 
 ---
 
-### FIXED: Payment Gateway activation + STK gateway selection
+### ADDED: Customers — filter by plan status (Expired / Plan Active / No Plan)
 
-**`system/controllers/paymentgateway.php`** — **`system/plugin/CreateHotspotUser.php`** — **`ui/ui/paymentgateway.tpl`**
+**`system/controllers/customers.php`** — **`ui/ui/customers.tpl`**
 
-- **Gateway selection** — `InitiateStkpush()` compared the whole comma-separated `payment_gateway` list against a single gateway name, so with more than one active gateway no STK push was ever sent. It now splits the list and uses the first gateway that maps to an STK flow.
-- **List UI** — added a hint that checking a gateway makes it ACTIVE, while clicking its name only opens its credentials page.
-- **Delete** — replaced the recursive `deleteFile()` with a direct `unlink()` of the exact gateway file.
-- **Audit** — only filters by gateway when one is selected, fixed the pagination query string, and added a not-found guard on audit view.
-- **CSRF** — the "active gateways" save now validates a CSRF token, and the `payment_gateway` read uses a null-safe default.
+- New plan-status dropdown in the **Customers** filter bar: **All Plans**, **Plan Active**, **Expired**, **No Plan**.
+- **Expired** is decided from each customer's **latest** recharge row (`MAX(id)` per `customer_id`) against `TIMESTAMP(expiration, time)`, so a customer who renewed after an old package lapsed is not wrongly listed as expired. This matches the dashboard's own "total expired" definition.
+- **Plan Active** is the complement of **Expired**; **No Plan** lists customers with no `tbl_user_recharges` row at all.
+- The selection survives pagination and applies to the **CSV export** (the filename now carries the plan-status segment).
+
+### CHANGED: Customers — VPN removed from the service filter
+
+**`ui/ui/customers.tpl`**
+
+`VPN` no longer appears in the service dropdown. Existing `service_type = 'VPN'` customers are untouched and still appear under **All Services**.
+
+### FIXED: Customers — service filter selection was never preserved
+
+**`system/controllers/customers.php`**
+
+`service_filter` was read from the request but never assigned to Smarty, so the dropdown dropped back to "All Services" after every submit. It is now assigned alongside the other filter values.
+
+### FIXED: Customers — duplicate page footer
+
+**`ui/ui/customers.tpl`**
+
+The template included `sections/footer.tpl` twice — once mid-file and again at the end. Because the footer itself emits `</body></html>`, the Customers page rendered two footers and invalid markup. The stray first include was removed; the remaining one sits after the closing container.
 
 ## [2.2.84] - 2026-10-31
 

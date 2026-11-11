@@ -1,17 +1,34 @@
 <?php
 
 /**
- * TalkSasa SMS Gateway Plugin for SpeedRadius
+ * TalkSasa SMS Gateway Plugin for SpeedRadius (PHPNuxBill)
+ *
+ * API v3 — https://bulksms.talksasa.com/api/v3
+ *   POST /api/v3/sms/send   { recipient, sender_id, type, message[, schedule_time][, dlt_template_id] }
+ *   GET  /api/v3/sms        list messages
+ *   GET  /api/v3/balance    remaining balance
+ *
+ * Auth: Authorization: Bearer <api_token>, Accept: application/json,
+ *       Content-Type: application/json.
+ *
+ * Responses: {"status":"success","data":...} or {"status":"error","message":"..."}
+ * The list endpoint nests rows as data.data[].
  */
+
+if (!defined('TALKSASA_PLUGIN_VERSION')) {
+    define('TALKSASA_PLUGIN_VERSION', '3.0.0');
+}
+
+define('TALKSASA_API_BASE', 'https://bulksms.talksasa.com/api/v3');
 
 // Include the SMS Lock helper
 require_once(__DIR__ . '/../helpers/SMSLock.php');
 
-// Register menu item in admin panel
 register_menu("TalkSasa SMS Gateway", true, "smsGatewayTalkSasa", 'COMMUNICATION', 'glyphicon glyphicon-envelope', '', '', ['Admin', 'SuperAdmin']);
 
-// Register hook for sending SMS with specific name
 register_hook('send_sms_talksasa', 'smsGatewayTalkSasa_hook_send_sms');
+
+// ==================== CONFIG UI ====================
 
 function smsGatewayTalkSasa()
 {
@@ -22,13 +39,13 @@ function smsGatewayTalkSasa()
         r2(U . 'plugin/smsGatewayTalkSasa_config', 'e', 'Please configure SMS gateway first');
     }
 
-    // Get last 10 SMS logs
     $logs = ORM::for_table('tbl_sms_logs')
         ->order_by_desc('created_at')
         ->limit(10)
         ->find_many();
 
     $ui->assign('sms_logs', $logs);
+    $ui->assign('talksasa_version', TALKSASA_PLUGIN_VERSION);
     $ui->assign('_title', 'SMS Gateway');
     $ui->assign('_system_menu', 'plugin/smsGatewayTalkSasa');
     $admin = Admin::_info();
@@ -41,34 +58,24 @@ function smsGatewayTalkSasa_config()
     global $ui;
     _admin();
 
-    if (!empty(_post('talksasa_api_token')) || !empty(_post('talksasa_sender_id'))) {
-        // Save API Token
-        $d = ORM::for_table('tbl_appconfig')->where('setting', 'talksasa_api_token')->find_one();
-        if ($d) {
-            $d->value = _post('talksasa_api_token');
-            $d->save();
-        } else {
-            $d = ORM::for_table('tbl_appconfig')->create();
-            $d->setting = 'talksasa_api_token';
-            $d->value = _post('talksasa_api_token');
-            $d->save();
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        foreach (['talksasa_api_token', 'talksasa_sender_id', 'talksasa_dlt_template_id'] as $key) {
+            $val = trim((string) _post($key, ''));
+            $d = ORM::for_table('tbl_appconfig')->where('setting', $key)->find_one();
+            if ($d) {
+                $d->value = $val;
+                $d->save();
+            } else {
+                $d = ORM::for_table('tbl_appconfig')->create();
+                $d->setting = $key;
+                $d->value = $val;
+                $d->save();
+            }
         }
-
-        // Save Sender ID
-        $d = ORM::for_table('tbl_appconfig')->where('setting', 'talksasa_sender_id')->find_one();
-        if ($d) {
-            $d->value = _post('talksasa_sender_id');
-            $d->save();
-        } else {
-            $d = ORM::for_table('tbl_appconfig')->create();
-            $d->setting = 'talksasa_sender_id';
-            $d->value = _post('talksasa_sender_id');
-            $d->save();
-        }
-
         r2(U . 'plugin/smsGatewayTalkSasa_config', 's', 'Configuration saved successfully');
     }
 
+    $ui->assign('talksasa_version', TALKSASA_PLUGIN_VERSION);
     $ui->assign('_title', 'SMS Gateway Configuration');
     $ui->assign('_system_menu', 'plugin/smsGatewayTalkSasa');
     $admin = Admin::_info();
@@ -77,17 +84,17 @@ function smsGatewayTalkSasa_config()
     $ui->display('smsGatewayTalkSasa.tpl');
 }
 
+// ==================== SENDING ====================
+
 function smsGatewayTalkSasa_hook_send_sms($data = [])
 {
     global $config;
 
-    // Check if we have the required data
     if (!is_array($data) || count($data) < 2) {
         _log("SMS Gateway: Invalid data format", 'SMS', 0);
         return false;
     }
 
-    // Extract phone and message from the data array
     list($phone, $message) = $data;
 
     if (empty($phone) || empty($message)) {
@@ -96,16 +103,13 @@ function smsGatewayTalkSasa_hook_send_sms($data = [])
         return false;
     }
 
-    // Clean old locks periodically
     SMSLock::cleanOldLocks();
 
-    // Try to acquire lock for this message
     if (!SMSLock::acquireLock($phone, $message)) {
         _log("SMS Gateway TalkSasa: Duplicate message blocked for $phone", 'SMS', 1);
-        return true; // Indicate success to prevent retries
+        return true;
     }
 
-    // Check recent messages in database
     $recent = ORM::for_table('tbl_sms_logs')
         ->where('phone', $phone)
         ->where('message', $message)
@@ -118,201 +122,230 @@ function smsGatewayTalkSasa_hook_send_sms($data = [])
         return true;
     }
 
-    // Check if configuration exists
     if (empty($config['talksasa_api_token']) || empty($config['talksasa_sender_id'])) {
         _log("SMS Gateway: Configuration missing", 'SMS', 0);
-        smsGatewayTalkSasa_log($phone, $message, null, 'failed', 'Configuration missing');
+        smsGatewayTalkSasa_log($phone, $message, null, 'failed', 'Configuration missing (API token / Sender ID)');
+        SMSLock::releaseLock($phone, $message);
         return false;
     }
 
-    // Format phone number 
-    $phone = smsGatewayTalkSasa_phoneFormat($phone);    // Prepare API request
-    $url = 'https://bulksms.talksasa.com/api/v3/sms/send';
-    $postData = [
-        'recipient' => $phone,
+    $recipient = smsGatewayTalkSasa_phoneFormat($phone);
+
+    $payload = [
+        'recipient' => $recipient,
         'sender_id' => $config['talksasa_sender_id'],
-        'type' => 'plain',
-        'message' => $message
+        'type'      => 'plain',
+        'message'   => $message,
     ];
+    if (!empty($config['talksasa_dlt_template_id'])) {
+        $payload['dlt_template_id'] = $config['talksasa_dlt_template_id'];
+    }
 
-    // Send request
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: Bearer ' . $config['talksasa_api_token'],
-        'Content-Type: application/json',
-        'Accept: application/json'
-    ]);
+    $res = smsGatewayTalkSasa_api('POST', '/sms/send', $payload);
+    $json = $res['json'];
 
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $error = curl_error($ch);
-    curl_close($ch);
-
-    if ($error) {
-        _log("SMS Gateway CURL Error: " . $error, 'SMS', 0);
-        smsGatewayTalkSasa_log($phone, $message, null, 'failed', 'CURL Error: ' . $error);
+    if ($res['error'] !== '') {
+        _log("SMS Gateway CURL Error: " . $res['error'], 'SMS', 0);
+        smsGatewayTalkSasa_log($recipient, $message, null, 'failed', 'CURL Error: ' . $res['error']);
+        SMSLock::releaseLock($phone, $message);
         return false;
     }
 
-    $result = json_decode($response, true);
+    $ok = $res['code'] >= 200 && $res['code'] < 300
+        && is_array($json) && (($json['status'] ?? '') === 'success');
 
-    if ($httpCode == 200 && isset($result['status']) && $result['status'] == 'success') {
-        _log("SMS sent successfully to $phone", 'SMS', 1);
-        smsGatewayTalkSasa_log($phone, $message, isset($result['data']['uid']) ? $result['data']['uid'] : null, 'sent', 'Message sent successfully');
+    if ($ok) {
+        $uid = smsGatewayTalkSasa_response_id($json['data'] ?? null);
+        _log("SMS sent successfully to $recipient", 'SMS', 1);
+        smsGatewayTalkSasa_log($recipient, $message, $uid, 'sent', 'Message sent successfully');
         SMSLock::releaseLock($phone, $message);
         return true;
-    } else {
-        $error = isset($result['message']) ? $result['message'] : 'Unknown error occurred';
-        _log("SMS Gateway Error: $error", 'SMS', 0);
-        smsGatewayTalkSasa_log($phone, $message, null, 'failed', $error);
-        SMSLock::releaseLock($phone, $message);
-        return false;
     }
+
+    $err = smsGatewayTalkSasa_error($res);
+    _log("SMS Gateway Error: $err", 'SMS', 0);
+    smsGatewayTalkSasa_log($recipient, $message, null, 'failed', $err);
+    SMSLock::releaseLock($phone, $message);
+    return false;
 }
 
-function smsGatewayTalkSasa_log($phone, $message, $message_id, $status, $status_message)
+/** Pull a usable error message out of a v3 response. */
+function smsGatewayTalkSasa_error($res)
 {
-    $log = ORM::for_table('tbl_sms_logs')->create();
-    $log->phone = $phone;
-    $log->message = $message;
-    $log->message_id = $message_id;
-    $log->status = $status;
-    $log->status_message = $status_message;
-    $log->save();
+    $json = $res['json'];
+    if (is_array($json)) {
+        if (!empty($json['message'])) {
+            $m = $json['message'];
+            if (is_array($m)) $m = implode('; ', array_filter(array_map('strval', $m)));
+            if (trim((string) $m) !== '') return trim((string) $m);
+        }
+        if (isset($json['status']) && $json['status'] === 'error') {
+            return 'API returned status=error (HTTP ' . $res['code'] . ')';
+        }
+    }
+    $body = trim((string) $res['body']);
+    if ($body === '') return 'HTTP ' . $res['code'] . ' — empty response';
+    return 'HTTP ' . $res['code'] . ' — ' . (strlen($body) > 300 ? substr($body, 0, 300) . '...' : $body);
 }
 
-function smsGatewayTalkSasa_check_balance()
+/** Extract a message identifier from the many shapes `data` can take. */
+function smsGatewayTalkSasa_response_id($data)
+{
+    if (is_array($data)) {
+        foreach (['uid', 'message_id', 'id'] as $k) {
+            if (isset($data[$k]) && !is_array($data[$k])) return $data[$k];
+        }
+        if (isset($data['data']) && is_array($data['data'])) {
+            $first = reset($data['data']);
+            if (is_array($first)) {
+                foreach (['uid', 'message_id', 'id'] as $k) {
+                    if (isset($first[$k]) && !is_array($first[$k])) return $first[$k];
+                }
+            }
+        }
+        return null;
+    }
+    return is_string($data) && $data !== '' ? $data : null;
+}
+
+// ==================== API CALLS ====================
+
+/**
+ * Low-level v3 request. Returns ['code','body','json','error'].
+ */
+function smsGatewayTalkSasa_api($method, $path, $payload = null, $timeout = 30)
 {
     global $config;
 
+    $token = trim((string) ($config['talksasa_api_token'] ?? ''));
+    if ($token === '') {
+        return ['code' => 0, 'body' => '', 'json' => null, 'error' => 'API token not configured'];
+    }
+
+    $url = TALKSASA_API_BASE . $path;
+    $headers = [
+        'Authorization: Bearer ' . $token,
+        'Accept: application/json',
+    ];
+
+    $ch = curl_init();
+    $opts = [
+        CURLOPT_URL            => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => $timeout,
+        CURLOPT_CONNECTTIMEOUT => 10,
+    ];
+
+    if ($method === 'POST') {
+        $opts[CURLOPT_POST] = true;
+        $opts[CURLOPT_POSTFIELDS] = json_encode($payload ?? []);
+        $headers[] = 'Content-Type: application/json';
+    } elseif ($method !== 'GET') {
+        $opts[CURLOPT_CUSTOMREQUEST] = $method;
+    }
+
+    $opts[CURLOPT_HTTPHEADER] = $headers;
+    curl_setopt_array($ch, $opts);
+
+    $body = curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err  = curl_error($ch);
+    curl_close($ch);
+
+    return [
+        'code'  => $code,
+        'body'  => $body === false ? '' : $body,
+        'json'  => json_decode((string) $body, true),
+        'error' => $err,
+    ];
+}
+
+// ==================== AJAX: BALANCE / MESSAGES ====================
+
+function smsGatewayTalkSasa_check_balance()
+{
     header('Content-Type: application/json');
     _admin();
 
-    if (empty($config['talksasa_api_token'])) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'API token not configured'
-        ]);
+    $res = smsGatewayTalkSasa_api('GET', '/balance', null, 15);
+
+    if ($res['error'] !== '') {
+        echo json_encode(['success' => false, 'message' => 'CURL Error: ' . $res['error']]);
         exit;
     }
 
-    $url = 'https://bulksms.talksasa.com/api/v3/balance';
-
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: Bearer ' . $config['talksasa_api_token'],
-        'Content-Type: application/json',
-        'Accept: application/json'
-    ]);
-
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $error = curl_error($ch);
-    curl_close($ch);
-
-    if ($error) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'CURL Error: ' . $error
-        ]);
-        exit;
-    }
-
-    $result = json_decode($response, true);
-
-    if ($httpCode == 200 && isset($result['status']) && $result['status'] == 'success') {
-        echo json_encode([
-            'success' => true,
-            'data' => $result['data']
-        ]);
+    $json = $res['json'];
+    if ($res['code'] >= 200 && $res['code'] < 300 && is_array($json) && ($json['status'] ?? '') === 'success') {
+        echo json_encode(['success' => true, 'data' => $json['data'] ?? null]);
     } else {
-        $error = isset($result['message']) ? $result['message'] : 'Unknown error occurred';
-        echo json_encode([
-            'success' => false,
-            'message' => $error
-        ]);
+        echo json_encode(['success' => false, 'message' => smsGatewayTalkSasa_error($res)]);
     }
     exit;
-}
-
-function smsGatewayTalkSasa_phoneFormat($phone)
-{
-    // Remove any non-numeric characters
-    $phone = preg_replace('/[^0-9]/', '', $phone);
-    
-    // If the number starts with '0', replace it with '254'
-    if (substr($phone, 0, 1) == '0') {
-        $phone = '254' . substr($phone, 1);
-    }
-    // If the number starts with neither '254' nor '0', add '254'
-    else if (substr($phone, 0, 3) != '254') {
-        $phone = '254' . $phone;
-    }
-    
-    return $phone;
 }
 
 function smsGatewayTalkSasa_messages()
 {
-    global $config;
-
     header('Content-Type: application/json');
     _admin();
 
-    if (empty($config['talksasa_api_token'])) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'API token not configured'
-        ]);
+    $res = smsGatewayTalkSasa_api('GET', '/sms', null, 20);
+
+    if ($res['error'] !== '') {
+        echo json_encode(['success' => false, 'message' => 'CURL Error: ' . $res['error']]);
         exit;
     }
 
-    $url = 'https://bulksms.talksasa.com/api/v3/sms/';
-
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: Bearer ' . $config['talksasa_api_token'],
-        'Content-Type: application/json',
-        'Accept: application/json'
-    ]);
-
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $error = curl_error($ch);
-    curl_close($ch);
-
-    if ($error) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'CURL Error: ' . $error
-        ]);
-        exit;
-    }
-
-    $result = json_decode($response, true);
-
-    if ($httpCode == 200 && isset($result['status']) && $result['status'] == 'success') {
-        echo json_encode([
-            'success' => true,
-            'data' => $result['data']
-        ]);
+    $json = $res['json'];
+    if ($res['code'] >= 200 && $res['code'] < 300 && is_array($json) && ($json['status'] ?? '') === 'success') {
+        $data = $json['data'] ?? [];
+        // The list endpoint nests rows: {"data":{"data":[...]}}
+        if (is_array($data) && isset($data['data']) && is_array($data['data'])) {
+            $data = $data['data'];
+        }
+        if (!is_array($data)) $data = [];
+        echo json_encode(['success' => true, 'data' => array_values($data)]);
     } else {
-        $error = isset($result['message']) ? $result['message'] : 'Unknown error occurred';
-        echo json_encode([
-            'success' => false,
-            'message' => $error
-        ]);
+        echo json_encode(['success' => false, 'message' => smsGatewayTalkSasa_error($res)]);
     }
     exit;
+}
+
+// ==================== HELPERS ====================
+
+function smsGatewayTalkSasa_log($phone, $message, $message_id, $status, $status_message)
+{
+    try {
+        $log = ORM::for_table('tbl_sms_logs')->create();
+        $log->phone = $phone;
+        $log->message = $message;
+        $log->message_id = $message_id;
+        $log->status = $status;
+        $log->status_message = $status_message;
+        $log->save();
+    } catch (Throwable $e) {
+        _log("TalkSasa log insert failed: " . $e->getMessage(), 'SMS', 0);
+    }
+}
+
+/**
+ * Normalise to international digits. Comma-separated lists are formatted
+ * element by element, since v3 accepts multiple recipients in one field.
+ */
+function smsGatewayTalkSasa_phoneFormat($phone)
+{
+    $parts = preg_split('/\s*,\s*/', (string) $phone);
+    $out = [];
+    foreach ($parts as $p) {
+        $p = preg_replace('/[^0-9]/', '', $p);
+        if ($p === '') continue;
+        if (strlen($p) === 9 && $p[0] === '7') {
+            $p = '254' . $p;
+        } elseif (substr($p, 0, 1) === '0') {
+            $p = '254' . substr($p, 1);
+        } elseif (substr($p, 0, 3) !== '254') {
+            $p = '254' . $p;
+        }
+        $out[] = $p;
+    }
+    return implode(',', $out);
 }

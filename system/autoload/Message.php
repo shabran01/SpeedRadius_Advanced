@@ -100,29 +100,16 @@ class Message
             return false;
         }
 
-        // GoWhatsApp (self-hosted go-whatsapp-multidevice-rest) — PRIMARY when enabled
-        if (($config['gowhatsapp_enabled'] ?? '') === 'yes' && !empty($config['gowhatsapp_url']) && function_exists('gowhatsapp_hook_send')) {
-            $result = call_user_func('gowhatsapp_hook_send', [$phone, $txt]);
+        // OpenWA (self-hosted, Docker) — PRIMARY self-hosted gateway when enabled.
+        // Declared here rather than relying only on the send_whatsapp hook: run_hook()
+        // returns on the FIRST registered handler, so a later plugin never gets a turn.
+        if (($config['openwa_enabled'] ?? '') === 'yes' && !empty($config['openwa_url']) && function_exists('openwa_hook_send')) {
+            $result = call_user_func('openwa_hook_send', [$phone, $txt]);
             if ($result !== false) {
                 return true;
             }
         }
 
-        // ApiWap (Cloud) — fallback if GoWhatsApp not configured
-        if (!empty($config['apiwap_enabled']) && $config['apiwap_enabled'] === 'yes' && !empty($config['apiwap_api_key']) && function_exists('apiwap_hook_send')) {
-            $result = call_user_func('apiwap_hook_send', [$phone, $txt]);
-            if ($result !== false) {
-                return true;
-            }
-        }
-
-        // GoWAHA (WAHA API) — fallback if ApiWap not configured
-        if (!empty($config['gowaha_url']) && !empty($config['gowaha_key']) && function_exists('gowaha_hook_send')) {
-            $result = call_user_func('gowaha_hook_send', [$phone, $txt]);
-            if ($result !== false) {
-                return true;
-            }
-        }
 
         // Other WhatsApp gateways via hook
         $hookResult = run_hook('send_whatsapp', [$phone, $txt]); #HOOK
